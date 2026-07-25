@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Character Sheet — Full App Prototype</title>
+<style>
+  :root{--stage:#e9e9ec;--ink:#2b2b30;--ink-2:#8a8a92;--line:#d3d3d9;--fill:#e6e6ea;--fill-2:#f1f1f4;--accent:#6d6ff0;--accent-soft:#ecedfe;--paper:#ffffff;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  body{margin:0;background:var(--stage);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);padding:18px 14px 40px;display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .caption{font-size:12px;letter-spacing:.05em;color:var(--ink-2);font-weight:600;text-align:center;max-width:390px;line-height:1.5;}
+
+  .phone{width:100%;max-width:390px;height:780px;background:var(--paper);border:1px solid var(--line);border-radius:30px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.10);position:relative;display:flex;flex-direction:column;}
+  .statusbar{flex:0 0 auto;height:32px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;color:var(--ink-2);}
+  .statusbar .blk{width:16px;height:8px;border:1px solid var(--line);border-radius:2px;display:inline-block;}
+  .statusbar .blk.round{width:8px;border-radius:50%;}
+  #screen{flex:1 1 auto;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
+
+  /* ---------- list ---------- */
+  .lhead{flex:0 0 auto;padding:12px 18px 8px;}
+  .lhead h1{margin:0;font-size:26px;letter-spacing:-.02em;}
+  .lhead .sub{font-size:12px;color:var(--ink-2);margin-top:2px;}
+  .llist{flex:1 1 auto;overflow-y:auto;padding:6px 14px 90px;}
+  .ccard{border:1px solid var(--line);border-radius:16px;padding:13px 15px;margin-bottom:10px;cursor:pointer;background:var(--paper);}
+  .ccard:active{background:var(--fill-2);}
+  .ccard .cn{font-size:17px;font-weight:700;}
+  .ccard .cc{font-size:12.5px;color:var(--ink-2);margin-top:3px;}
+  .ccard .chp{font-size:12.5px;color:var(--ink-2);margin-top:8px;font-variant-numeric:tabular-nums;}
+  .fab{position:absolute;right:18px;bottom:20px;width:56px;height:56px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:28px;line-height:1;box-shadow:0 6px 18px rgba(109,111,240,.45);cursor:pointer;z-index:10;}
+  .fab:active{opacity:.9;}
+
+  /* ---------- hub vitals ---------- */
+  .vitals{flex:0 0 auto;padding:8px 16px 12px;border-bottom:1px solid var(--line);background:var(--paper);}
+  .vtop{display:flex;align-items:center;gap:10px;}
+  .back{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--paper);color:var(--ink-2);display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex:0 0 auto;}
+  .vname{font-size:19px;font-weight:800;letter-spacing:-.01em;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lvpill{font-size:11px;font-weight:700;color:#fff;background:var(--accent);border-radius:20px;padding:3px 9px;flex:0 0 auto;display:inline-flex;align-items:center;gap:2px;}
+  .lvpill .lvinp{width:26px;border:none;background:transparent;color:#fff;font:inherit;font-weight:700;text-align:center;padding:0;}
+  .lvpill .lvinp:focus{outline:none;}
+  .classbtn{display:flex;align-items:center;gap:8px;width:100%;border:1px solid var(--line);border-radius:8px;background:var(--paper);padding:8px 10px;margin:8px 0 2px;cursor:pointer;}
+  .classbtn:active{background:var(--fill-2);}
+  .classbtn .clsum{flex:1 1 auto;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .classbtn .chev{color:var(--line);font-size:18px;flex:0 0 auto;}
+  .hdtile{font-size:13px;font-weight:700;line-height:1.3;margin-top:2px;}
+  .hdrow{display:flex;align-items:center;gap:7px;padding:8px 0;border-top:1px solid var(--fill);}
+  .hdrow:first-of-type{border-top:none;}
+  .hdrow .lab{font-size:10px;color:var(--ink-2);font-weight:700;text-transform:uppercase;}
+  .hdrow .dtype{width:52px;text-align:center;}
+  .hdrow .curinp{width:38px;}
+  .clsrow{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--fill);}
+  .clsrow:first-of-type{border-top:none;}
+  .clsrow .inp{flex:1 1 auto;min-width:0;}
+  .clsrow .cllv{width:40px;}
+  .delx{margin-left:auto;color:#b3261e;cursor:pointer;font-size:15px;flex:0 0 auto;}
+  .clines{margin:6px 0 2px;}
+  .cline{font-size:12.5px;color:var(--ink-2);}
+  .cline b{color:var(--ink);font-weight:600;}
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+  .tile{border:1px solid var(--line);border-radius:11px;padding:7px 9px;}
+  .tile.hp{grid-column:1 / 3;display:flex;align-items:center;gap:10px;}
+  .tile .tl{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-2);font-weight:700;}
+  .hpwrap{display:flex;align-items:baseline;gap:3px;margin-top:2px;}
+  .num{border:1px solid var(--line);border-radius:7px;background:var(--paper);font:inherit;color:var(--ink);padding:6px 4px;text-align:center;font-variant-numeric:tabular-nums;font-weight:700;width:100%;}
+  .num:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .hp .num{width:46px;font-size:16px;}
+  .hp .slash{color:var(--ink-2);font-weight:600;}
+  .hp .tempbox{margin-left:auto;text-align:right;}
+  .hp .tempbox .num{width:44px;}
+  .tile .tval{font-size:16px;font-weight:800;margin-top:2px;font-variant-numeric:tabular-nums;}
+  .tile.btn{cursor:pointer;} .tile.btn:active{background:var(--fill-2);}
+
+  /* ---------- bottom zone ---------- */
+  .bottom{flex:1 1 auto;overflow-y:auto;min-height:0;}
+  .menu{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 16px 22px;}
+  .mtile{border:1px solid var(--line);border-radius:14px;padding:14px 13px;cursor:pointer;background:var(--paper);}
+  .mtile:active{background:var(--fill-2);}
+  .mtile .ico{font-size:20px;}
+  .mtile .mt{font-size:14px;font-weight:700;margin-top:8px;}
+  .mtile .ms{font-size:11px;color:var(--ink-2);margin-top:2px;}
+
+  .sv{padding:6px 16px 26px;}
+  .svhead{display:flex;align-items:center;justify-content:space-between;padding:8px 0 4px;position:sticky;top:0;background:var(--paper);z-index:5;}
+  .svhead .t{font-size:19px;font-weight:800;letter-spacing:-.01em;}
+  .close{width:30px;height:30px;border-radius:50%;border:1px solid var(--line);background:var(--paper);color:var(--ink-2);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;}
+
+  .sechead-row{display:flex;align-items:center;justify-content:space-between;margin:18px 0 6px;min-height:26px;gap:10px;}
+  .sechead-row:first-of-type{margin-top:8px;}
+  .sechead{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-2);font-weight:700;margin:0;display:inline-flex;align-items:center;gap:7px;cursor:pointer;min-width:0;}
+  .sechead.static{cursor:default;}
+  .sechead .nmtxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .caret{font-size:10px;color:var(--ink-2);flex:0 0 auto;}
+  .ccount{font-size:11px;color:var(--ink-2);font-weight:700;flex:0 0 auto;}
+  .sec-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto;}
+  .editcat{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:var(--paper);color:var(--ink-2);display:flex;align-items:center;justify-content:center;font-size:12px;cursor:pointer;}
+  .addmini{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:1;cursor:pointer;flex:0 0 auto;}
+  .txtbtn{font-size:12px;font-weight:700;color:var(--accent);background:var(--accent-soft);border:none;border-radius:8px;padding:6px 10px;cursor:pointer;flex:0 0 auto;}
+  .empty{font-size:13px;color:var(--ink-2);font-style:italic;opacity:.6;padding:4px 2px 6px;}
+
+  .rec{display:flex;align-items:center;gap:11px;padding:11px 2px;border-top:1px solid var(--fill);cursor:pointer;}
+  .rec:first-of-type{border-top:none;}
+  .rec:active{background:var(--fill-2);}
+  .rec .info{flex:1 1 auto;min-width:0;}
+  .rec .nm{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rec .pv{font-size:12px;color:var(--ink-2);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rec .chev{color:var(--line);font-size:18px;flex:0 0 auto;}
+  .rec.dim .nm{color:var(--ink-2);}
+
+  .prep{width:15px;height:15px;border-radius:50%;border:2px solid var(--line);background:var(--paper);flex:0 0 auto;cursor:pointer;}
+  .prep.on{background:var(--accent);border-color:var(--accent);}
+  .lvlbadge{font-size:11px;font-weight:700;color:var(--ink-2);background:var(--fill);border:1px solid var(--line);border-radius:7px;padding:2px 0;flex:0 0 auto;width:26px;text-align:center;}
+  .valcluster{display:flex;align-items:baseline;gap:2px;flex:0 0 auto;font-variant-numeric:tabular-nums;}
+  .curinp{width:36px;text-align:right;border:none;border-bottom:1.5px solid var(--line);background:transparent;font:inherit;font-size:16px;font-weight:700;color:var(--accent);padding:2px;}
+  .curinp:focus{outline:none;border-bottom-color:var(--accent);}
+  .maxlbl{font-size:14px;color:var(--ink-2);font-weight:600;}
+  .qty{width:44px;text-align:center;}
+
+  .newcat{margin-top:20px;width:100%;border:1px dashed var(--line);border-radius:12px;padding:11px;font-size:13px;font-weight:600;color:var(--accent);background:var(--paper);cursor:pointer;}
+  .newcat:active{background:var(--accent-soft);}
+
+  .slotblock{border:1px solid var(--line);border-radius:14px;padding:2px 12px 6px;background:var(--fill-2);}
+  .slotrow{display:flex;align-items:center;justify-content:space-between;padding:9px 2px;border-top:1px solid var(--line);}
+  .slotrow:first-of-type{border-top:none;}
+  .slotlvl{font-size:15px;font-weight:600;}
+
+  .daygrid{display:flex;flex-wrap:wrap;gap:8px;}
+  .daybtn{border:1px solid var(--line);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:700;background:var(--paper);cursor:pointer;}
+  .daybtn:active{background:var(--fill-2);}
+  .daybtn.newest{border-color:var(--accent);color:var(--accent);}
+
+  .coins{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;}
+  .coin{text-align:center;} .coin .cl{font-size:10px;font-weight:800;color:var(--ink-2);margin-bottom:3px;}
+
+  .abhead{display:grid;grid-template-columns:44px 1fr 1fr 1.35fr;gap:8px;padding:0 2px 6px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2);font-weight:700;}
+  .abhead span{text-align:center;} .abhead span:first-child{text-align:left;}
+  .abrow{display:grid;grid-template-columns:44px 1fr 1fr 1.35fr;gap:8px;align-items:center;padding:5px 2px;border-top:1px solid var(--fill);}
+  .abrow:first-of-type{border-top:none;}
+  .abrow .an{font-size:14px;font-weight:800;}
+  .savecell{display:flex;align-items:center;gap:6px;}
+  .mk{width:24px;height:24px;border-radius:6px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink-2);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:0 0 auto;}
+  .mk.on{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .skrow{display:flex;align-items:center;gap:9px;padding:8px 2px;border-top:1px solid var(--fill);}
+  .skrow .nm{font-size:14.5px;font-weight:600;display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 auto;overflow:hidden;}
+  .skrow .nm .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .skrow .ab{font-size:9.5px;font-weight:800;color:var(--ink-2);background:var(--fill);border-radius:5px;padding:2px 5px;flex:0 0 auto;}
+  .num.sk{width:54px;flex:0 0 auto;text-align:center;}
+  .topstats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0 2px;}
+  .statbox{border:1px solid var(--line);border-radius:12px;padding:9px 11px;background:var(--fill-2);}
+  .statbox .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2);font-weight:700;margin-bottom:5px;}
+  .num.big{font-size:17px;font-weight:800;text-align:left;}
+  .area{border:1px solid var(--line);border-radius:8px;background:var(--paper);font:inherit;color:var(--ink);padding:9px 10px;width:100%;resize:none;overflow-y:hidden;line-height:1.45;}
+  .area:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .chkrow{display:flex;align-items:center;gap:10px;margin-top:14px;cursor:pointer;}
+  .chkrow .box{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);background:var(--paper);display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;}
+  .chkrow .box.on{background:var(--accent);border-color:var(--accent);}
+  .chkrow .lab{font-size:14px;font-weight:600;}
+
+  /* ---------- modal ---------- */
+  .overlay{position:absolute;inset:0;background:rgba(25,25,30,.4);display:none;align-items:center;justify-content:center;padding:22px;z-index:40;}
+  .overlay.on{display:flex;}
+  .dialog{width:100%;max-width:330px;background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:15px 16px 16px;box-shadow:0 20px 44px rgba(0,0,0,.3);max-height:88%;overflow-y:auto;}
+  .dhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .dhead .t{font-size:17px;font-weight:700;}
+  .dlabel{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2);font-weight:700;margin:0 0 5px;display:block;}
+  .inp{border:1px solid var(--line);border-radius:8px;background:var(--paper);font:inherit;color:var(--ink);padding:8px 10px;width:100%;}
+  .inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+  .row2{display:flex;gap:10px;margin-top:12px;} .row2 .col{flex:1 1 0;min-width:0;}
+  .mt12{margin-top:12px;}
+  .dact{margin-top:16px;display:flex;justify-content:flex-end;gap:10px;}
+  .del{border:1px solid var(--line);background:var(--paper);color:#b3261e;font:inherit;font-weight:600;font-size:13px;padding:8px 14px;border-radius:12px;cursor:pointer;}
+  .primary{border:1px solid var(--accent);background:var(--accent);color:#fff;font:inherit;font-weight:600;font-size:13px;padding:8px 16px;border-radius:12px;cursor:pointer;}
+  .primary:disabled{opacity:.4;cursor:default;}
+  .setup-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-top:1px solid var(--fill);}
+  .setup-row:first-of-type{border-top:none;}
+  .setup-row .lv{font-size:15px;font-weight:600;}
+  .setup-row input{width:70px;text-align:right;}
+  .hint{font-size:12px;color:var(--ink-2);margin-top:10px;line-height:1.4;}
+</style>
+</head>
+<body>
+  <div class="caption">Full app prototype &mdash; tap a character to open the hub, tap a subview, edit anything, &times; back to the grid, &lsaquo; back to the list.</div>
+
+  <div class="phone">
+    <div class="statusbar"><span>9:41</span><span><span class="blk round"></span> <span class="blk"></span></span></div>
+    <div id="screen"></div>
+    <div class="overlay" id="modal" onclick="if(event.target===this)closeModal()"><div class="dialog" id="mbody"></div></div>
+  </div>
+
+<script>
+/* ============================ DATA ============================ */
+var ABIL_ORDER=["STR","DEX","CON","INT","WIS","CHA"];
+var SKILLS=[["Acrobatics","DEX"],["Animal Handling","WIS"],["Arcana","INT"],["Athletics","STR"],["Deception","CHA"],["History","INT"],["Insight","WIS"],["Intimidation","CHA"],["Investigation","INT"],["Medicine","WIS"],["Nature","INT"],["Perception","WIS"],["Performance","CHA"],["Persuasion","CHA"],["Religion","INT"],["Sleight of Hand","DEX"],["Stealth","DEX"],["Survival","WIS"]];
+
+function blankAbilities(){var o={};ABIL_ORDER.forEach(function(k){o[k]={score:"10",mod:"+0",save:"+0",saveProf:false};});return o;}
+function blankSkills(){var o={};SKILLS.forEach(function(s){o[s[0]]={value:"+0",prof:false,exp:false};});return o;}
+function blankSlots(){var a=[];for(var l=1;l<=9;l++){a.push({level:l,total:0,current:0});}return a;}
+function newChar(id,name,classes){
+  return {id:id,name:name,classes:classes,speed:"30",passivePerception:"10",profBonus:"+2",ac:"10",
+    hp:{cur:0,max:0,temp:0},hitDice:[],
+    abilities:blankAbilities(),skills:blankSkills(),
+    journal:[],notes:"",
+    coins:{PP:"0",GP:"0",EP:"0",SP:"0",CP:"0"},items:[],
+    featCats:[],feats:[],
+    equipment:[],
+    spellCats:[],spells:[],
+    slots:blankSlots(),counterCats:[],counters:[]};
+}
+
+var sable=newChar("sable","Sable Nightwind",[{name:"Rogue (Arcane Trickster)",level:5},{name:"Wizard (Evoker)",level:2}]);
+sable.speed="30";sable.passivePerception="14";sable.profBonus="+3";sable.ac="15";
+sable.hp={cur:38,max:45,temp:5};
+sable.hitDice=[{die:"d8",max:5,cur:3},{die:"d6",max:2,cur:2}];
+sable.abilities={STR:{score:"10",mod:"+0",save:"+0",saveProf:false},DEX:{score:"17",mod:"+3",save:"+6",saveProf:true},CON:{score:"13",mod:"+1",save:"+1",saveProf:false},INT:{score:"16",mod:"+3",save:"+6",saveProf:true},WIS:{score:"12",mod:"+1",save:"+1",saveProf:false},CHA:{score:"14",mod:"+2",save:"+2",saveProf:false}};
+(function(){
+  var v={"Acrobatics":["+6",1,0],"Arcana":["+6",1,0],"Deception":["+5",1,0],"Insight":["+4",1,0],"Investigation":["+6",1,0],"Perception":["+4",1,0],"Persuasion":["+5",1,0],"Sleight of Hand":["+9",1,1],"Stealth":["+9",1,1]};
+  for(var k in v){if(v.hasOwnProperty(k)){sable.skills[k]={value:v[k][0],prof:!!v[k][1],exp:!!v[k][2]};}}
+})();
+sable.journal=[{day:1,body:"Arrived in Barovia. The mists closed behind us; there is no road back. A funeral in the village square."},{day:2,body:"Met Ireena Kolyana. Strahd knows we are here."},{day:3,body:"Windmill on the hill — Old Bonegrinder. We did not linger."}];
+sable.notes="Find the Sunsword. Tome of Strahd location still unknown. Madam Eva's reading pointed to the Amber Temple.";
+sable.coins={PP:"2",GP:"84",EP:"0",SP:"37",CP:"12"};
+sable.items=[{name:"Thieves' Tools",qty:"1",desc:"Proficient. Used for locks and traps."},{name:"Potion of Healing",qty:"3",desc:"Regain 2d4+2 HP as an action."},{name:"Rations",qty:"5",desc:"Days of trail food."},{name:"Grappling Hook",qty:"1",desc:""}];
+sable.featCats=[{id:1,name:"Rogue"},{id:2,name:"Wizard"}];
+sable.feats=[{name:"Sneak Attack",desc:"+3d6 once per turn when you have advantage or an ally is adjacent to the target.",catId:1},{name:"Cunning Action",desc:"Bonus action to Dash, Disengage, or Hide.",catId:1},{name:"Uncanny Dodge",desc:"Reaction to halve damage from one attacker you can see.",catId:1},{name:"Arcane Recovery",desc:"Once per day on a short rest, recover spell slots up to half your wizard level.",catId:2},{name:"Sculpt Spells",desc:"Protect allies from your own evocation spells.",catId:2},{name:"Darkvision",desc:"See in dim light within 60 ft as if bright.",catId:null}];
+sable.equipment=[{name:"Rapier",desc:"1d8 piercing, finesse.",section:"weapons",attuned:false},{name:"Shortbow",desc:"1d6 piercing, range 80/320.",section:"weapons",attuned:false},{name:"Dagger (x2)",desc:"1d4 piercing, finesse, thrown 20/60.",section:"weapons",attuned:false},{name:"Cloak of Elvenkind",desc:"Advantage on Stealth to hide; disadvantage on Perception to see you.",section:"other",attuned:true},{name:"Studded Leather",desc:"AC 12 + Dex.",section:"other",attuned:false}];
+sable.spellCats=[{id:1,name:"Combat"},{id:2,name:"Utility"}];
+sable.spells=[{name:"Fire Bolt",desc:"Ranged spell attack, 2d10 fire.",catId:1,level:0,prepared:true},{name:"Fireball",desc:"20-ft radius, 8d6 fire; Dex save for half.",catId:1,level:3,prepared:true},{name:"Shield",desc:"Reaction; +5 AC until your next turn.",catId:1,level:1,prepared:true},{name:"Mage Hand",desc:"Spectral hand manipulates objects at range.",catId:2,level:0,prepared:true},{name:"Disguise Self",desc:"Change your appearance for 1 hour.",catId:2,level:1,prepared:false},{name:"Misty Step",desc:"Bonus action; teleport up to 30 ft.",catId:2,level:2,prepared:true},{name:"Detect Magic",desc:"Ritual. Sense magic within 30 ft.",catId:null,level:1,prepared:false}];
+sable.slots=blankSlots();sable.slots[0].total=4;sable.slots[0].current=4;sable.slots[1].total=2;sable.slots[1].current=1;
+sable.counterCats=[{id:1,name:"Class Features"},{id:2,name:"Items"}];
+sable.counters=[{name:"Arcane Recovery",cur:1,max:1,catId:1,note:"Recover expended spell slots, once per day."},{name:"Wand of Magic Missiles",cur:5,max:7,catId:2,note:"Regains 1d6+1 charges daily at dawn."},{name:"Inspiration",cur:1,max:1,catId:null,note:"DM-granted; spend for advantage."}];
+
+var thorne=newChar("thorne","Thorne Ironfell",[{name:"Fighter (Battle Master)",level:8}]);
+thorne.hp={cur:71,max:71,temp:0};thorne.speed="30";thorne.passivePerception="12";thorne.profBonus="+3";thorne.hitDice=[{die:"d10",max:8,cur:8}];thorne.ac="18";
+var wren=newChar("wren","Wren Duskwhisper",[{name:"Druid (Circle of the Moon)",level:4}]);
+wren.hp={cur:27,max:27,temp:0};wren.passivePerception="15";wren.profBonus="+2";wren.hitDice=[{die:"d8",max:4,cur:4}];wren.ac="15";
+
+var DB=[sable,thorne,wren];
+
+/* ============================ STATE ============================ */
+var screen="list", cur=null, view="menu", draft=null, dmode=null, dctx=null, editIdx=null, editCatId=null, collapse={};
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function totalLevel(c){var t=0;c.classes.forEach(function(x){t+=Number(x.level)||0;});return t;}
+function el(id){return document.getElementById(id);}
+function suf(n){return ["th","st","nd","rd"][(n%100>10&&n%100<14)?0:(n%10<4?n%10:0)];}
+function autoGrow(t){if(!t)return;t.style.height='auto';var h=t.scrollHeight,m=parseInt(t.getAttribute('data-max')||'220',10);if(h>m){t.style.height=m+'px';t.style.overflowY='auto';}else{t.style.height=h+'px';t.style.overflowY='hidden';}}
+function growAll(){var a=document.querySelectorAll('.area');for(var i=0;i<a.length;i++)autoGrow(a[i]);}
+
+/* ============================ ROUTER ============================ */
+function renderScreen(){ if(screen==="list")renderList(); else renderHub(); }
+function openChar(id){for(var i=0;i<DB.length;i++){if(DB[i].id===id){cur=DB[i];break;}} screen="hub";view="menu";collapse={};renderScreen();}
+function toList(){screen="list";cur=null;renderScreen();}
+
+/* ============================ LIST ============================ */
+function renderList(){
+  var cards='';
+  DB.forEach(function(c){
+    cards+='<div class="ccard" onclick="openChar(\''+c.id+'\')"><div class="cn">'+esc(c.name)+'</div>'
+      +'<div class="cc">'+(c.classes.map(function(x){return esc(x.name)+' '+x.level;}).join(' / ')||'No class')+' &middot; Level '+totalLevel(c)+'</div>'
+      +'<div class="chp">HP '+c.hp.cur+' / '+c.hp.max+(Number(c.hp.temp)>0?' (+'+c.hp.temp+' temp)':'')+'</div></div>';
+  });
+  el('screen').innerHTML='<div class="lhead"><h1>Characters</h1><div class="sub">'+DB.length+' saved</div></div>'
+    +'<div class="llist">'+cards+'</div>'
+    +'<button class="fab" onclick="alert(\'New character (stub)\')">+</button>';
+}
+
+/* ============================ HUB ============================ */
+function renderHub(){
+  el('screen').innerHTML='<div class="vitals" id="vitals"></div><div class="bottom" id="bottom"></div>';
+  renderVitals(); renderBottom();
+}
+function renderVitals(){
+  var c=cur;
+  var clsum=c.classes.map(function(x){return esc(x.name)+' '+x.level;}).join(' \u00b7 ');
+  if(!clsum)clsum='<span style="color:var(--ink-2)">Add class\u2026</span>';
+  var hd=c.hitDice.map(function(d){return esc(d.cur)+'/'+esc(d.max)+' '+esc(d.die);}).join(' \u00b7 ');
+  if(!hd)hd='Tap to set up';
+  el('vitals').innerHTML=
+    '<div class="vtop"><span class="back" onclick="toList()">&lsaquo;</span><span class="vname">'+esc(c.name)+'</span>'
+      +'<span class="lvpill">Lvl '+totalLevel(c)+'</span></div>'
+    +'<div class="classbtn" onclick="openClasses()"><div class="clsum">'+clsum+'</div><span class="chev">\u203a</span></div>'
+    +'<div class="tiles">'
+      +'<div class="tile hp"><div><div class="tl">Hit Points</div><div class="hpwrap">'
+        +'<input class="num" value="'+c.hp.cur+'" oninput="setPath([\'hp\',\'cur\'],this.value)"><span class="slash">/</span>'
+        +'<input class="num" value="'+c.hp.max+'" oninput="setPath([\'hp\',\'max\'],this.value)"></div></div>'
+        +'<div class="tempbox"><div class="tl">Temp</div><input class="num" value="'+c.hp.temp+'" oninput="setPath([\'hp\',\'temp\'],this.value)"></div></div>'
+      +'<div class="tile btn" onclick="openHitDice()"><div class="tl">Hit Dice</div><div class="tval hdtile">'+hd+'</div></div>'
+      +'<div class="tile"><div class="tl">Armor Class</div><input class="num" style="margin-top:3px" value="'+esc(c.ac)+'" oninput="setPath([\'ac\'],this.value)"></div>'
+    +'</div>';
+}
+function setPath(path,val){var o=cur;for(var i=0;i<path.length-1;i++)o=o[path[i]];o[path[path.length-1]]=val;}
+
+var MENU=[["journal","\u270e","Journal & Notes","log & freeform"],["inventory","\u25C9","Inventory","coins & items"],["feats","\u2726","Feats & Traits","by category"],["equipment","\u2694","Equipment","weapons & gear"],["spells","\u2727","Spell List","prepared & levels"],["counters","\u25F4","Counters","slots & resources"],["abilities","\u2B43","Abilities & Skills","scores & skills"]];
+function renderBottom(){
+  if(view==="menu"){
+    var g='';MENU.forEach(function(m){g+='<div class="mtile" onclick="openView(\''+m[0]+'\')"><div class="ico">'+m[1]+'</div><div class="mt">'+m[2]+'</div><div class="ms">'+m[3]+'</div></div>';});
+    el('bottom').innerHTML='<div class="menu">'+g+'</div>';return;
+  }
+  var fn={journal:svJournal,inventory:svInventory,feats:svFeats,equipment:svEquipment,spells:svSpells,counters:svCounters,abilities:svAbilities}[view];
+  fn(); growAll();
+}
+function openView(k){view=k;renderBottom();el('bottom').scrollTop=0;}
+function menu(){view="menu";renderBottom();}
+function head(title){return '<div class="svhead"><span class="t">'+title+'</span><span class="close" onclick="menu()">&times;</span></div>';}
+
+/* ---------- JOURNAL & NOTES ---------- */
+function svJournal(){
+  var c=cur,days='';
+  c.journal.forEach(function(e,i){var newest=(i===c.journal.length-1);days+='<button class="daybtn'+(newest?' newest':'')+'" onclick="openDay('+i+')">Day '+e.day+'</button>';});
+  if(!days)days='<div class="empty">No entries yet</div>';
+  el('bottom').innerHTML='<div class="sv">'+head('Journal &amp; Notes')
+    +'<div class="sechead-row"><span class="sechead static">Journal</span><span class="addmini" onclick="addDay()">+</span></div>'
+    +'<div class="daygrid">'+days+'</div>'
+    +'<div class="sechead-row"><span class="sechead static">Notes</span></div>'
+    +'<textarea class="area" data-max="240" placeholder="Freeform notes\u2026" oninput="cur.notes=this.value;autoGrow(this)">'+esc(c.notes)+'</textarea>'
+    +'</div>';
+}
+function addDay(){var c=cur;var n=c.journal.length?c.journal[c.journal.length-1].day+1:1;c.journal.push({day:n,body:""});renderBottom();openDay(c.journal.length-1);}
+function openDay(i){
+  var e=cur.journal[i],last=(i===cur.journal.length-1);
+  var delBtn=last?'<button class="del" onclick="delDay('+i+')">Delete day</button>':'';
+  openModal('<div class="dhead"><span class="t">Day '+e.day+'</span><span class="close" onclick="closeModal()">&times;</span></div>'
+    +'<textarea class="area" data-max="300" placeholder="What happened\u2026" oninput="cur.journal['+i+'].body=this.value;autoGrow(this)">'+esc(e.body)+'</textarea>'
+    +'<div class="dact">'+delBtn+'</div>');
+  autoGrow(el('mbody').querySelector('.area'));
+}
+function delDay(i){cur.journal.splice(i,1);closeModal();}
+
+/* ---------- INVENTORY ---------- */
+function svInventory(){
+  var c=cur,coins='';
+  ["PP","GP","EP","SP","CP"].forEach(function(k){coins+='<div class="coin"><div class="cl">'+k+'</div><input class="num" value="'+esc(c.coins[k])+'" oninput="cur.coins.'+k+'=this.value"></div>';});
+  var items='';
+  c.items.forEach(function(it,i){
+    var pv=(it.desc||'').replace(/\s+/g,' ').trim();
+    items+='<div class="rec" onclick="openItem('+i+')"><div class="info"><div class="nm">'+(esc(it.name)||'Untitled')+'</div>'+(pv?'<div class="pv">'+esc(pv)+'</div>':'')+'</div>'
+      +'<input class="num qty" value="'+esc(it.qty)+'" onclick="event.stopPropagation()" oninput="cur.items['+i+'].qty=this.value"><span class="chev">\u203a</span></div>';
+  });
+  if(!items)items='<div class="empty">No items yet</div>';
+  el('bottom').innerHTML='<div class="sv">'+head('Inventory')
+    +'<div class="sechead-row"><span class="sechead static">Coins</span></div><div class="coins">'+coins+'</div>'
+    +'<div class="sechead-row"><span class="sechead static">Items</span><span class="addmini" onclick="newItem()">+</span></div>'+items
+    +'</div>';
+}
+function newItem(){draft={name:"",qty:"1",desc:""};dmode="createItem";itemDialog("New item");}
+function openItem(i){editIdx=i;draft=cur.items[i];dmode="editItem";itemDialog("Edit item");}
+function itemDialog(title){
+  var creating=(dmode==="createItem");
+  openModal('<div class="dhead"><span class="t">'+title+'</span><span class="close" onclick="closeModal()">&times;</span></div>'
+    +'<label class="dlabel">Name</label><input class="inp" id="d-name" value="'+esc(draft.name)+'" oninput="draft.name=this.value;syncCreate()">'
+    +'<label class="dlabel mt12">Description</label><textarea class="area" data-max="180" oninput="draft.desc=this.value;autoGrow(this)">'+esc(draft.desc)+'</textarea>'
+    +'<div class="dact">'+(creating?'':'<button class="del" onclick="cur.items.splice(editIdx,1);closeModal()">Delete</button>')
+    +(creating?'<button class="primary" id="d-create" onclick="cur.items.push(draft);closeModal()">Create</button>':'')+'</div>');
+  autoGrow(el('mbody').querySelector('.area'));syncCreate();
+}
+
+/* ---------- generic categorized list (Feats, Spells, Counters) ---------- */
+function maxCatId(cats){var m=0;cats.forEach(function(c){if(c.id>m)m=c.id;});return m;}
+function catBlock(cats,records,ckey,rowFn,addFn){
+  var html='';
+  cats.forEach(function(c){
+    var idxs=[];records.forEach(function(r,i){if(r.catId===c.id)idxs.push(i);});
+    var col=collapse[ckey+c.id];var caret=col?'\u25B8':'\u25BE';
+    html+='<div class="sechead-row"><span class="sechead" onclick="tog(\''+ckey+c.id+'\')"><span class="caret">'+caret+'</span><span class="nmtxt">'+esc(c.name)+'</span>'+(col?' <span class="ccount">'+idxs.length+'</span>':'')+'</span>'
+      +'<span class="sec-actions"><span class="editcat" onclick="'+addFn+'CatOpen('+c.id+')">\u270E</span><span class="addmini" onclick="'+addFn+'New('+c.id+')">+</span></span></div>';
+    if(!col)html+=idxs.length?idxs.map(rowFn).join(''):'<div class="empty">Nothing here yet</div>';
+  });
+  var un=[];records.forEach(function(r,i){if(r.catId==null)un.push(i);});
+  var uc=collapse[ckey+'un'];var ucar=uc?'\u25B8':'\u25BE';
+  html+='<div class="sechead-row"><span class="sechead" onclick="tog(\''+ckey+'un\')"><span class="caret">'+ucar+'</span><span class="nmtxt">Uncategorized</span>'+(uc?' <span class="ccount">'+un.length+'</span>':'')+'</span><span class="sec-actions"><span class="addmini" onclick="'+addFn+'New(null)">+</span></span></div>';
+  if(!uc)html+=un.length?un.map(rowFn).join(''):'<div class="empty">Nothing here yet</div>';
+  return html;
+}
+function tog(k){collapse[k]=!collapse[k];renderBottom();}
+function catSelectHTML(cats,sel){var h='<option value=""'+(sel==null?' selected':'')+'>Uncategorized</option>';cats.forEach(function(c){h+='<option value="'+c.id+'"'+(c.id===sel?' selected':'')+'>'+esc(c.name)+'</option>';});return h;}
+function syncCreate(){var b=el('d-create');if(b)b.disabled=(!draft.name||draft.name.trim().length===0);}
+
+/* ---------- FEATS & TRAITS ---------- */
+function svFeats(){
+  var c=cur;
+  var rows=function(i){var e=c.feats[i];var pv=(e.desc||'').replace(/\s+/g,' ').trim();return '<div class="rec" onclick="featsEdit('+i+')"><div class="info"><div class="nm">'+(esc(e.name)||'Untitled')+'</div>'+(pv?'<div class="pv">'+esc(pv)+'</div>':'')+'</div><span class="chev">\u203a</span></div>';};
+  el('bottom').innerHTML='<div class="sv">'+head('Feats &amp; Traits')+catBlock(c.featCats,c.feats,'ft',rows,'feats')+'<button class="newcat" onclick="featsCatNew()">+ New category</button></div>';
+}
+function featsNew(catId){draft={name:"",desc:"",catId:catId};dmode="c";recDialog("New entry","feats",false);}
+function featsEdit(i){editIdx=i;draft=cur.feats[i];dmode="e";recDialog("Edit entry","feats",true);}
+function recDialog(title,key,editing){
+  var cats=cur.featCats;
+  openModal('<div class="dhead"><span class="t">'+title+'</span><span class="close" onclick="closeModal()">&times;</span></div>'
+    +'<label class="dlabel">Name</label><input class="inp" id="d-name" value="'+esc(draft.name)+'" oninput="draft.name=this.value;syncCreate()">'
+    +'<label class="dlabel mt12">Description</label><textarea class="area" data-max="200" oninput="draft.desc=this.value;autoGrow(this)">'+esc(draft.desc)+'</textarea>'
+    +'<label class="dlabel mt12">Category</label><select class="inp" onchange="draft.catId=this.value===\'\'?null:parseInt(this.value,10)">'+catSelectHTML(cats,draft.catId)+'</select>'
+    +'<div class="dact">'+(editing?'<button class="del" onclick="cur.feats.splice(editIdx,1);closeModal()">Delete</button>':'')
+    +(editing?'':'<button class="primary" id="d-create" onclick="featsCreate()">Create</button>')+'</div>');
+  autoGrow(el('mbody').querySelector('.area'));syncCreate();
+}
+function featsCreate(){if(!draft.name.trim())return;if(draft.catId!=null)collapse['ft'+draft.catId]=false;else collapse['ftun']=false;cur.feats.push(draft);closeModal();}
+function featsCatNew(){var id=maxCatId(cur.featCats)+1;cur.featCats.push({id:id,name:"New category"});renderBottom();featsCatOpen(id);}
+function featsCatOpen(id){catDialog(cur.featCats,cur.feats,id,"feats");}
+
+/* ---------- EQUIPMENT ---------- */
+function svEquipment(){
+  var c=cur;
+  var row=function(i){var e=c.equipment[i];var pv=(e.desc||'').replace(/\s+/g,' ').trim();return '<div class="rec" onclick="equipEdit('+i+')"><div class="info"><div class="nm">'+(esc(e.name)||'Untitled')+'</div>'+(pv?'<div class="pv">'+esc(pv)+'</div>':'')+'</div><span class="chev">\u203a</span></div>';};
+  var attuned='',weapons='',other='';
+  c.equipment.forEach(function(e,i){if(e.attuned)attuned+=row(i);if(e.section==='weapons')weapons+=row(i);if(e.section==='other')other+=row(i);});
+  el('bottom').innerHTML='<div class="sv">'+head('Equipment')
+    +'<div class="sechead-row"><span class="sechead static">Attuned Items</span></div>'+(attuned||'<div class="empty">Nothing attuned</div>')
+    +'<div class="sechead-row"><span class="sechead static">Weapons</span><span class="addmini" onclick="equipNew(\'weapons\')">+</span></div>'+(weapons||'<div class="empty">Nothing here yet</div>')
+    +'<div class="sechead-row"><span class="sechead static">Other Equipment</span><span class="addmini" onclick="equipNew(\'other\')">+</span></div>'+(other||'<div class="empty">Nothing here yet</div>')
+    +'</div>';
+}
+function equipNew(section){draft={name:"",desc:"",section:section,attuned:false};dmode="c";equipDialog("New item",false);}
+function equipEdit(i){editIdx=i;draft=cur.equipment[i];dmode="e";equipDialog("Edit item",true);}
+function equipDialog(title,editing){
+  openModal('<div class="dhead"><span class="t">'+title+'</span><span class="close" onclick="closeModal()">&times;</span></div>'
+    +'<label class="dlabel">Name</label><input class="inp" id="d-name" value="'+esc(draft.name)+'" oninput="draft.name=this.value;syncCreate()">'
+    +'<label class="dlabel mt12">Description</label><textarea class="area" data-max="180" oninput="draft.desc=this.value;autoGrow(this)">'+esc(draft.desc)+'</textarea>'
+    +'<div class="chkrow" onclick="draft.attuned=!draft.attuned;el(\'attbox\').className=\'box\'+(draft.attuned?\' on\':\'\')"><span class="box'+(draft.attuned?' on':'')+'" id="attbox">\u2713</span><span class="lab">Attuned</span></div>'
+    +'<div class="dact">'+(editing?'<button class="del" onclick="cur.equipment.splice(editIdx,1);closeModal()">Delete</button>':'')
+    +(editing?'':'<button class="primary" id="d-create" onclick="equipCreate()">Create</button>')+'</div>');
+  autoGrow(el('mbody').querySelector('.area'));syncCreate();
+}
+function equipCreate(){if(!draft.name.trim())return;cur.equipment.push(draft);closeModal();}
+
+/* ---------- SPELL LIST ---------- */
+function svSpells(){
+  var c=cur;
+  var row=function(i){var s=c.spells[i];var pv=(s.desc||'').replace(/\s+/g,' ').trim();var badge=s.level===0?'C':s.level;
+    return '<div class="rec'+(s.prepared?'':' dim')+'" onclick="spellEdit('+i+')">'
+      +'<span class="prep'+(s.prepared?' on':'')+'" onclick="event.stopPropagation();cur.spells['+i+'].prepared=!cur.spells['+i+'].prepared;renderBottom()"></span>'
+      +'<div class="info"><div class="nm">'+(esc(s.name)||'Untitled')+'</div>'+(pv?'<div class="pv">'+esc(pv)+'</div>':'')+'</div>'
+      +'<span class="lvlbadge">'+badge+'</span><span class="chev">\u203a</span></div>';};
+  el('bottom').innerHTML='<div class="sv">'+head('Spell List')+catBlock(c.spellCats,c.spells,'sp',row,'spells')+'<button class="newcat" onclick="spellsCatNew()">+ New category</button></div>';
+}
+function spellsNew(catId){draft={name:"",desc:"",catId:catId,level:0,prepared:false};dmode="c";spellDialog("New spell",false);}
+function spellEdit(i){editIdx=i;draft=cur.spells[i];dmode="e";spellDialog("Edit spell",true);}
+function spellDialog(title,editing){
+  var lv='';for(var l=0;l<=9;l++){lv+='<option value="'+l+'"'+(l===draft.level?' selected':'')+'>'+(l===0?'Cantrip':l+suf(l)+' Level')+'</option>';}
+  openModal('<div class="dhead"><span class="t">'+title+'</span><span class="close" onclick="closeModal()">&times;</span></div>'
+    +'<label class="dlabel">Name</label><input class="inp" id="d-name" value="'+esc(draft.name)+'" oninput="draft.name=this.value;syncCreate()">'
+    +'<label class="dlabel mt12">Description</label><textarea class="area" data-max="180" oninput="draft.desc=this.value;autoGrow(this)">'+esc(draft.desc)+'</textarea>'
+    +'<div class="row2"><div class="col"><label class="dlabel">Level</label><select class="inp" onchange="draft.level=parseInt(this.value,10)">'+lv+'</select></div>'
+    +'<div class="col"><label class="dlabel">Category</label><select class="inp" onchange="draft.catId=this.value===\'\'?null:parseInt(this.value,10)">'+catSelectHTML(cur.spellCats,draft.catId)+'</select></div></div>'
+    +'<div class="chkrow" onclick="draft.prepared=!draft.prepared;el(\'prepbox\').className=\'box\'+(draft.prepared?\' on\':\'\')"><span class="box'+(draft.prepared?' on':'')+'" id="prepbox">\u2713</span><span class="lab">Prepared</span></div>'
+    +'<div class="dact">'+(editing?'<button class="del" onclick="cur.spells.splice(editIdx,1);closeModal()">Delete</button>':'')
+    +(editing?'':'<button class="primary" id="d-create" onclick="spellsCreate()">Create</button>')+'</div>');
+  autoGrow(el('mbody').querySelector('.area'));syncCreate();
+}
+function spellsCreate(){if(!draft.name.trim())return;if(draft.catId!=null)collapse['sp'+draft.catId]=false;else collapse['spun']=false;cur.spells.push(draft);closeModal();}
+function spellsCatNew(){var id=maxCatId(cur.spellCats)+1;cur.spellCats.push({id:id,name:"New category"});renderBottom();spellsCatOpen(id);}
+function spellsCatOpen(id){catDialog(cur.spellCats,cur.spells,id,"spells");}
+
+/* ---------- COUNTERS ---------- */
+function svCounters(){
+  var c=cur;
+  var slots='';c.slots.forEach(function(s,idx){if(s.total>0){slots+='<div class="slotrow"><span class="slotlvl">'+s.level+suf(s.level)+'</span><span class="valcluster"><input class="curinp" value="'+s.current+'" onclick="event.stopPropagation()" oninput="cur.slots['+idx+'].current=parseInt(this.value,10)||0"><span class="maxlbl">/ '+s.total+'</span></span></div>';}});
+  if(!slots)slots='<div class="empty">No spell slots yet &mdash; tap "Set totals".</div>';
+  var row=function(i){var ct=c.counters[i];var pv=(ct.note||'').replace(/\s+/g,' ').trim();var dep=Number(ct.cur)<=0;
+    return '<div class="rec'+(dep?' dim':'')+'" onclick="counterEdit('+i+')"><div class="info"><div class="nm">'+(esc(ct.name)||'Untitled')+'</div>'+(pv?'<div class="pv">'+esc(pv)+'</div>':'')+'</div>'
+      +'<span class="valcluster"><input class="curinp" value="'+esc(ct.cur)+'" onclick="event.stopPropagation()" oninput="cur.counters['+i+'].cur=parseInt(this.value,10)||0"><span class="maxlbl">/ '+esc(ct.max)+'</span></span><span class="chev">\u203a</span></div>';};
+  el('bottom').innerHTML='<div class="sv">'+head('Counters')
+    +'<div class="sechead-row"><span class="sechead static">Spell Slots</span><button class="txtbtn" onclick="slotSetup()">Set totals</button></div><div class="slotblock">'+slots+'</div>'
+    +catBlock(c.counterCats,c.counters,'ct',row,'counters')+'<button class="newcat" onclick="countersCatNew()">+ New category</button></div>';
+}
+function slotSetup(){
+  var rows='';cur.slots.forEach(function(s,idx){rows+='<div class="setup-row"><span class="lv">'+s.level+suf(s.level)+' level</span><input class="inp" value="'+s.total+'" oninput="setSlotTotal('+idx+',this.value)"></div>';});
+  openModal('<div class="dhead"><span class="t">Spell slot totals</span><span class="close" onclick="closeModal()">&times;</span></div><div class="hint" style="margin:0 0 8px">Set slots per level. 0 hides the level.</div>'+rows);
+}
+function setSlotTotal(idx,v){var n=parseInt(v,10);if(isNaN(n)||n<0)n=0;var was=cur.slots[idx].total;cur.slots[idx].total=n;if(was===0&&n>0)cur.slots[idx].current=n;if(n<cur.slots[idx].current)cur.slots[idx].current=n;}
+function countersNew(catId){draft={name:"",cur:1,max:1,catId:catId,note:""};dmode="c";counterDialog("New counter",false);}
+function counterEdit(i){editIdx=i;draft=cur.counters[i];dmode="e";counterDialog("Edit counter",true);}
+function counterDialog(title,editing){
+  openModal('<div class="dhead"><span class="t">'+title+'</span><span class="close" onclick="closeModal()">&times;</span></div>'
+    +'<label class="dlabel">Name</label><input class="inp" id="d-name" value="'+esc(draft.name)+'" oninput="draft.name=this.value;syncCreate()">'
+    +'<div class="row2"><div class="col"><label class="dlabel">Max</label><input class="inp" value="'+esc(draft.max)+'" oninput="draft.max=parseInt(this.value,10)||0"></div>'
+    +'<div class="col"><label class="dlabel">Category</label><select class="inp" onchange="draft.catId=this.value===\'\'?null:parseInt(this.value,10)">'+catSelectHTML(cur.counterCats,draft.catId)+'</select></div></div>'
+    +'<label class="dlabel mt12">Note</label><textarea class="area" data-max="140" oninput="draft.note=this.value;autoGrow(this)">'+esc(draft.note)+'</textarea>'
+    +'<div class="dact">'+(editing?'<button class="del" onclick="cur.counters.splice(editIdx,1);closeModal()">Delete</button>':'')
+    +(editing?'':'<button class="primary" id="d-create" onclick="countersCreate()">Create</button>')+'</div>');
+  autoGrow(el('mbody').querySelector('.area'));syncCreate();
+}
+function countersCreate(){if(!draft.name.trim())return;draft.cur=draft.max;if(draft.catId!=null)collapse['ct'+draft.catId]=false;else collapse['ctun']=false;cur.counters.push(draft);closeModal();}
+function countersCatNew(){var id=maxCatId(cur.counterCats)+1;cur.counterCats.push({id:id,name:"New category"});renderBottom();countersCatOpen(id);}
+function countersCatOpen(id){catDialog(cur.counterCats,cur.counters,id,"counters");}
+
+/* ---------- shared category rename/delete dialog ---------- */
+function catDialog(cats,records,id,key){
+  editCatId=id;dctx={cats:cats,records:records,key:key};
+  var c=null;cats.forEach(function(x){if(x.id===id)c=x;});
+  var n=0;records.forEach(function(r){if(r.catId===id)n++;});
+  openModal('<div class="dhead"><span class="t">Category</span><span class="close" onclick="closeModal()">&times;</span></div>'
+    +'<label class="dlabel">Category name</label><input class="inp" value="'+esc(c.name)+'" oninput="catRename(this.value)">'
+    +'<div class="dact"><button class="del" onclick="catDelete()">Delete category</button></div>'
+    +(n>0?'<div class="hint">Deleting moves its '+n+(n===1?' entry':' entries')+' to Uncategorized.</div>':''));
+}
+function catRename(v){dctx.cats.forEach(function(x){if(x.id===editCatId)x.name=v;});}
+function catDelete(){dctx.records.forEach(function(r){if(r.catId===editCatId)r.catId=null;});for(var i=0;i<dctx.cats.length;i++){if(dctx.cats[i].id===editCatId){dctx.cats.splice(i,1);break;}}closeModal();}
+
+/* ---------- ABILITIES & SKILLS ---------- */
+function svAbilities(){
+  var c=cur,ab='';
+  ABIL_ORDER.forEach(function(k){var a=c.abilities[k];
+    ab+='<div class="abrow"><span class="an">'+k+'</span>'
+      +'<input class="num" value="'+esc(a.score)+'" oninput="cur.abilities.'+k+'.score=this.value">'
+      +'<input class="num" value="'+esc(a.mod)+'" oninput="cur.abilities.'+k+'.mod=this.value">'
+      +'<div class="savecell"><span class="mk'+(a.saveProf?' on':'')+'" onclick="cur.abilities.'+k+'.saveProf=!cur.abilities.'+k+'.saveProf;renderBottom()">P</span>'
+      +'<input class="num" value="'+esc(a.save)+'" oninput="cur.abilities.'+k+'.save=this.value"></div></div>';});
+  var sk='';
+  SKILLS.forEach(function(s){var nm=s[0],d=c.skills[nm];var jn=nm.replace(/'/g,"\\'");
+    sk+='<div class="skrow"><span class="nm"><span class="lbl">'+esc(nm)+'</span> <span class="ab">'+s[1]+'</span></span>'
+      +'<span class="mk'+(d.prof?' on':'')+'" onclick="toggleSk(\''+jn+'\',\'prof\')">P</span>'
+      +'<span class="mk'+(d.exp?' on':'')+'" onclick="toggleSk(\''+jn+'\',\'exp\')">E</span>'
+      +'<input class="num sk" value="'+esc(d.value)+'" oninput="cur.skills[\''+jn+'\'].value=this.value"></div>';});
+  el('bottom').innerHTML='<div class="sv">'+head('Abilities &amp; Skills')
+    +'<div class="topstats"><div class="statbox"><div class="lbl">Prof. Bonus</div><input class="num big" value="'+esc(c.profBonus)+'" oninput="cur.profBonus=this.value"></div>'
+    +'<div class="statbox"><div class="lbl">Passive Perc.</div><input class="num big" value="'+esc(c.passivePerception)+'" oninput="cur.passivePerception=this.value"></div>'
+    +'<div class="statbox"><div class="lbl">Speed</div><input class="num big" value="'+esc(c.speed)+'" oninput="cur.speed=this.value"></div></div>'
+    +'<div class="sechead-row"><span class="sechead static">Abilities</span></div>'
+    +'<div class="abhead"><span>Ability</span><span>Score</span><span>Mod</span><span>Save</span></div>'+ab
+    +'<div class="sechead-row"><span class="sechead static">Skills</span></div>'+sk+'</div>';
+}
+function toggleSk(nm,f){cur.skills[nm][f]=!cur.skills[nm][f];renderBottom();}
+
+/* ---------- CLASSES (dialog; levels sum to total) ---------- */
+function openClasses(){
+  var rows='';
+  cur.classes.forEach(function(x,i){
+    rows+='<div class="clsrow"><input class="inp" placeholder="Class (e.g. Rogue)" value="'+esc(x.name)+'" oninput="cur.classes['+i+'].name=this.value;renderVitals()">'
+      +'<input class="curinp cllv" value="'+x.level+'" oninput="cur.classes['+i+'].level=parseInt(this.value,10)||0;renderVitals();updCltot()">'
+      +'<span class="delx" onclick="removeClass('+i+')">\u2715</span></div>';
+  });
+  if(!rows)rows='<div class="empty">No classes yet.</div>';
+  openModal('<div class="dhead"><span class="t">Classes</span><span class="close" onclick="closeModal()">&times;</span></div>'
+    +'<div class="hint" style="margin:0 0 6px">Class name is free text; the levels add up to your total.</div>'
+    +rows+'<button class="txtbtn" style="margin-top:12px" onclick="addClass()">+ Add class</button>'
+    +'<div class="hint" id="cltot">Total level: '+totalLevel(cur)+'</div>');
+}
+function updCltot(){var e=el('cltot');if(e)e.textContent='Total level: '+totalLevel(cur);}
+function addClass(){cur.classes.push({name:"",level:1});renderVitals();openClasses();}
+function removeClass(i){cur.classes.splice(i,1);renderVitals();openClasses();}
+
+/* ---------- HIT DICE (dialog; per-die, no computed total) ---------- */
+function openHitDice(){
+  var rows='';
+  cur.hitDice.forEach(function(d,i){
+    rows+='<div class="hdrow"><input class="inp dtype" placeholder="d8" value="'+esc(d.die)+'" oninput="cur.hitDice['+i+'].die=this.value;renderVitals()">'
+      +'<span class="lab">Cur</span><input class="curinp" value="'+d.cur+'" oninput="cur.hitDice['+i+'].cur=parseInt(this.value,10)||0;renderVitals()">'
+      +'<span class="lab">Max</span><input class="curinp" style="color:var(--ink-2)" value="'+d.max+'" oninput="cur.hitDice['+i+'].max=parseInt(this.value,10)||0;renderVitals()">'
+      +'<span class="delx" onclick="removeDie('+i+')">\u2715</span></div>';
+  });
+  if(!rows)rows='<div class="empty">No hit dice yet.</div>';
+  openModal('<div class="dhead"><span class="t">Hit Dice</span><span class="close" onclick="closeModal()">&times;</span></div>'
+    +'<div class="hint" style="margin:0 0 6px">Set up each die type with its max and current count.</div>'
+    +rows+'<button class="txtbtn" style="margin-top:12px" onclick="addDie()">+ Add die type</button>');
+}
+function addDie(){cur.hitDice.push({die:"d8",max:1,cur:1});renderVitals();openHitDice();}
+function removeDie(i){cur.hitDice.splice(i,1);renderVitals();openHitDice();}
+
+/* ---------- MODAL ---------- */
+function openModal(html){el('mbody').innerHTML=html;el('modal').classList.add('on');}
+function closeModal(){el('modal').classList.remove('on');draft=null;dmode=null;dctx=null;editIdx=null;editCatId=null;renderBottom();}
+
+renderScreen();
+</script>
+</body>
+</html>
