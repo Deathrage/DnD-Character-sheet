@@ -263,11 +263,53 @@ Real files on disk are impossible as a primary store for an app that must run on
 
 ### Durability, which needs answering because IndexedDB is evictable
 
-IndexedDB is cleared by "clear browsing data", may be evicted under storage pressure, is scoped to the exact origin, and is invisible to file managers and cloud sync. Three mitigations, all first-class features rather than afterthoughts:
+First, precisely what the exposure is. Browser storage defaults to **best-effort**, which per MDN "persists as long as the origin is below its quota, the device has enough storage space, and the user doesn't choose to delete the data". Eviction happens three documented ways: device storage pressure, a least-recently-used sweep across origins, and exceeding the browser's total disk allocation.
 
-1. **Export / Import `.json`** — a download and a file input, which work on every platform including iOS. This is how a character becomes a real file you can keep, back up, sync, or commit to git.
-2. **Raw-JSON editor in the app** — view and edit the document as text, validated on save, errors reported rather than swallowed. Emergency repair works on a phone, which DevTools access does not: IndexedDB values are read-only in DevTools and editing them requires a console script.
-3. **`navigator.storage.persist()`** requested on first save.
+Two properties of eviction matter more than the mechanism:
+
+- **It is all-or-nothing per origin.** "When an origin's data is evicted by the browser, all of its data, not parts of it, is deleted at the same time." There is no scenario where one character is lost — every character goes at once.
+- **Safari evicts on a timer, not only under pressure.** With cross-site tracking prevention enabled, "if an origin has no user interaction, such as click or tap, in the last seven days of browser use, its data created from script will be deleted." A campaign meeting fortnightly exceeds that window between every single session.
+
+The three mitigations below are therefore load-bearing features, not afterthoughts.
+
+#### 1. Export / Import `.json`
+
+Export builds a `Blob` and triggers an `<a download>`; import reads an `<input type="file" accept="application/json">`. Both are universally supported, iOS included, and neither needs the File System Access API.
+
+- **Pretty-printed** via `JSON.stringify(doc, null, 2)`. Not cosmetic: minified output would defeat the git-history and hand-editing reasons for wanting a file at all.
+- **Filename `{slug(name)}-{YYYY-MM-DD}.json`** — sorts chronologically and stays identifiable in a folder with thirty others.
+- One file per character, matching START.md's "each character single file". A whole-library bundle is deferred: it would either break that contract or need N sequential downloads.
+- Import runs the full `parseCharacter` path, so an export written by an older schema version migrates on the way in, and it always creates a new character rather than overwriting one.
+
+What this buys: a copy that outlives the browser profile entirely. It is the only mitigation that survives "clear browsing data", a lost phone, or moving to a different browser.
+
+What it costs: it is manual, and nothing prompts you. An export reminder is deliberately deferred rather than absent by accident — say so if you want one.
+
+#### 2. Raw-JSON editor
+
+The document as text in a textarea, seeded with the pretty-printed JSON.
+
+- It edits a **draft string, not the observable document**, so `deepObserve` sees nothing and autosave stays quiet until commit. A half-typed document must never reach storage.
+- Commit runs `JSON.parse`, then `parseCharacter`. Two failure classes are reported differently: a **syntax error**, with its position, versus a **schema failure**, with Zod's field paths. Either way the text stays in the editor — a rejected commit never discards what you typed.
+- **It is reachable when the document will not load**, which is the entire point of the feature. A character whose stored JSON fails to parse or migrate is still listed, flagged as damaged, and its only available action is "Open raw JSON" — seeded with the raw stored text rather than a parsed document. Without this, a bad document is both unreachable and unfixable on a phone.
+- `id` is protected: a commit that changes it is rejected, because a changed id either collides with another character or orphans this one. `schemaVersion` stays editable — lowering it simply re-runs migrations on commit, which is useful for testing, while raising it above `CURRENT` fails as `FROM_FUTURE`.
+
+Honest limitation: editing a few thousand lines of JSON in a phone textarea is unpleasant. This is a repair tool, not a daily one — but it is the difference between a recoverable document and an unrecoverable one.
+
+#### 3. `navigator.storage.persist()`
+
+Requested once, on first save. It asks for the persistent storage bucket, where data "is only evicted, or deleted, if the user chooses to, by using their browser's settings". A grant exempts the origin from the pressure and LRU sweeps: "this eviction mechanism only applies to origins that are not persistent and skips over origins that have been granted data persistence."
+
+The API exists everywhere relevant — Chrome 55, Firefox 57, Safari 15.2, and the same on mobile — but the grant is not ours to make. Firefox prompts the user; Chrome and Safari decide automatically from interaction history. `persist()` returning `false` is therefore a normal outcome, not an error condition.
+
+Two things it does **not** do:
+
+- It does not survive the user clearing site data. Nothing does.
+- It is not documented to exempt an origin from Safari's seven-day no-interaction eviction. MDN describes that rule separately from the pressure-and-LRU mechanism that persistence skips, and does not state that persistence overrides it. Treat iOS as the platform where Export is doing the real work.
+
+**So the app reports its own storage status** rather than requesting persistence and hoping. `navigator.storage.persisted()` and `estimate()` feed a small indicator on the character list: when persistence was refused, a quiet line stating that storage may be cleared, with an Export action beside it. Silently running on best-effort storage is the failure mode worth avoiding — you should always know which regime you are in. `estimate()` returns padded estimates rather than exact figures, so it is presented as an approximation.
+
+This adds one small item to the first slice; say so if you would rather it waited.
 
 ### Repository
 
@@ -410,6 +452,8 @@ Full depth through all three layers, narrow surface. Everything below is in scop
 10. A stored document with `schemaVersion` absent, or greater than `CURRENT`, or failing v1 validation, surfaces the corresponding error and offers the raw JSON for repair — it is never silently repaired.
 11. Edits made and then immediately backgrounding the tab are still present on reopening.
 12. All seven hub tiles render; the six unwired ones are visibly inert and navigate nowhere.
+13. The character list reports storage status: when `persisted()` returns false, a visible notice that storage may be cleared, with an Export action next to it.
+14. A character whose stored JSON fails to load still appears in the list, flagged as damaged, and opens in the raw-JSON editor seeded with its raw stored text.
 
 ### Out of scope for the first slice
 
@@ -447,7 +491,7 @@ Storybook uses a decorator that injects a `CharacterStore` built from a fixture,
 
 ## 11. Accepted risks and open items
 
-**iOS storage eviction** is reduced by `storage.persist()` and Export, not eliminated. If it ever bites in practice, that is the argument for moving to a Tauri shell — and the repository interface is where that change lands.
+**iOS storage eviction is the sharpest risk in this design.** Safari deletes script-written storage for an origin with no user interaction in the last seven days of browser use, and persistence is not documented to exempt an origin from that rule. A fortnightly campaign exceeds that window between every session. Eviction is also all-or-nothing per origin, so it takes every character at once. `persist()` and the storage indicator reduce the chance and make the regime visible; only Export actually survives it. If this bites in practice it is the argument for a Tauri shell, and the repository interface in §5 is where that change lands.
 
 **`journal: LongText[]` with index-as-day** means days cannot be skipped or labelled. Accepted as `Model.ts` specifies it.
 
