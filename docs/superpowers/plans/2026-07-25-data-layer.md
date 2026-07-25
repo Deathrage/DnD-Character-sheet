@@ -45,11 +45,15 @@ src/shared/
   slug.test.ts
 
 src/data/schema/
-  primitives.ts                     reusable Zod pieces: names, ints, currentAndTotal, categorized
-  primitives.test.ts
-  v1.ts                             CharacterDocumentV1Schema + inferred type + cross-field invariants
-  v1.test.ts
-  index.ts                          CURRENT, SCHEMAS registry, CharacterDocument (latest alias)
+  README.md                         the version-isolation rule and how to add v2
+  index.ts                          the ONLY entry point used outside schema/: CURRENT,
+                                    SCHEMAS registry, CharacterDocument (latest alias)
+  v1/                               FROZEN once shipped — see README.md
+    primitives.ts                   v1's own names, ints, currentAndTotal, categorized
+    primitives.test.ts
+    document.ts                     characterDocumentV1Schema + type + cross-field invariants
+    document.test.ts
+    index.ts                        v1's public face inside schema/
 
 src/data/factory/
   createCharacter.ts                blank valid v1 document
@@ -79,6 +83,16 @@ src/data/repository/
 ```
 
 Files are split by responsibility, not by size: schema validation, migration, serialization and storage each change for different reasons and are each independently testable.
+
+### Schema versions are isolated by construction
+
+Each schema version owns a complete, self-contained directory. **Nothing is shared between versions** — v1 has its own primitives, and v2 will start as a copy of `v1/` and diverge. Once a version ships, its directory is never edited again.
+
+This is deliberate duplication, and it protects the thing the whole design rests on. The migration loop validates a document *at its own version* before migrating it, which is only meaningful if v1's schema still means what it meant when v1 shipped. With primitives shared across versions, tightening a rule for v2's benefit would make `validateAt(1, doc)` reject a v1 file that was always legitimately valid — and the app would report `INVALID_AT_VERSION`, blaming the user's file for a change we made. Loosening one is just as bad: a v1 document that should have been rejected reaches a migration written on the assumption it could not exist.
+
+The behavioural lock comes free with the structural one: because each version's tests are colocated and frozen with it, editing v1's limits immediately fails v1's own tests.
+
+Only `src/data/schema/index.ts` is imported from outside `schema/`. Version directories are internal, so the rest of the data layer never names a version.
 
 ---
 
@@ -364,8 +378,8 @@ git commit -m "chore: scaffold TypeScript, Vitest, ESLint layer boundaries and P
 The reusable Zod pieces every section is built from. Written and tested first so the document schema in Task 3 is assembly rather than invention.
 
 **Files:**
-- Create: `src/data/schema/primitives.ts`
-- Test: `src/data/schema/primitives.test.ts`
+- Create: `src/data/schema/README.md`, `src/data/schema/v1/primitives.ts`
+- Test: `src/data/schema/v1/primitives.test.ts`
 
 **Interfaces:**
 - Consumes: nothing.
@@ -373,7 +387,7 @@ The reusable Zod pieces every section is built from. Written and tested first so
 
 - [ ] **Step 1: Write the failing test**
 
-Create `src/data/schema/primitives.test.ts`:
+Create `src/data/schema/v1/primitives.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -540,7 +554,7 @@ Expected: FAIL — cannot resolve `./primitives.js`.
 
 - [ ] **Step 3: Implement the primitives**
 
-Create `src/data/schema/primitives.ts`:
+Create `src/data/schema/v1/primitives.ts`:
 
 ```ts
 import { z } from 'zod';
@@ -564,18 +578,18 @@ export const signedInt = z.number().int();
 /** A hit-die size as it appears in JSON: digits, no leading zero. */
 export const dieSizeKey = z.string().regex(/^[1-9]\d*$/, 'must be a positive integer without a leading zero');
 
-// Explicit regexes rather than z.string().uuid() / z.iso.datetime(): those helpers
-// moved between Zod 3 and 4, and this keeps the schema valid on either.
-export const uuid = z
-  .string()
-  .regex(
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    'must be a UUID',
-  );
+// Zod's own validators, with the variants chosen deliberately. Measured against
+// zod 4.4.3:
+//   z.uuid()             accepts a nil UUID and a bogus version nibble — too loose.
+//   z.uuidv4()           rejects both, and pins v4, which is all crypto.randomUUID() emits.
+//   z.iso.datetime()     accepts 0, 1 or 6 fractional digits — too loose.
+//   ...({ precision: 3 }) accepts exactly toISOString()'s shape, and unlike a regex
+//                        it also rejects impossible dates such as month 13 or hour 99.
+// The tests pin these choices down, because z.uuid() and bare z.iso.datetime() both
+// look like harmless simplifications and would silently widen what we accept.
+export const uuid = z.uuidv4();
 
-export const isoDateTime = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/, 'must be an ISO 8601 UTC timestamp');
+export const isoDateTime = z.iso.datetime({ precision: 3 });
 
 /** `current` is deliberately not checked against `total` (spec §3.2). */
 export const currentAndTotal = z.object({
@@ -609,7 +623,7 @@ If `z.record` complains about arity, this is Zod 3: it accepts `z.record(valueSc
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/data/schema/primitives.ts src/data/schema/primitives.test.ts
+git add src/data/schema/README.md src/data/schema/v1/primitives.ts src/data/schema/v1/primitives.test.ts
 git commit -m "feat: add Zod schema primitives with string, integer and ordering invariants"
 ```
 
@@ -618,8 +632,8 @@ git commit -m "feat: add Zod schema primitives with string, integer and ordering
 ## Task 3: The v1 document schema
 
 **Files:**
-- Create: `src/data/schema/v1.ts`, `src/data/schema/index.ts`
-- Test: `src/data/schema/v1.test.ts`
+- Create: `src/data/schema/v1/document.ts`, `src/data/schema/v1/index.ts`, `src/data/schema/index.ts`
+- Test: `src/data/schema/v1/document.test.ts`
 
 **Interfaces:**
 - Consumes: everything from `primitives.ts`.
@@ -631,11 +645,11 @@ git commit -m "feat: add Zod schema primitives with string, integer and ordering
 
 - [ ] **Step 1: Write the failing test**
 
-Create `src/data/schema/v1.test.ts`. It needs a valid document to mutate, and `createCharacter` does not exist yet, so build one locally — this fixture also documents the shape precisely.
+Create `src/data/schema/v1/document.test.ts`. It needs a valid document to mutate, and `createCharacter` does not exist yet, so build one locally — this fixture also documents the shape precisely.
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { ABILITY_KEYS, SKILL_KEYS, SPELL_SLOT_LEVELS, characterDocumentV1Schema } from './v1.js';
+import { ABILITY_KEYS, SKILL_KEYS, SPELL_SLOT_LEVELS, characterDocumentV1Schema } from './document.js';
 
 const ZERO = { current: 0, total: 0 };
 
@@ -802,12 +816,12 @@ describe('characterDocumentV1Schema', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npm test -- v1`
-Expected: FAIL — cannot resolve `./v1.js`.
+Run: `npm test -- document`
+Expected: FAIL — cannot resolve `./document.js`.
 
 - [ ] **Step 3: Implement the v1 schema**
 
-Create `src/data/schema/v1.ts`:
+Create `src/data/schema/v1/document.ts`:
 
 ```ts
 import { z } from 'zod';
@@ -978,13 +992,25 @@ export type CharacterDocumentV1 = z.infer<typeof characterDocumentV1Schema>;
 
 If `ctx.addIssue({ code: 'custom' })` is rejected by the installed Zod's types, use `code: z.ZodIssueCode.custom` — the enum spelling is the Zod 3 form.
 
-- [ ] **Step 4: Create the schema registry**
+- [ ] **Step 4: Create v1's internal barrel and the schema registry**
 
-Create `src/data/schema/index.ts`:
+Create `src/data/schema/v1/index.ts` — v1's public face inside `schema/`, so the registry never reaches past it:
+
+```ts
+export {
+  ABILITY_KEYS,
+  SKILL_KEYS,
+  SPELL_SLOT_LEVELS,
+  characterDocumentV1Schema,
+  type CharacterDocumentV1,
+} from './document.js';
+```
+
+Create `src/data/schema/index.ts` — the only entry point anything outside `schema/` imports:
 
 ```ts
 import { z } from 'zod';
-import { characterDocumentV1Schema, type CharacterDocumentV1 } from './v1.js';
+import { characterDocumentV1Schema, type CharacterDocumentV1 } from './v1/index.js';
 
 /** The version this build writes. Bump when adding a schema version. */
 export const CURRENT = 1;
@@ -998,8 +1024,10 @@ export const SCHEMAS: Readonly<Record<number, z.ZodTypeAny>> = {
 export type CharacterDocument = CharacterDocumentV1;
 
 export { characterDocumentV1Schema, type CharacterDocumentV1 };
-export { ABILITY_KEYS, SKILL_KEYS, SPELL_SLOT_LEVELS } from './v1.js';
+export { ABILITY_KEYS, SKILL_KEYS, SPELL_SLOT_LEVELS } from './v1/index.js';
 ```
+
+The key tuples are re-exported here so consumers such as the factory in Task 4 never import from a version directory. When v2 arrives, this file gains a `2:` entry and the `CharacterDocument` alias moves to `CharacterDocumentV2` — and that is the *only* file that changes.
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
