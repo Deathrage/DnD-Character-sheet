@@ -170,3 +170,113 @@ describe('characterDocumentV1Schema', () => {
     expect(SPELL_SLOT_LEVELS).toHaveLength(9);
   });
 });
+
+type Doc = ReturnType<typeof validDocument>;
+
+// Every object schema in the document is `.strict()`, so an unknown key anywhere must be
+// rejected, not silently stripped — see the file-level comment in document.ts for why. This
+// table is what makes the asymmetry (some schemas strict, others not) impossible to
+// reintroduce unnoticed: one case per nested location, each naming the location.
+const unknownKeyLocations: Array<[string, (doc: Doc) => void]> = [
+  [
+    'the document root',
+    (doc) => {
+      (doc as Record<string, unknown>).extra = 'x';
+    },
+  ],
+  [
+    'hitPoints',
+    (doc) => {
+      (doc.hitPoints as Record<string, unknown>).extra = 'x';
+    },
+  ],
+  [
+    'a class entry',
+    (doc) => {
+      (doc.classes.Rogue as Record<string, unknown>).extra = 'x';
+    },
+  ],
+  [
+    'inventory',
+    (doc) => {
+      (doc.inventory as Record<string, unknown>).extra = 'x';
+    },
+  ],
+  [
+    'inventory.coins',
+    (doc) => {
+      (doc.inventory.coins as Record<string, unknown>).extra = 'x';
+    },
+  ],
+  [
+    'an inventory item',
+    (doc) => {
+      (doc.inventory.items[0]! as Record<string, unknown>).extra = 'x';
+    },
+  ],
+  [
+    'an equipment item',
+    (doc) => {
+      (doc.equipment.weapons[0]! as Record<string, unknown>).extra = 'x';
+    },
+  ],
+  [
+    'a spell entry',
+    (doc) => {
+      (doc.spellList.uncategorized[0]! as Record<string, unknown>).extra = 'x';
+    },
+  ],
+  [
+    'a counter entry',
+    (doc) => {
+      (doc.counters.categories['Class Features'][0]! as Record<string, unknown>).extra = 'x';
+    },
+  ],
+  [
+    'a categorized section object',
+    (doc) => {
+      (doc.featsAndTraits as Record<string, unknown>).extra = 'x';
+    },
+  ],
+  [
+    'an ability',
+    (doc) => {
+      (
+        doc.abilitiesAndSkills.abilities as Record<string, Record<string, unknown>>
+      ).strength!.extra = 'x';
+    },
+  ],
+  [
+    'a skill',
+    (doc) => {
+      (doc.abilitiesAndSkills.skills as Record<string, Record<string, unknown>>).stealth!.extra =
+        'x';
+    },
+  ],
+  [
+    'abilitiesAndSkills',
+    (doc) => {
+      (doc.abilitiesAndSkills as Record<string, unknown>).extra = 'x';
+    },
+  ],
+  [
+    'journalAndNotes',
+    (doc) => {
+      (doc.journalAndNotes as Record<string, unknown>).extra = 'x';
+    },
+  ],
+  [
+    'a spell-slot entry',
+    (doc) => {
+      (doc.counters.spellSlots as Record<string, Record<string, unknown>>)['1']!.extra = 'x';
+    },
+  ],
+];
+
+describe('rejects an unknown key at every nested location', () => {
+  it.each(unknownKeyLocations)('%s', (_location, injectUnknownKey) => {
+    const doc = validDocument();
+    injectUnknownKey(doc);
+    expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
+  });
+});

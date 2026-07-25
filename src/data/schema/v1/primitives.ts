@@ -40,23 +40,34 @@ export const uuid = z.uuidv4();
 
 export const isoDateTime = z.iso.datetime({ precision: 3 });
 
-/** `current` is deliberately not checked against `total` (spec §3.2). */
-export const currentAndTotal = z.object({
-  current: nonNegativeInt,
-  total: nonNegativeInt,
-});
+// These object schemas are `.strict()`, like every object schema in v1 — see the file-level
+// comment in document.ts for why unknown keys must be reported rather than silently dropped,
+// and why `.extend()` (used below and by consumers of these primitives) must re-apply
+// `.strict()` to its result.
 
-export const nameAndDescription = z.object({
-  name: shortName,
-  description: longText,
-});
+/** `current` is deliberately not checked against `total` (spec §3.2). */
+export const currentAndTotal = z
+  .object({
+    current: nonNegativeInt,
+    total: nonNegativeInt,
+  })
+  .strict();
+
+export const nameAndDescription = z
+  .object({
+    name: shortName,
+    description: longText,
+  })
+  .strict();
 
 /**
  * Categorized<T> (spec §3.2). Display order is object-key insertion order,
  * so there is no order array — see §3.4.
  */
 export const categorized = <Item extends z.ZodTypeAny>(item: Item) =>
-  z.object({
-    categories: z.record(categoryName, z.array(item)),
-    uncategorized: z.array(item),
-  });
+  z
+    .object({
+      categories: z.record(categoryName, z.array(item)),
+      uncategorized: z.array(item),
+    })
+    .strict();

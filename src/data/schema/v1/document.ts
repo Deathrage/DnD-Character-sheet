@@ -2,6 +2,16 @@
 // and that meaning must not change under already-stored documents. A rule change here is a
 // new schema version, not an edit — see ../README.md.
 
+// Every object schema below ends in `.strict()`: an unknown key is always an error, never a
+// silent drop. This is a correctness property, not a tidiness one. The raw-JSON editor is a
+// headline feature — a user can hand-edit a character and save it — and a document is never
+// silently repaired. If validation stripped a typo'd key (e.g. `temporry` instead of
+// `temporary`) instead of rejecting it, the edit would vanish with no error reported and the
+// stale value would remain; a later migration function would also never get a chance to see
+// or rescue a field it might care about, because by the time it runs the unknown key is
+// already gone. `.strict()` does not survive `.extend()` in Zod 4.4.3 — verified empirically,
+// not assumed — so every `.extend()` call here re-applies `.strict()` to its result.
+
 import { z } from 'zod';
 import {
   categorized,
@@ -63,29 +73,27 @@ const spellLevel = z.union([
   z.literal(9),
 ]);
 
-const classItem = z.object({ name: shortName, level: nonNegativeInt });
+const classItem = z.object({ name: shortName, level: nonNegativeInt }).strict();
 
-const inventoryItem = nameAndDescription.extend({ count: nonNegativeInt });
+const inventoryItem = nameAndDescription.extend({ count: nonNegativeInt }).strict();
 
-const equipmentItem = nameAndDescription.extend({
-  attuned: z.boolean(),
-  equipped: z.boolean(),
-});
+const equipmentItem = nameAndDescription
+  .extend({
+    attuned: z.boolean(),
+    equipped: z.boolean(),
+  })
+  .strict();
 
-const spellListItem = nameAndDescription.extend({
-  level: spellLevel,
-  prepared: z.boolean(),
-});
+const spellListItem = nameAndDescription
+  .extend({
+    level: spellLevel,
+    prepared: z.boolean(),
+  })
+  .strict();
 
-const countersItem = nameAndDescription.extend(currentAndTotal.shape);
+const countersItem = nameAndDescription.extend(currentAndTotal.shape).strict();
 
-/**
- * No `proficient`: ability-check proficiency has no referent in the rules (spec §3.1).
- * `.strict()` here (not just on the document root) is what makes a stray `proficient` on
- * an ability an error rather than a silently stripped key: Zod's `.strict()` does not
- * cascade into nested object schemas, so each schema that must reject unknown keys needs
- * its own call.
- */
+/** No `proficient`: ability-check proficiency has no referent in the rules (spec §3.1). */
 const abilitiesItem = z
   .object({
     score: nonNegativeInt,
@@ -95,16 +103,18 @@ const abilitiesItem = z
   })
   .strict();
 
-const skillsItem = z.object({
-  modifier: signedInt,
-  proficient: z.boolean(),
-  expertise: z.boolean(),
-});
+const skillsItem = z
+  .object({
+    modifier: signedInt,
+    proficient: z.boolean(),
+    expertise: z.boolean(),
+  })
+  .strict();
 
 const fixedKeys = <Key extends string, Value extends z.ZodTypeAny>(
   keys: readonly Key[],
   value: Value,
-) => z.object(Object.fromEntries(keys.map((key) => [key, value])) as Record<Key, Value>);
+) => z.object(Object.fromEntries(keys.map((key) => [key, value])) as Record<Key, Value>).strict();
 
 const documentShape = z.object({
   schemaVersion: z.literal(1),
@@ -114,46 +124,58 @@ const documentShape = z.object({
 
   classes: z.record(shortName, classItem),
 
-  hitPoints: currentAndTotal.extend({ temporary: nonNegativeInt }),
+  hitPoints: currentAndTotal.extend({ temporary: nonNegativeInt }).strict(),
   hitDices: z.record(dieSizeKey, currentAndTotal),
   armorClass: nonNegativeInt,
 
-  journalAndNotes: z.object({
-    journal: z.array(longText),
-    notes: longText,
-  }),
+  journalAndNotes: z
+    .object({
+      journal: z.array(longText),
+      notes: longText,
+    })
+    .strict(),
 
-  inventory: z.object({
-    coins: z.object({
-      pp: nonNegativeInt,
-      gp: nonNegativeInt,
-      ep: nonNegativeInt,
-      sp: nonNegativeInt,
-      cp: nonNegativeInt,
-    }),
-    items: z.array(inventoryItem),
-  }),
+  inventory: z
+    .object({
+      coins: z
+        .object({
+          pp: nonNegativeInt,
+          gp: nonNegativeInt,
+          ep: nonNegativeInt,
+          sp: nonNegativeInt,
+          cp: nonNegativeInt,
+        })
+        .strict(),
+      items: z.array(inventoryItem),
+    })
+    .strict(),
 
   featsAndTraits: categorized(nameAndDescription),
 
-  equipment: z.object({
-    weapons: z.array(equipmentItem),
-    other: z.array(equipmentItem),
-  }),
+  equipment: z
+    .object({
+      weapons: z.array(equipmentItem),
+      other: z.array(equipmentItem),
+    })
+    .strict(),
 
   spellList: categorized(spellListItem),
 
-  counters: categorized(countersItem).extend({
-    spellSlots: fixedKeys(SPELL_SLOT_LEVELS, currentAndTotal),
-  }),
+  counters: categorized(countersItem)
+    .extend({
+      spellSlots: fixedKeys(SPELL_SLOT_LEVELS, currentAndTotal),
+    })
+    .strict(),
 
-  abilitiesAndSkills: z.object({
-    proficiencyBonus: nonNegativeInt,
-    passivePerception: nonNegativeInt,
-    speed: nonNegativeInt,
-    abilities: fixedKeys(ABILITY_KEYS, abilitiesItem),
-    skills: fixedKeys(SKILL_KEYS, skillsItem),
-  }),
+  abilitiesAndSkills: z
+    .object({
+      proficiencyBonus: nonNegativeInt,
+      passivePerception: nonNegativeInt,
+      speed: nonNegativeInt,
+      abilities: fixedKeys(ABILITY_KEYS, abilitiesItem),
+      skills: fixedKeys(SKILL_KEYS, skillsItem),
+    })
+    .strict(),
 });
 
 export const characterDocumentV1Schema = documentShape.strict().superRefine((doc, ctx) => {
