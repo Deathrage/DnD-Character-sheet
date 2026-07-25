@@ -1,6 +1,7 @@
 // Schema v1 is frozen: this file defines what a v1 character document was allowed to be,
 // and that meaning must not change under already-stored documents. A rule change here is a
-// new schema version, not an edit — see ../README.md.
+// new schema version, not an edit — see ../README.md#when-the-freeze-begins for what "frozen"
+// means and when it starts applying.
 
 import { z } from 'zod';
 

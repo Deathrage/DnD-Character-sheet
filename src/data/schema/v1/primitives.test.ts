@@ -1,6 +1,6 @@
 // Schema v1 is frozen: these tests lock in what a v1 character document was allowed to be.
-// Editing an assertion here to let new code pass is editing v1's meaning — see ../README.md
-// instead of changing this file once v1 has shipped.
+// Editing an assertion here to let new code pass is editing v1's meaning — see
+// ../README.md#when-the-freeze-begins for what "frozen" means and when it starts applying.
 
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';

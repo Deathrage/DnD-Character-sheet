@@ -13,4 +13,9 @@ export const SCHEMAS: Readonly<Record<number, z.ZodTypeAny>> = {
 export type CharacterDocument = CharacterDocumentV1;
 
 export { characterDocumentV1Schema, type CharacterDocumentV1 };
-export { ABILITY_KEYS, SKILL_KEYS, SPELL_SLOT_LEVELS } from './v1/index.js';
+
+// Deliberately not re-exported here: ABILITY_KEYS, SKILL_KEYS, SPELL_SLOT_LEVELS. They are v1
+// facts, not version-neutral ones — re-exporting them from this barrel would let a v2 rename
+// silently change what a caller gets with no hint at the call site. Their only consumer is the
+// blank-document factory, which lives inside v1/ (next to v1/index.js, which already exports
+// them) precisely because a blank document must satisfy its own version's required fields.

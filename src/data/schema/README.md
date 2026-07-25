@@ -5,6 +5,14 @@ its Zod schemas and its tests, colocated. Nothing is shared between version dire
 version has shipped, its directory is never edited again — not to fix a limit, not to tighten a
 regex, not to "clean up" duplication with a later version.
 
+## When the freeze begins
+
+A version is frozen from the moment it could have written a document that someone still has —
+a build using it has been released, or it has already stored real data — not from the moment
+its directory was authored. Before that point the directory is ordinary work-in-progress and may
+be edited freely, no migration required. If you are unsure which side of that line a version is
+on, treat it as frozen and ask.
+
 ## Why
 
 The migration loop that opens a stored character document validates it _at the version it claims
