@@ -99,24 +99,31 @@ describe('uuid and isoDateTime', () => {
     expect(uuid.safeParse('not-a-uuid').success).toBe(false);
   });
 
+  it('rejects the nil UUID, which z.uuid() would wrongly accept', () => {
+    // This is the case that specifically catches z.uuidv4() being "simplified" to z.uuid():
+    // z.uuid() special-cases 00000000-0000-0000-0000-000000000000 as valid; uuidv4 does not.
+    expect(uuid.safeParse('00000000-0000-0000-0000-000000000000').success).toBe(false);
+  });
+
   it('rejects a bad version nibble, otherwise correctly shaped', () => {
-    // Version nibble (3rd group, 1st char) must be 1-5; '6' is out of range.
+    // Version nibble (3rd group, 1st char) must be exactly 4; '6' is out of range.
     expect(uuid.safeParse('aaaaaaaa-aaaa-6aaa-8aaa-aaaaaaaaaaaa').success).toBe(false);
   });
 
   it('rejects a bad variant nibble, otherwise correctly shaped', () => {
     // Variant nibble (4th group, 1st char) must be 8/9/a/b; 'c' is out of range.
-    expect(uuid.safeParse('aaaaaaaa-aaaa-1aaa-caaa-aaaaaaaaaaaa').success).toBe(false);
+    // Version nibble is a valid '4' so this case is isolated to the variant alone.
+    expect(uuid.safeParse('aaaaaaaa-aaaa-4aaa-caaa-aaaaaaaaaaaa').success).toBe(false);
   });
 
   it('rejects a wrong-length group, otherwise correctly shaped', () => {
     // 2nd group has 3 hex digits instead of the required 4.
-    expect(uuid.safeParse('aaaaaaaa-aaa-1aaa-8aaa-aaaaaaaaaaaa').success).toBe(false);
+    expect(uuid.safeParse('aaaaaaaa-aaa-4aaa-8aaa-aaaaaaaaaaaa').success).toBe(false);
   });
 
   it('rejects a non-hex character, otherwise correctly shaped', () => {
     // Last character of the final group is 'z', which is not a hex digit.
-    expect(uuid.safeParse('aaaaaaaa-aaaa-1aaa-8aaa-aaaaaaaaaaaz').success).toBe(false);
+    expect(uuid.safeParse('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaz').success).toBe(false);
   });
 
   it('accepts a Date.toISOString() value', () => {
@@ -143,6 +150,14 @@ describe('uuid and isoDateTime', () => {
 
   it('rejects a value with no milliseconds at all', () => {
     expect(isoDateTime.safeParse('2026-07-25T09:41:00Z').success).toBe(false);
+  });
+
+  it('rejects an impossible month, which a hand-rolled regex would not catch', () => {
+    expect(isoDateTime.safeParse('2026-13-01T09:41:00.000Z').success).toBe(false);
+  });
+
+  it('rejects an impossible hour, which a hand-rolled regex would not catch', () => {
+    expect(isoDateTime.safeParse('2026-07-25T99:41:00.000Z').success).toBe(false);
   });
 });
 

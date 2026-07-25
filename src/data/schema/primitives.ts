@@ -21,18 +21,20 @@ export const dieSizeKey = z
   .string()
   .regex(/^[1-9]\d*$/, 'must be a positive integer without a leading zero');
 
-// Explicit regexes rather than z.string().uuid() / z.iso.datetime(): those helpers
-// moved between Zod 3 and 4, and this keeps the schema valid on either.
-export const uuid = z
-  .string()
-  .regex(
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    'must be a UUID',
-  );
+// The bare z.uuid() / z.iso.datetime() helpers look like the obvious choice here, but
+// both are looser than what this app actually produces, and either would silently widen
+// what a character file is allowed to contain:
+//   - z.uuid() accepts any RFC version (1-8) and special-cases the nil UUID
+//     (00000000-0000-0000-0000-000000000000) as valid. Every id in this app comes from
+//     crypto.randomUUID(), which only ever emits version 4, so z.uuidv4() is the accurate
+//     constraint — it also has no nil-UUID special case, so a zeroed-out id is rejected.
+//   - z.iso.datetime() with no options accepts 0, 1, or 6 fractional-second digits. Every
+//     timestamp in this app comes from Date.toISOString(), which always emits exactly 3,
+//     so { precision: 3 } is the accurate constraint. As a bonus over a hand-rolled regex,
+//     it also rejects calendar-impossible values (month 13, hour 99).
+export const uuid = z.uuidv4();
 
-export const isoDateTime = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/, 'must be an ISO 8601 UTC timestamp');
+export const isoDateTime = z.iso.datetime({ precision: 3 });
 
 /** `current` is deliberately not checked against `total` (spec §3.2). */
 export const currentAndTotal = z.object({
