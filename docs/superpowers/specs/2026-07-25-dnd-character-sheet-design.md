@@ -307,9 +307,19 @@ Two things it does **not** do:
 - It does not survive the user clearing site data. Nothing does.
 - It is not documented to exempt an origin from Safari's seven-day no-interaction eviction. MDN describes that rule separately from the pressure-and-LRU mechanism that persistence skips, and does not state that persistence overrides it. Treat iOS as the platform where Export is doing the real work.
 
-**So the app reports its own storage status** rather than requesting persistence and hoping. `navigator.storage.persisted()` and `estimate()` feed a small indicator on the character list: when persistence was refused, a quiet line stating that storage may be cleared, with an Export action beside it. Silently running on best-effort storage is the failure mode worth avoiding — you should always know which regime you are in. `estimate()` returns padded estimates rather than exact figures, so it is presented as an approximation.
+#### The persistence gate
 
-This adds one small item to the first slice; say so if you would rather it waited.
+`persist()` is never called speculatively. On launch the app reads `persisted()`, and while that reports false the character list is covered by a **blocking dialog** — no close button, no scrim dismissal, no Escape key. Running on evictable storage is not a condition to mention in a line of small text the user scrolls past.
+
+Its primary action is "Make storage permanent", which calls `persist()`. Because Firefox prompts, the request now arrives attached to a deliberate tap rather than firing during character creation — better mannered, and materially likelier to be granted.
+
+One qualification, because a literally unclosable dialog would render the app unusable: **denial is the likely outcome on a first run.** Chrome decides from site engagement, installation and notification permission, and a freshly opened app has none of the three. The gate therefore must not become a trap:
+
+- **Granted** — the dialog closes and never returns.
+- **Refused** — the dialog rewrites itself to name the actual levers rather than repeat a failed request: install the app to Home Screen or desktop, which is one of Chrome's three signals and something the manifest already supports, and export now.
+- **"Continue for this session"** appears only after an attempt has been made. It dismisses the gate for the current session and never permanently; the gate returns on the next launch while storage is still best-effort.
+
+`estimate()` is reported alongside as usage against quota, presented as an approximation because the specification pads the figure.
 
 ### Repository
 
@@ -452,8 +462,9 @@ Full depth through all three layers, narrow surface. Everything below is in scop
 10. A stored document with `schemaVersion` absent, or greater than `CURRENT`, or failing v1 validation, surfaces the corresponding error and offers the raw JSON for repair — it is never silently repaired.
 11. Edits made and then immediately backgrounding the tab are still present on reopening.
 12. All seven hub tiles render; the six unwired ones are visibly inert and navigate nowhere.
-13. The character list reports storage status: when `persisted()` returns false, a visible notice that storage may be cleared, with an Export action next to it.
-14. A character whose stored JSON fails to load still appears in the list, flagged as damaged, and opens in the raw-JSON editor seeded with its raw stored text.
+13. While `persisted()` reports false, a blocking dialog covers the character list with no close button, no scrim dismissal and no Escape key; its primary action calls `persist()`, and a grant closes it permanently.
+14. If `persist()` is refused, the dialog explains installing the app and exporting, and offers a session-only dismissal — the app is never left unusable, and the gate returns on the next launch.
+15. A character whose stored JSON fails to load still appears in the list, flagged as damaged, and opens in the raw-JSON editor seeded with its raw stored text.
 
 ### Out of scope for the first slice
 
@@ -505,6 +516,7 @@ Storybook uses a decorator that injects a `CharacterStore` built from a fixture,
 | --- | --- |
 | PWA + IndexedDB, not filesystem | No mobile browser supports user-visible file access; verified against BCD and caniuse |
 | Export/Import + raw-JSON editor as first-class features | Restores the durability and hand-repair that a real file would give, on every platform |
+| Persistence as a blocking gate, not a notice | User's decision. `persist()` is gesture-triggered so Firefox's prompt arrives with context; the gate cannot be permanently dismissed, but yields a session-only escape after an attempt, because Chrome's heuristics make first-run denial likely and an inescapable dialog would render the app unusable |
 | No local versioning | User's decision: versioning belongs to remote upload and restore only |
 | Debounced autosave, no save button | A save button is forgettable on a phone and adds friction to every counter tick |
 | `Model.ts` authoritative for fields | User's decision; the wireframe is a sketch |
