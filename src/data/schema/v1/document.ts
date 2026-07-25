@@ -9,8 +9,18 @@
 // `temporary`) instead of rejecting it, the edit would vanish with no error reported and the
 // stale value would remain; a later migration function would also never get a chance to see
 // or rescue a field it might care about, because by the time it runs the unknown key is
-// already gone. `.strict()` does not survive `.extend()` in Zod 4.4.3 — verified empirically,
-// not assumed — so every `.extend()` call here re-applies `.strict()` to its result.
+// already gone.
+//
+// `.strict()` does not cascade: it closes a schema's own key set, not that of any other schema
+// merely used as one of its property values. Wrapping the document root in `.strict()` did not
+// stop an unknown key on `abilitiesItem` from being silently stripped, because `abilitiesItem`
+// is a separate schema instance referenced as a nested value — confirmed against Zod 4.4.3, not
+// assumed. That is why every schema below is `.strict()` itself, including ones only ever used
+// as a nested value. (`.extend()`, separately, does preserve a strict base's closed key set in
+// this Zod version — also confirmed, not assumed — so a trailing `.strict()` after `.extend()`
+// is not strictly load-bearing below, but each schema still ends in one explicitly, so its
+// strictness is visible at its own definition rather than depending on a reader tracing back
+// through an `.extend()` chain to confirm the base was strict.)
 
 import { z } from 'zod';
 import {

@@ -42,8 +42,7 @@ export const isoDateTime = z.iso.datetime({ precision: 3 });
 
 // These object schemas are `.strict()`, like every object schema in v1 — see the file-level
 // comment in document.ts for why unknown keys must be reported rather than silently dropped,
-// and why `.extend()` (used below and by consumers of these primitives) must re-apply
-// `.strict()` to its result.
+// and for what was actually verified about `.strict()`, nesting, and `.extend()` in Zod 4.4.3.
 
 /** `current` is deliberately not checked against `total` (spec §3.2). */
 export const currentAndTotal = z
