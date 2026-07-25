@@ -2188,7 +2188,12 @@ Create `src/data/repository/indexedDbRepository.test.ts`:
 ```ts
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createCharacter } from '../factory/createCharacter.js';
-import { CHARACTER_STORE, DB_NAME, createIndexedDbRepository } from './indexedDbRepository.js';
+import {
+  CHARACTER_STORE,
+  DB_NAME,
+  createIndexedDbRepository,
+  openDb,
+} from './indexedDbRepository.js';
 
 const ID_A = '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e';
 const ID_B = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
@@ -2198,7 +2203,6 @@ const docFor = (id: string, name: string) =>
 
 /** Writes a value straight into the store, bypassing validation, to simulate damage. */
 async function putRaw(id: string, value: unknown): Promise<void> {
-  const { openDb } = await import('./indexedDbRepository.js');
   const db = await openDb();
   await db.put(CHARACTER_STORE, value, id);
   db.close();
