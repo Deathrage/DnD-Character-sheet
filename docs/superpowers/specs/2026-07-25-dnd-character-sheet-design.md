@@ -332,13 +332,21 @@ interface CharacterSummary {
   hitPoints: HitPoints;
 }
 
+/** A row of the character list. A damaged document still appears, flagged. */
+type ListEntry =
+  | { ok: true; summary: CharacterSummary }
+  | { ok: false; id: string; error: LoadError };
+
 interface CharacterRepository {
-  list(): Promise<CharacterSummary[]>;
+  list(): Promise<ListEntry[]>;
   get(id: string): Promise<LoadResult | null>;   // null when no such id
+  getRaw(id: string): Promise<unknown>;          // unvalidated, to seed the raw-JSON editor
   save(doc: CharacterDocument): Promise<void>;
   delete(id: string): Promise<void>;
 }
 ```
+
+`list()` yields `ListEntry`, not `CharacterSummary`, because a document that fails to load cannot be summarised and must still be listed. `getRaw` exists so the raw-JSON editor can be seeded with the stored text of exactly such a document.
 
 IndexedDB via `idb`: database `dnd-character-sheet`, one object store `characters` keyed by `id`. `list()` reads full documents and maps them to summaries — with a handful of characters this is cheaper than maintaining a denormalized index, and can be revisited if it ever matters. A document that fails to load is still listed, flagged as damaged, so it can be opened in the raw-JSON editor rather than disappearing.
 
