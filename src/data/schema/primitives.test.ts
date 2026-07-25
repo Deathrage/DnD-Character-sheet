@@ -13,6 +13,7 @@ import {
   nameAndDescription,
   nonNegativeInt,
   shortName,
+  signedInt,
   uuid,
 } from './primitives.js';
 
@@ -66,6 +67,19 @@ describe('nonNegativeInt', () => {
   });
 });
 
+describe('signedInt', () => {
+  it.each([-9999, -1, 0, 1, 9999])('accepts %i', (value) => {
+    expect(signedInt.parse(value)).toBe(value);
+  });
+
+  it.each([1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    'rejects %p',
+    (value) => {
+      expect(signedInt.safeParse(value).success).toBe(false);
+    },
+  );
+});
+
 describe('dieSizeKey', () => {
   it.each(['1', '8', '12', '100'])('accepts %s', (value) => {
     expect(dieSizeKey.parse(value)).toBe(value);
@@ -85,6 +99,26 @@ describe('uuid and isoDateTime', () => {
     expect(uuid.safeParse('not-a-uuid').success).toBe(false);
   });
 
+  it('rejects a bad version nibble, otherwise correctly shaped', () => {
+    // Version nibble (3rd group, 1st char) must be 1-5; '6' is out of range.
+    expect(uuid.safeParse('aaaaaaaa-aaaa-6aaa-8aaa-aaaaaaaaaaaa').success).toBe(false);
+  });
+
+  it('rejects a bad variant nibble, otherwise correctly shaped', () => {
+    // Variant nibble (4th group, 1st char) must be 8/9/a/b; 'c' is out of range.
+    expect(uuid.safeParse('aaaaaaaa-aaaa-1aaa-caaa-aaaaaaaaaaaa').success).toBe(false);
+  });
+
+  it('rejects a wrong-length group, otherwise correctly shaped', () => {
+    // 2nd group has 3 hex digits instead of the required 4.
+    expect(uuid.safeParse('aaaaaaaa-aaa-1aaa-8aaa-aaaaaaaaaaaa').success).toBe(false);
+  });
+
+  it('rejects a non-hex character, otherwise correctly shaped', () => {
+    // Last character of the final group is 'z', which is not a hex digit.
+    expect(uuid.safeParse('aaaaaaaa-aaaa-1aaa-8aaa-aaaaaaaaaaaz').success).toBe(false);
+  });
+
   it('accepts a Date.toISOString() value', () => {
     expect(isoDateTime.safeParse(new Date('2026-07-25T09:41:00.000Z').toISOString()).success).toBe(
       true,
@@ -93,6 +127,22 @@ describe('uuid and isoDateTime', () => {
 
   it('rejects a local-time string with no zone', () => {
     expect(isoDateTime.safeParse('2026-07-25 09:41').success).toBe(false);
+  });
+
+  it('rejects a value with no trailing Z, otherwise correctly shaped', () => {
+    expect(isoDateTime.safeParse('2026-07-25T09:41:00.000').success).toBe(false);
+  });
+
+  it('rejects a non-UTC offset in place of Z', () => {
+    expect(isoDateTime.safeParse('2026-07-25T09:41:00.000+02:00').success).toBe(false);
+  });
+
+  it('rejects the wrong number of millisecond digits', () => {
+    expect(isoDateTime.safeParse('2026-07-25T09:41:00.00Z').success).toBe(false);
+  });
+
+  it('rejects a value with no milliseconds at all', () => {
+    expect(isoDateTime.safeParse('2026-07-25T09:41:00Z').success).toBe(false);
   });
 });
 
