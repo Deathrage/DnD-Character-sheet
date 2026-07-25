@@ -117,8 +117,29 @@ describe('characterDocumentV1Schema', () => {
 
   it('rejects a class key with leading/trailing whitespace (shortName as a record key)', () => {
     const doc = validDocument();
+    // The key and classItem.name are both padded and identical, because spec §3.3 requires
+    // them equal. That means asserting `success === false` alone would not isolate the record
+    // key's own refinement from classItem.name's (redundant, but independently sufficient)
+    // rejection of the same padded string — the document would still fail even if the record
+    // key stopped enforcing padding. Zod reports a key-level rejection as its own issue with
+    // code 'invalid_key', which neither the name field's refinement nor the class-key/name
+    // superRefine can produce, so asserting that code specifically is what isolates it.
     doc.classes = { ' Rogue': { name: ' Rogue', level: 5 } } as never;
-    expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
+    const result = characterDocumentV1Schema.safeParse(doc);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.code === 'invalid_key')).toBe(true);
+    }
+  });
+
+  it('rejects a category name with leading/trailing whitespace (categoryName as a record key)', () => {
+    const doc = validDocument();
+    doc.featsAndTraits.categories = { ' Rogue': doc.featsAndTraits.categories.Rogue } as never;
+    const result = characterDocumentV1Schema.safeParse(doc);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues.some((issue) => issue.code === 'invalid_key')).toBe(true);
+    }
   });
 
   it('rejects a hit-dice key that is not a die size', () => {
