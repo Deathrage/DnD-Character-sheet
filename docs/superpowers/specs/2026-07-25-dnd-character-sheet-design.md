@@ -63,8 +63,6 @@ The business layer always sees the **current** schema version. Migration is enti
 | **Added** `id: string` (UUID) | Needed as the IndexedDB key and for routing |
 | **Added** `name: string` | `Model.ts` has no character name, but the list screen cannot exist without one |
 | **Added** `updatedAt: string` (ISO 8601) | Remote sync will need it; cheap to maintain now |
-| **Added** `classOrder: string[]` | JSON objects have no guaranteed key order; user-controlled ordering must be explicit |
-| **Added** `categoryOrder: string[]` to every `Categorized<T>` | Same reason |
 | **Removed** `AbilitiesItem.proficient` | Ability-check proficiency has no referent in the rules. Proficiency attaches to armour, weapons, tools, skills and saving throws — never to a bare ability. `savingThrowProficient` and `SkillsItem.proficient` already cover the real cases |
 | **Not stored** `level` | Derived; lives on the business facade |
 | **Not stored** `Equipment.attuned`, `Equipment.equipped` | Derived views; stored shape is `weapons[]` and `other[]`, each item carrying its own `attuned` and `equipped` booleans |
@@ -88,8 +86,9 @@ interface NameAndDescription extends Name { description: LongText }
 interface CurrentAndTotal { current: number; total: number }
 
 interface Categorized<T> {
+  /** Display order is object-key insertion order, i.e. creation order.
+   *  No explicit order array — see §3.4. */
   categories: Record<CategoryName, T[]>;
-  categoryOrder: CategoryName[];   // permutation of Object.keys(categories)
   uncategorized: T[];
 }
 
@@ -165,7 +164,6 @@ interface CharacterDocumentV1 {
   updatedAt: string;  // ISO 8601
 
   classes: Record<ShortName, ClassItem>;
-  classOrder: ShortName[];
 
   hitPoints: HitPoints;
   /** Key is the die size in digits, e.g. "8" for d8. JSON stringifies object
@@ -188,14 +186,24 @@ The ability keyed to each skill (Acrobatics → DEX and so on) is **not** stored
 
 ### 3.3 Invariants the data layer enforces
 
-- `categoryOrder` is a permutation of `Object.keys(categories)` — no missing and no extra keys.
-- `classOrder` is a permutation of `Object.keys(classes)`.
 - For every entry in `classes`, the map key equals `value.name`.
 - `hitDices` keys match `/^[1-9]\d*$/` — a die size, rendered as `d{key}`.
 - **Non-negative integers:** `ClassItem.level`, `armorClass`, `proficiencyBonus`, `passivePerception`, `speed`, `AbilitiesItem.score`, `InventoryItem.count`, every `coins` amount, `HitPoints.temporary`, and both members of every `CurrentAndTotal`.
 - **Signed integers:** `AbilitiesItem.modifier`, `AbilitiesItem.savingThrowModifier` and `SkillsItem.modifier` are the only fields that may be negative. The UI always renders these with an explicit sign.
 - Names are trimmed and non-empty after trimming.
 - `current` is never validated against `total`, per §3.2.
+
+### 3.4 Ordering
+
+Categories and classes display in **creation order**, with no stored order array. This is guaranteed rather than incidental: `JSON.stringify`, `JSON.parse`, `Object.keys` and `for...in` all iterate string keys in insertion order per the ECMAScript specification. MobX's observable objects are Proxies over a plain object and so inherit that order, and `toJS` preserves it. A round-trip through the file therefore preserves creation order without storing anything.
+
+Two consequences follow.
+
+**Rename must preserve position.** Re-keying a map is delete-then-insert, which would move the renamed entry to the end. `renameCategory` and `renameClass` therefore rebuild the map in a single pass, emitting existing keys in order and substituting the new name in place.
+
+**Purely-numeric names sort first.** The specification orders array-index-like string keys ahead of all others, in ascending numeric order. A category named `1` or `12` appears before every non-numeric category regardless of when it was created. Accepted — see §11. Nothing is lost or mislabelled, only displayed in an unexpected position.
+
+There is no user-controlled reordering. Adding it later means reintroducing an explicit order array.
 
 ## 4. Versioning and migration
 
@@ -268,7 +276,7 @@ interface CharacterSummary {
   id: string;
   name: string;
   totalLevel: number;                 // computed while mapping, never stored
-  classes: { name: string; level: number }[];   // in classOrder
+  classes: { name: string; level: number }[];   // in creation order
   hitPoints: HitPoints;
 }
 
@@ -317,13 +325,12 @@ Most edits are direct field writes. These have rules and must be actions:
 | --- | --- |
 | `appendJournalDay()` | Appends at the end only |
 | `deleteNewestJournalDay()` | Deletes the last entry only; no other index is deletable |
-| `renameCategory(from, to)` | Re-keys `categories`, rewrites `categoryOrder` in place; rejects a name already in use; commits on confirm, not per keystroke |
-| `deleteCategory(name)` | Moves its items to `uncategorized`, then removes the key and its order entry |
-| `createCategory(name)` | Rejects duplicates and empty names; appends to `categoryOrder` |
-| `reorderCategories(order)` | Accepts only a permutation of the existing category names |
+| `renameCategory(from, to)` | Rebuilds `categories` in one pass so the entry keeps its position (§3.4); rejects a name already in use; commits on confirm, not per keystroke |
+| `deleteCategory(name)` | Moves its items to `uncategorized`, then removes the key |
+| `createCategory(name)` | Rejects duplicates and empty names; the new category appears last |
 | `moveItemToCategory(...)` | Keeps `categories` and `uncategorized` mutually exclusive |
-| `addClass` / `removeClass` / `renameClass` | Keeps map key and `value.name` equal, maintains `classOrder` |
-| `reorderClasses(order)` | Accepts only a permutation of the existing class names |
+| `addClass` / `removeClass` | Keeps map key and `value.name` equal |
+| `renameClass(from, to)` | Rebuilds `classes` in one pass so the entry keeps its position (§3.4) |
 
 Category rename commits on confirm rather than on each keystroke because renaming re-keys the map — the wireframe rewrote it on every `oninput`, which would re-key mid-word and cannot handle a transiently duplicate or empty name.
 
@@ -396,7 +403,7 @@ Full depth through all three layers, narrow surface. Everything below is in scop
 3. Class add, remove, rename and level edits round-trip through a reload.
 4. HP current, max and temporary, and AC, round-trip through a reload.
 5. Hit dice per die type — add, remove, current, max — round-trip through a reload.
-6. Feats & Traits: create, edit and delete entries; create, rename and reorder categories; deleting a category moves its entries to Uncategorized; a duplicate category name is rejected with a visible message.
+6. Feats & Traits: create, edit and delete entries; create and rename categories, with a rename keeping the category in place rather than moving it last; deleting a category moves its entries to Uncategorized; a duplicate category name is rejected with a visible message.
 7. Editing an entry below 640px shows a bottom sheet with every field visible while the keyboard is open; at 640px and above the same edit shows a centred modal.
 8. Export produces a `.json` that Import restores into an equivalent character under a new `id`.
 9. The raw-JSON editor rejects a malformed document with a readable error and leaves the stored document untouched.
@@ -444,6 +451,8 @@ Storybook uses a decorator that injects a `CharacterStore` built from a fixture,
 
 **`journal: LongText[]` with index-as-day** means days cannot be skipped or labelled. Accepted as `Model.ts` specifies it.
 
+**A purely-numeric category name sorts first.** Creation order comes from object-key insertion order, and the ECMAScript specification places array-index-like keys ahead of all others. So a category named `1` appears above `Combat` even if created after it. Accepted deliberately over rejecting the name, which would refuse the user's input for a reason unconnected to their character sheet. Nothing is lost or mislabelled. Reintroducing an order array is the fix if it ever proves annoying.
+
 **`list()` reads full documents.** Fine for a handful of characters; revisit only if it measurably matters.
 
 ## 12. Decision log
@@ -455,7 +464,7 @@ Storybook uses a decorator that injects a `CharacterStore` built from a fixture,
 | No local versioning | User's decision: versioning belongs to remote upload and restore only |
 | Debounced autosave, no save button | A save button is forgettable on a phone and adds friction to every counter tick |
 | `Model.ts` authoritative for fields | User's decision; the wireframe is a sketch |
-| `Record` + explicit order arrays | User's decision; order arrays fix JSON's lack of key ordering |
+| `Record` keys, no order arrays | User's decision. Display order is object-key insertion order, which the ECMAScript specification guarantees for string keys; the one exception, purely-numeric names, is accepted in §11 |
 | `AbilitiesItem.proficient` dropped | No referent in the rules, and the app computes nothing, so the flag would carry no information |
 | MobX over Valtio | User preference and familiarity; cached `computed` values also cannot leak into the saved file |
 | Plain observable document + facade | Avoids a hydrate/dehydrate layer between classes and a plain-JSON document |
