@@ -115,6 +115,12 @@ describe('characterDocumentV1Schema', () => {
     }
   });
 
+  it('rejects a class key with leading/trailing whitespace (shortName as a record key)', () => {
+    const doc = validDocument();
+    doc.classes = { ' Rogue': { name: ' Rogue', level: 5 } } as never;
+    expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
+  });
+
   it('rejects a hit-dice key that is not a die size', () => {
     const doc = validDocument();
     doc.hitDices = { d8: { current: 1, total: 1 } } as never;

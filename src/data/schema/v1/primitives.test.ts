@@ -22,11 +22,30 @@ import {
 } from './primitives.js';
 
 describe('shortName', () => {
-  it('trims surrounding whitespace', () => {
-    expect(shortName.parse('  Sable  ')).toBe('Sable');
+  // Not trimmed: parseCharacter returns the parsed value, so trimming on load would silently
+  // rewrite a stored or hand-edited document. Padding is rejected instead — see primitives.ts.
+  it('returns an already-trimmed name unchanged', () => {
+    expect(shortName.parse('Sable')).toBe('Sable');
   });
 
-  it('rejects a value that is empty after trimming', () => {
+  it('preserves internal whitespace', () => {
+    // The case that stops someone "fixing" the refinement into a whitespace ban.
+    expect(shortName.parse('Sable Nightwind')).toBe('Sable Nightwind');
+  });
+
+  it.each(['  Sable', 'Sable  ', '  Sable  '])(
+    'rejects leading and/or trailing whitespace: %p',
+    (value) => {
+      expect(shortName.safeParse(value).success).toBe(false);
+    },
+  );
+
+  it('rejects an empty string', () => {
+    expect(shortName.safeParse('').success).toBe(false);
+  });
+
+  it('rejects a whitespace-only string, which .min(1) alone would not catch', () => {
+    // '   ' has length 3, so it passes .min(1); the trim refinement is what rejects it.
     expect(shortName.safeParse('   ').success).toBe(false);
   });
 
@@ -37,6 +56,29 @@ describe('shortName', () => {
 });
 
 describe('categoryName', () => {
+  it('returns an already-trimmed name unchanged', () => {
+    expect(categoryName.parse('Rogue')).toBe('Rogue');
+  });
+
+  it('preserves internal whitespace', () => {
+    expect(categoryName.parse('Class Features')).toBe('Class Features');
+  });
+
+  it.each(['  Rogue', 'Rogue  ', '  Rogue  '])(
+    'rejects leading and/or trailing whitespace: %p',
+    (value) => {
+      expect(categoryName.safeParse(value).success).toBe(false);
+    },
+  );
+
+  it('rejects an empty string', () => {
+    expect(categoryName.safeParse('').success).toBe(false);
+  });
+
+  it('rejects a whitespace-only string, which .min(1) alone would not catch', () => {
+    expect(categoryName.safeParse('   ').success).toBe(false);
+  });
+
   it(`accepts exactly ${MAX_CATEGORY_NAME} characters and rejects one more`, () => {
     expect(categoryName.safeParse('a'.repeat(MAX_CATEGORY_NAME)).success).toBe(true);
     expect(categoryName.safeParse('a'.repeat(MAX_CATEGORY_NAME + 1)).success).toBe(false);

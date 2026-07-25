@@ -9,9 +9,17 @@ export const MAX_SHORT_NAME = 80;
 export const MAX_CATEGORY_NAME = 40;
 export const MAX_LONG_TEXT = 20_000;
 
-/** Names are trimmed and must survive trimming. */
-export const shortName = z.string().trim().min(1).max(MAX_SHORT_NAME);
-export const categoryName = z.string().trim().min(1).max(MAX_CATEGORY_NAME);
+// Not trimmed: parseCharacter returns the parsed value, so trimming here would silently
+// rewrite a stored or hand-edited document the moment it loads — the same silent-repair
+// problem this schema already refuses to commit for unknown keys. Padding is rejected
+// instead, and trimming happens at the write boundary (createCharacter, and later the
+// business layer's name-editing actions), where rewriting the user's own fresh input is not
+// a surprise. Internal whitespace (e.g. "Sable Nightwind") is untouched either way.
+const isTrimmed = (value: string) => value === value.trim();
+const NOT_TRIMMED = 'must not have leading or trailing whitespace';
+
+export const shortName = z.string().min(1).max(MAX_SHORT_NAME).refine(isTrimmed, NOT_TRIMMED);
+export const categoryName = z.string().min(1).max(MAX_CATEGORY_NAME).refine(isTrimmed, NOT_TRIMMED);
 
 /** Freeform prose. Not trimmed — leading whitespace may be deliberate. */
 export const longText = z.string().max(MAX_LONG_TEXT);
