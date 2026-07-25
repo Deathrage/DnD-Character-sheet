@@ -5,6 +5,7 @@ import {
   SKILL_KEYS,
   SPELL_SLOT_LEVELS,
   characterDocumentV1Schema,
+  type CharacterDocumentV1,
 } from './document.js';
 
 const INPUT = {
@@ -64,10 +65,205 @@ describe('createCharacter', () => {
     expect(Object.keys(doc.counters.spellSlots)).toEqual([...SPELL_SLOT_LEVELS]);
   });
 
-  it('returns independent documents, not shared substructures', () => {
-    const first = createCharacter(INPUT);
-    const second = createCharacter(INPUT);
-    first.inventory.items.push({ name: 'Rope', description: '', count: 1 });
-    expect(second.inventory.items).toEqual([]);
+  // The two tests above only check *which* keys exist and that three aggregate numbers are
+  // zero. Neither closes over the per-key value of every ability, skill and spell-slot entry —
+  // schema validation alone does not either, since it enforces types, not values. A stray
+  // `true`, or a non-zero modifier on a single key, would pass every test above. Assert every
+  // key explicitly rather than a sampled one.
+
+  it('zeroes every ability entry, not just a sample', () => {
+    const doc = createCharacter(INPUT);
+    for (const key of ABILITY_KEYS) {
+      expect(doc.abilitiesAndSkills.abilities[key]).toEqual({
+        score: 0,
+        modifier: 0,
+        savingThrowModifier: 0,
+        savingThrowProficient: false,
+      });
+    }
+  });
+
+  it('zeroes every skill entry, not just a sample', () => {
+    const doc = createCharacter(INPUT);
+    for (const key of SKILL_KEYS) {
+      expect(doc.abilitiesAndSkills.skills[key]).toEqual({
+        modifier: 0,
+        proficient: false,
+        expertise: false,
+      });
+    }
+  });
+
+  it('zeroes every spell-slot level, not just a sample', () => {
+    const doc = createCharacter(INPUT);
+    for (const level of SPELL_SLOT_LEVELS) {
+      expect(doc.counters.spellSlots[level]).toEqual({ current: 0, total: 0 });
+    }
+  });
+
+  describe('does not share substructure between documents', () => {
+    // Task 3's fixture had a single shared object sitting behind every spell-slot entry, so a
+    // mutation on one slot silently poisoned the rest of module state. Tasks 5-7 all build their
+    // fixtures on this factory, so a regression here would surface as confusing failures
+    // somewhere else entirely. Every mutable location gets its own case below rather than
+    // trusting one sampled field (inventory.items) to stand in for the rest.
+    const cases: Array<{
+      name: string;
+      mutate: (doc: CharacterDocumentV1) => void;
+      read: (doc: CharacterDocumentV1) => unknown;
+      original: unknown;
+    }> = [
+      {
+        name: 'inventory.items',
+        mutate: (doc) => doc.inventory.items.push({ name: 'Rope', description: '', count: 1 }),
+        read: (doc) => doc.inventory.items,
+        original: [],
+      },
+      {
+        name: 'inventory.coins',
+        mutate: (doc) => {
+          doc.inventory.coins.pp = 5;
+        },
+        read: (doc) => doc.inventory.coins.pp,
+        original: 0,
+      },
+      {
+        name: 'hitPoints',
+        mutate: (doc) => {
+          doc.hitPoints.current = 5;
+        },
+        read: (doc) => doc.hitPoints,
+        original: { current: 0, total: 0, temporary: 0 },
+      },
+      {
+        name: 'hitDices',
+        mutate: (doc) => {
+          doc.hitDices['6'] = { current: 1, total: 1 };
+        },
+        read: (doc) => doc.hitDices,
+        original: {},
+      },
+      {
+        name: 'classes',
+        mutate: (doc) => {
+          doc.classes['Wizard'] = { name: 'Wizard', level: 1 };
+        },
+        read: (doc) => doc.classes,
+        original: {},
+      },
+      {
+        name: 'journalAndNotes.journal',
+        mutate: (doc) => doc.journalAndNotes.journal.push('an entry'),
+        read: (doc) => doc.journalAndNotes.journal,
+        original: [],
+      },
+      {
+        name: 'equipment.weapons',
+        mutate: (doc) =>
+          doc.equipment.weapons.push({
+            name: 'Sword',
+            description: '',
+            attuned: false,
+            equipped: false,
+          }),
+        read: (doc) => doc.equipment.weapons,
+        original: [],
+      },
+      {
+        name: 'equipment.other',
+        mutate: (doc) =>
+          doc.equipment.other.push({
+            name: 'Torch',
+            description: '',
+            attuned: false,
+            equipped: false,
+          }),
+        read: (doc) => doc.equipment.other,
+        original: [],
+      },
+      {
+        name: 'featsAndTraits.uncategorized',
+        mutate: (doc) =>
+          doc.featsAndTraits.uncategorized.push({ name: 'Darkvision', description: '' }),
+        read: (doc) => doc.featsAndTraits.uncategorized,
+        original: [],
+      },
+      {
+        name: 'featsAndTraits.categories',
+        mutate: (doc) => {
+          doc.featsAndTraits.categories['Racial'] = [];
+        },
+        read: (doc) => doc.featsAndTraits.categories,
+        original: {},
+      },
+      {
+        name: 'spellList.uncategorized',
+        mutate: (doc) =>
+          doc.spellList.uncategorized.push({
+            name: 'Fireball',
+            description: '',
+            level: 3,
+            prepared: false,
+          }),
+        read: (doc) => doc.spellList.uncategorized,
+        original: [],
+      },
+      {
+        name: 'spellList.categories',
+        mutate: (doc) => {
+          doc.spellList.categories['Evocation'] = [];
+        },
+        read: (doc) => doc.spellList.categories,
+        original: {},
+      },
+      {
+        name: 'counters.uncategorized',
+        mutate: (doc) =>
+          doc.counters.uncategorized.push({ name: 'Ki', description: '', current: 0, total: 0 }),
+        read: (doc) => doc.counters.uncategorized,
+        original: [],
+      },
+      {
+        name: 'counters.categories',
+        mutate: (doc) => {
+          doc.counters.categories['Class'] = [];
+        },
+        read: (doc) => doc.counters.categories,
+        original: {},
+      },
+      {
+        name: 'counters.spellSlots',
+        mutate: (doc) => {
+          doc.counters.spellSlots['1'].current = 5;
+        },
+        read: (doc) => doc.counters.spellSlots['1'],
+        original: { current: 0, total: 0 },
+      },
+      {
+        name: 'abilitiesAndSkills.abilities',
+        mutate: (doc) => {
+          doc.abilitiesAndSkills.abilities.strength.score = 5;
+        },
+        read: (doc) => doc.abilitiesAndSkills.abilities.strength,
+        original: { score: 0, modifier: 0, savingThrowModifier: 0, savingThrowProficient: false },
+      },
+      {
+        name: 'abilitiesAndSkills.skills',
+        mutate: (doc) => {
+          doc.abilitiesAndSkills.skills.acrobatics.modifier = 5;
+        },
+        read: (doc) => doc.abilitiesAndSkills.skills.acrobatics,
+        original: { modifier: 0, proficient: false, expertise: false },
+      },
+    ];
+
+    for (const { name, mutate, read, original } of cases) {
+      it(`independent ${name}`, () => {
+        const first = createCharacter(INPUT);
+        const second = createCharacter(INPUT);
+        mutate(first);
+        expect(read(second)).toEqual(original);
+      });
+    }
   });
 });

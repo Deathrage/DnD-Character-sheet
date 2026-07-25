@@ -20,6 +20,10 @@ export interface CreateCharacterInput {
 
 const zero = () => ({ current: 0, total: 0 });
 
+// `Item` has no parameter to infer from — it is resolved from the contextual type at each call
+// site below, i.e. from `createCharacter`'s declared `CharacterDocument` return type. Building
+// this object into a local variable before returning would drop that context and force an
+// explicit type argument (or `any`) at each call site instead.
 const emptyCategorized = <Item>() => ({
   categories: {} as Record<string, Item[]>,
   uncategorized: [] as Item[],
