@@ -64,7 +64,7 @@ export const nameAndDescription = z
  * Categorized<T> (spec §3.2). Display order is object-key insertion order,
  * so there is no order array — see §3.4.
  */
-export const categorized = <Item extends z.ZodTypeAny>(item: Item) =>
+export const categorized = <Item extends z.ZodType>(item: Item) =>
   z
     .object({
       categories: z.record(categoryName, z.array(item)),

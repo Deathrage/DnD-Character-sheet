@@ -122,7 +122,7 @@ const skillsItem = z
   })
   .strict();
 
-const fixedKeys = <Key extends string, Value extends z.ZodTypeAny>(
+const fixedKeys = <Key extends string, Value extends z.ZodType>(
   keys: readonly Key[],
   value: Value,
 ) => z.object(Object.fromEntries(keys.map((key) => [key, value])) as Record<Key, Value>).strict();

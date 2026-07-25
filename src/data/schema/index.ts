@@ -5,7 +5,7 @@ import { characterDocumentV1Schema, type CharacterDocumentV1 } from './v1/index.
 export const CURRENT = 1;
 
 /** Every historical schema, keyed by its version, for stepwise migration (spec §4). */
-export const SCHEMAS: Readonly<Record<number, z.ZodTypeAny>> = {
+export const SCHEMAS: Readonly<Record<number, z.ZodType>> = {
   1: characterDocumentV1Schema,
 };
 

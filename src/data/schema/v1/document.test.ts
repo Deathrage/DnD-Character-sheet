@@ -1,3 +1,7 @@
+// Schema v1 is frozen: these tests lock in what a v1 character document was allowed to be.
+// Editing an assertion here to let new code pass is editing v1's meaning — see
+// ../README.md#when-the-freeze-begins for what "frozen" means and when it starts applying.
+
 import { describe, expect, it } from 'vitest';
 import {
   ABILITY_KEYS,
@@ -6,7 +10,15 @@ import {
   characterDocumentV1Schema,
 } from './document.js';
 
-const ZERO = { current: 0, total: 0 };
+/**
+ * A fresh `{ current: 0, total: 0 }` object every call. Must not be a shared constant: several
+ * fixture fields (below, `spellSlots`) place the same call's result at multiple keys, and a
+ * table case mutates one of those in place. A single shared object there would let that
+ * mutation leak into every other slot, and into every document any later test builds.
+ */
+function zero() {
+  return { current: 0, total: 0 };
+}
 
 function validDocument() {
   return {
@@ -48,7 +60,7 @@ function validDocument() {
       uncategorized: [{ name: 'Fire Bolt', description: '2d10 fire.', level: 'c', prepared: true }],
     },
     counters: {
-      spellSlots: Object.fromEntries(SPELL_SLOT_LEVELS.map((level) => [level, ZERO])),
+      spellSlots: Object.fromEntries(SPELL_SLOT_LEVELS.map((level) => [level, zero()])),
       categories: {
         'Class Features': [
           { name: 'Arcane Recovery', description: 'Once per day.', current: 1, total: 1 },
@@ -208,6 +220,15 @@ const unknownKeyLocations: Array<[string, (doc: Doc) => void]> = [
       (doc.inventory.coins as Record<string, unknown>).extra = 'x';
     },
   ],
+  // Behaviourally redundant with the spell-slot-entry case below — both exercise the same bare
+  // `currentAndTotal` instance — but this is the other location where it is used unextended,
+  // and it is cheap to keep both.
+  [
+    'a hit-dice entry',
+    (doc) => {
+      (doc.hitDices['8'] as Record<string, unknown>).extra = 'x';
+    },
+  ],
   [
     'an inventory item',
     (doc) => {
@@ -238,6 +259,15 @@ const unknownKeyLocations: Array<[string, (doc: Doc) => void]> = [
       (doc.featsAndTraits as Record<string, unknown>).extra = 'x';
     },
   ],
+  // The only place bare `nameAndDescription` (not `.extend()`-ed) is used as an item schema.
+  // Every schema derived via `.extend()` re-applies its own `.strict()` on the clone, so none
+  // of those cases can detect nameAndDescription itself losing strictness — this one can.
+  [
+    'a feats/traits item',
+    (doc) => {
+      (doc.featsAndTraits.uncategorized[0]! as Record<string, unknown>).extra = 'x';
+    },
+  ],
   [
     'an ability',
     (doc) => {
@@ -265,8 +295,10 @@ const unknownKeyLocations: Array<[string, (doc: Doc) => void]> = [
       (doc.journalAndNotes as Record<string, unknown>).extra = 'x';
     },
   ],
+  // Targets slot '1' specifically, and only slot '1': before the `zero()` fix above, every
+  // spell-slot entry was the same shared object, so this case silently mutated all nine.
   [
-    'a spell-slot entry',
+    "the spell-slot entry at level '1'",
     (doc) => {
       (doc.counters.spellSlots as Record<string, Record<string, unknown>>)['1']!.extra = 'x';
     },
