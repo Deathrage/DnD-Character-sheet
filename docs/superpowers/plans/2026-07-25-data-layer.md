@@ -411,11 +411,22 @@ import {
 } from './primitives.js';
 
 describe('shortName', () => {
-  it('trims surrounding whitespace', () => {
-    expect(shortName.parse('  Sable  ')).toBe('Sable');
+  it('rejects leading or trailing whitespace rather than trimming it', () => {
+    expect(shortName.safeParse('  Sable  ').success).toBe(false);
+    expect(shortName.safeParse('Sable ').success).toBe(false);
+    expect(shortName.safeParse(' Sable').success).toBe(false);
   });
 
-  it('rejects a value that is empty after trimming', () => {
+  it('returns an already-trimmed name unchanged', () => {
+    expect(shortName.parse('Sable')).toBe('Sable');
+  });
+
+  it('preserves internal whitespace', () => {
+    expect(shortName.parse('Sable Nightwind')).toBe('Sable Nightwind');
+  });
+
+  it('rejects an empty or whitespace-only value', () => {
+    expect(shortName.safeParse('').success).toBe(false);
     expect(shortName.safeParse('   ').success).toBe(false);
   });
 
@@ -565,9 +576,23 @@ export const MAX_SHORT_NAME = 80;
 export const MAX_CATEGORY_NAME = 40;
 export const MAX_LONG_TEXT = 20_000;
 
-/** Names are trimmed and must survive trimming. */
-export const shortName = z.string().trim().min(1).max(MAX_SHORT_NAME);
-export const categoryName = z.string().trim().min(1).max(MAX_CATEGORY_NAME);
+/**
+ * Names must arrive already trimmed. The schema deliberately does NOT trim:
+ * `parseCharacter` returns the parsed value, so trimming here would silently
+ * rewrite a stored or hand-edited document — the same silent repair that
+ * unknown-key rejection exists to prevent. Trimming belongs at the write
+ * boundary: the factory and the business layer's name-editing actions.
+ * Internal whitespace is untouched.
+ */
+const isTrimmed = (value: string) => value === value.trim();
+const NOT_TRIMMED = 'must not have leading or trailing whitespace';
+
+export const shortName = z.string().min(1).max(MAX_SHORT_NAME).refine(isTrimmed, NOT_TRIMMED);
+export const categoryName = z
+  .string()
+  .min(1)
+  .max(MAX_CATEGORY_NAME)
+  .refine(isTrimmed, NOT_TRIMMED);
 
 /** Freeform prose. Not trimmed — leading whitespace may be deliberate. */
 export const longText = z.string().max(MAX_LONG_TEXT);
@@ -608,7 +633,7 @@ export const nameAndDescription = z.object({
  * Categorized<T> (spec §3.2). Display order is object-key insertion order,
  * so there is no order array — see §3.4.
  */
-export const categorized = <Item extends z.ZodTypeAny>(item: Item) =>
+export const categorized = <Item extends z.ZodType>(item: Item) =>
   z.object({
     categories: z.record(categoryName, z.array(item)),
     uncategorized: z.array(item),
@@ -917,7 +942,7 @@ const skillsItem = z.object({
   expertise: z.boolean(),
 });
 
-const fixedKeys = <Key extends string, Value extends z.ZodTypeAny>(
+const fixedKeys = <Key extends string, Value extends z.ZodType>(
   keys: readonly Key[],
   value: Value,
 ) =>
@@ -1018,7 +1043,7 @@ import { characterDocumentV1Schema, type CharacterDocumentV1 } from './v1/index.
 export const CURRENT = 1;
 
 /** Every historical schema, keyed by its version, for stepwise migration (spec §4). */
-export const SCHEMAS: Readonly<Record<number, z.ZodTypeAny>> = {
+export const SCHEMAS: Readonly<Record<number, z.ZodType>> = {
   1: characterDocumentV1Schema,
 };
 
@@ -1280,7 +1305,7 @@ git commit -m "feat: add blank character factory with injected id and timestamp"
   - `type LoadResult = { ok: true; doc: CharacterDocument } | { ok: false; error: LoadError; raw: unknown }`
   - `versionOf(raw: unknown, current: number): number`
   - `type Migration = (doc: unknown) => unknown`
-  - `interface MigrationRegistry { current: number; schemas: Readonly<Record<number, z.ZodTypeAny>>; migrations: ReadonlyMap<number, Migration> }`
+  - `interface MigrationRegistry { current: number; schemas: Readonly<Record<number, z.ZodType>>; migrations: ReadonlyMap<number, Migration> }`
   - `defaultRegistry: MigrationRegistry`
   - `parseCharacter(raw: unknown, registry?: MigrationRegistry): LoadResult`
   - `describeLoadError(error: LoadError): string`
@@ -1722,7 +1747,7 @@ export type LoadResult =
 /** The schema and migration tables the walk uses. A parameter so tests can supply a fake. */
 export interface MigrationRegistry {
   current: number;
-  schemas: Readonly<Record<number, z.ZodTypeAny>>;
+  schemas: Readonly<Record<number, z.ZodType>>;
   migrations: ReadonlyMap<number, Migration>;
 }
 

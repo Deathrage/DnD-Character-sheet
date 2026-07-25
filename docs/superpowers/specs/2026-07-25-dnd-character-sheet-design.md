@@ -190,7 +190,7 @@ The ability keyed to each skill (Acrobatics → DEX and so on) is **not** stored
 - `hitDices` keys match `/^[1-9]\d*$/` — a die size, rendered as `d{key}`.
 - **Non-negative integers:** `ClassItem.level`, `armorClass`, `proficiencyBonus`, `passivePerception`, `speed`, `AbilitiesItem.score`, `InventoryItem.count`, every `coins` amount, `HitPoints.temporary`, and both members of every `CurrentAndTotal`.
 - **Signed integers:** `AbilitiesItem.modifier`, `AbilitiesItem.savingThrowModifier` and `SkillsItem.modifier` are the only fields that may be negative. The UI always renders these with an explicit sign.
-- Names are trimmed and non-empty after trimming.
+- Names must be **already trimmed** and non-empty. The schema rejects leading or trailing whitespace rather than removing it: `parseCharacter` returns the parsed value, so trimming on load would silently rewrite a stored or hand-edited document — the same silent repair that unknown-key rejection exists to prevent. Trimming belongs at the write boundary, in `createCharacter` and in the business layer's name-editing actions. Internal whitespace is untouched.
 - `current` is never validated against `total`, per §3.2.
 
 ### 3.4 Ordering
