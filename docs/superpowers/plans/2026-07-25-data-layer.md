@@ -53,11 +53,9 @@ src/data/schema/
     primitives.test.ts
     document.ts                     characterDocumentV1Schema + type + cross-field invariants
     document.test.ts
+    blank.ts                        createCharacter — a blank document valid at v1
+    blank.test.ts
     index.ts                        v1's public face inside schema/
-
-src/data/factory/
-  createCharacter.ts                blank valid v1 document
-  createCharacter.test.ts
 
 src/data/migration/
   errors.ts                         LoadError union, CharacterLoadError, describeLoadError
@@ -93,6 +91,10 @@ This is deliberate duplication, and it protects the thing the whole design rests
 The behavioural lock comes free with the structural one: because each version's tests are colocated and frozen with it, editing v1's limits immediately fails v1's own tests.
 
 Only `src/data/schema/index.ts` is imported from outside `schema/`. Version directories are internal, so the rest of the data layer never names a version.
+
+**The blank-document factory lives inside the version directory too**, for the same reason the schema does: a blank document must satisfy its version's required fields, so a v1 factory cannot produce a valid v2 document. `schema/index.ts` re-exports it as `createCharacter`, a version-tracking export exactly parallel to the `CharacterDocument` alias.
+
+Consequently `schema/index.ts` does **not** export `ABILITY_KEYS`, `SKILL_KEYS` or `SPELL_SLOT_LEVELS`. Those are v1 facts, and the only thing outside `document.ts` that wants them is the blank factory, which is now colocated with them. Exporting them unversioned would mean every consumer silently switched lists the day v2 renamed a skill. The UI does not want them either: it needs display labels such as `"Animal Handling"` and an ability badge, which the schema's camelCase keys do not carry.
 
 ---
 
@@ -1024,10 +1026,11 @@ export const SCHEMAS: Readonly<Record<number, z.ZodTypeAny>> = {
 export type CharacterDocument = CharacterDocumentV1;
 
 export { characterDocumentV1Schema, type CharacterDocumentV1 };
-export { ABILITY_KEYS, SKILL_KEYS, SPELL_SLOT_LEVELS } from './v1/index.js';
 ```
 
-The key tuples are re-exported here so consumers such as the factory in Task 4 never import from a version directory. When v2 arrives, this file gains a `2:` entry and the `CharacterDocument` alias moves to `CharacterDocumentV2` — and that is the *only* file that changes.
+Deliberately **not** exported here: `ABILITY_KEYS`, `SKILL_KEYS` and `SPELL_SLOT_LEVELS`. They are v1 facts, and the only consumer outside `document.ts` is the blank factory, which Task 4 places beside them inside `v1/`. Exporting them version-neutrally would mean every consumer silently switched lists the day v2 renamed a skill.
+
+Task 4 adds a `createCharacter` export to this file. When v2 arrives, this file gains a `2:` entry, and the `CharacterDocument` alias and the `createCharacter` re-export both point at v2 — and it is the *only* file outside a version directory that changes.
 
 - [ ] **Step 5: Run the tests to verify they pass**
 
@@ -1050,24 +1053,34 @@ git commit -m "feat: add v1 character document schema with cross-field invariant
 ## Task 4: Blank character factory
 
 **Files:**
-- Create: `src/data/factory/createCharacter.ts`
-- Test: `src/data/factory/createCharacter.test.ts`
+- Create: `src/data/schema/v1/blank.ts`
+- Test: `src/data/schema/v1/blank.test.ts`
+- Modify: `src/data/schema/v1/index.ts` — re-export the factory
+- Modify: `src/data/schema/index.ts` — re-export it as the current version's factory
 
 **Interfaces:**
-- Consumes: `CharacterDocument`, `characterDocumentV1Schema`, `ABILITY_KEYS`, `SKILL_KEYS`, `SPELL_SLOT_LEVELS`, `CURRENT`.
-- Produces: `createCharacter(input: CreateCharacterInput): CharacterDocument` where
-  `CreateCharacterInput = { name: string; id: string; now: Date }`.
+- Consumes, all colocated inside `v1/`: `CharacterDocumentV1`, `characterDocumentV1Schema`, `ABILITY_KEYS`, `SKILL_KEYS`, `SPELL_SLOT_LEVELS`.
+- Produces: `createCharacter(input: CreateCharacterInput): CharacterDocumentV1` where
+  `CreateCharacterInput = { name: string; id: string; now: Date }`, re-exported from
+  `src/data/schema/index.ts` so Tasks 5–7 import it without naming a version.
+
+The factory lives inside `v1/` because a blank document must satisfy its version's required fields — a v1 factory cannot produce a valid v2 document. It therefore belongs with the schema that defines what valid means, and it reads the key tuples colocated rather than through the public barrel.
 
 Both `id` and `now` are injected rather than generated inside. A factory that reaches for `crypto.randomUUID()` and `new Date()` internally cannot be asserted against a fixed expectation, and the repository needs to control ids on import anyway.
 
 - [ ] **Step 1: Write the failing test**
 
-Create `src/data/factory/createCharacter.test.ts`:
+Create `src/data/schema/v1/blank.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { ABILITY_KEYS, SKILL_KEYS, SPELL_SLOT_LEVELS, characterDocumentV1Schema } from '../schema/index.js';
-import { createCharacter } from './createCharacter.js';
+import { createCharacter } from './blank.js';
+import {
+  ABILITY_KEYS,
+  SKILL_KEYS,
+  SPELL_SLOT_LEVELS,
+  characterDocumentV1Schema,
+} from './document.js';
 
 const INPUT = {
   name: 'Wren Duskwhisper',
@@ -1141,20 +1154,20 @@ Note the zeroed numbers. A blank sheet does not assume speed 30 or a +2 proficie
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `npm test -- createCharacter`
-Expected: FAIL — cannot resolve `./createCharacter.js`.
+Run: `npm test -- blank`
+Expected: FAIL — cannot resolve `./blank.js`.
 
 - [ ] **Step 3: Implement the factory**
 
-Create `src/data/factory/createCharacter.ts`:
+Create `src/data/schema/v1/blank.ts`, with a freeze header matching `document.ts`:
 
 ```ts
 import {
   ABILITY_KEYS,
   SKILL_KEYS,
   SPELL_SLOT_LEVELS,
-  type CharacterDocument,
-} from '../schema/index.js';
+  type CharacterDocumentV1 as CharacterDocument,
+} from './document.js';
 
 export interface CreateCharacterInput {
   name: string;
@@ -1224,15 +1237,29 @@ export function createCharacter({ name, id, now }: CreateCharacterInput): Charac
 
 Every nested value is built inside the function call, so no two documents share a substructure.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [ ] **Step 4: Re-export it through both barrels**
 
-Run: `npm test -- createCharacter`
+Add to `src/data/schema/v1/index.ts`:
+
+```ts
+export { createCharacter, type CreateCharacterInput } from './blank.js';
+```
+
+Add to `src/data/schema/index.ts` — a version-tracking export, the same treatment `CharacterDocument` gets, so Tasks 5–7 never name a version:
+
+```ts
+export { createCharacter, type CreateCharacterInput } from './v1/index.js';
+```
+
+- [ ] **Step 5: Run the tests to verify they pass**
+
+Run: `npm test -- blank`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/data/factory
+git add src/data/schema
 git commit -m "feat: add blank character factory with injected id and timestamp"
 ```
 
@@ -1467,7 +1494,7 @@ Create `src/data/migration/parseCharacter.test.ts`:
 ```ts
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { createCharacter } from '../factory/createCharacter.js';
+import { createCharacter } from '../schema/index.js';
 import type { Migration } from './migrations.js';
 import { parseCharacter, type MigrationRegistry } from './parseCharacter.js';
 
@@ -1818,7 +1845,7 @@ Create `src/data/serialization/exportCharacter.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { createCharacter } from '../factory/createCharacter.js';
+import { createCharacter } from '../schema/index.js';
 import { exportFilename, toJsonText } from './exportCharacter.js';
 
 const doc = createCharacter({
@@ -1902,7 +1929,7 @@ Create `src/data/serialization/importCharacter.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { createCharacter } from '../factory/createCharacter.js';
+import { createCharacter } from '../schema/index.js';
 import { toJsonText } from './exportCharacter.js';
 import { fromJsonText } from './importCharacter.js';
 
@@ -2091,7 +2118,7 @@ Create `src/data/repository/summarize.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { createCharacter } from '../factory/createCharacter.js';
+import { createCharacter } from '../schema/index.js';
 import { summarize } from './summarize.js';
 
 const base = () =>
@@ -2215,7 +2242,7 @@ Create `src/data/repository/indexedDbRepository.test.ts`:
 
 ```ts
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createCharacter } from '../factory/createCharacter.js';
+import { createCharacter } from '../schema/index.js';
 import {
   CHARACTER_STORE,
   DB_NAME,
