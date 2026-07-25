@@ -1,3 +1,7 @@
+// Schema v1 is frozen: this file defines what a v1 character document was allowed to be,
+// and that meaning must not change under already-stored documents. A rule change here is a
+// new schema version, not an edit — see ../README.md.
+
 import { z } from 'zod';
 
 export const MAX_SHORT_NAME = 80;
