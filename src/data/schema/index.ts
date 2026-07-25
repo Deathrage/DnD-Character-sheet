@@ -14,6 +14,8 @@ export type CharacterDocument = CharacterDocumentV1;
 
 export { characterDocumentV1Schema, type CharacterDocumentV1 };
 
+export { createCharacter, type CreateCharacterInput } from './v1/index.js';
+
 // Deliberately not re-exported here: ABILITY_KEYS, SKILL_KEYS, SPELL_SLOT_LEVELS. They are v1
 // facts, not version-neutral ones — re-exporting them from this barrel would let a v2 rename
 // silently change what a caller gets with no hint at the call site. Their only consumer is the

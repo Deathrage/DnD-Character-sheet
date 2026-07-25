@@ -5,3 +5,4 @@ export {
   characterDocumentV1Schema,
   type CharacterDocumentV1,
 } from './document.js';
+export { createCharacter, type CreateCharacterInput } from './blank.js';
