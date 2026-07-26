@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 import { CURRENT, SCHEMAS, type CharacterDocument } from '../schema/index.js';
-import { CharacterLoadError, type LoadError, type SchemaIssue } from './errors.js';
+import { CharacterLoadError, toSchemaIssues, type LoadError } from './errors.js';
 import { MIGRATIONS, type Migration } from './migrations.js';
 import { versionOf } from './versionOf.js';
 
@@ -32,16 +32,25 @@ function validateAt(registry: MigrationRegistry, version: number, doc: unknown):
 
   const result = schema.safeParse(doc);
   if (!result.success) {
-    const issues: SchemaIssue[] = result.error.issues.map((issue) => ({
-      path: issue.path.join('.'),
-      message: issue.message,
-    }));
+    const issues = toSchemaIssues(result.error);
     throw new CharacterLoadError({ code: 'INVALID_AT_VERSION', version, issues });
   }
 
   return result.data;
 }
 
+/**
+ * The one deliberate exception to `parseCharacter`'s "a thrown error means the loader is bad"
+ * rule below: a migration that throws is reported as `MIGRATION_FAILED` rather than rethrown.
+ *
+ * Every other throw inside this walk is a programming error, so letting it escape is right. A
+ * migration is different — it can legitimately fail on input that is schema-valid but genuinely
+ * unconvertible (a v1 field whose v2 counterpart has no defensible value for this particular
+ * document, say), and that is a fact about the file, not a bug in the loader. Reporting it as
+ * data corruption is what puts the document in front of the repair screen instead of crashing
+ * the app. The original error is preserved verbatim as `cause`, so a migration that threw
+ * because it really was buggy is still fully diagnosable.
+ */
 function runMigration(registry: MigrationRegistry, version: number, doc: unknown): unknown {
   const migration = registry.migrations.get(version);
   if (migration === undefined) {

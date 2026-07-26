@@ -1,6 +1,7 @@
 import { openDB, type IDBPDatabase } from 'idb';
+import { CharacterLoadError, toSchemaIssues } from '../migration/errors.js';
 import { parseCharacter, type LoadResult } from '../migration/parseCharacter.js';
-import { characterDocumentV1Schema, type CharacterDocument } from '../schema/index.js';
+import { CURRENT, CURRENT_SCHEMA, type CharacterDocument } from '../schema/index.js';
 import { summarize } from './summarize.js';
 import type { CharacterRepository, ListEntry } from './types.js';
 
@@ -69,7 +70,17 @@ export function createIndexedDbRepository(): CharacterRepository {
 
     async save(doc: CharacterDocument): Promise<void> {
       // Validate at the boundary: an invalid document must never reach storage (spec §6).
-      const validated = characterDocumentV1Schema.parse(doc);
+      // The refusal is reported as a CharacterLoadError, the same taxonomy every other failure
+      // in this layer uses, so the business layer can render it without importing a Zod type.
+      const result = CURRENT_SCHEMA.safeParse(doc);
+      if (!result.success) {
+        throw new CharacterLoadError({
+          code: 'INVALID_AT_VERSION',
+          version: CURRENT,
+          issues: toSchemaIssues(result.error),
+        });
+      }
+      const validated = result.data;
 
       const db = await openDb();
       try {

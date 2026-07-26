@@ -1,8 +1,23 @@
+import type { z } from 'zod';
+
 /** A schema complaint, flattened so no Zod type escapes the data layer. */
 export interface SchemaIssue {
   /** Dotted path to the offending field, or '' for the document root. */
   path: string;
   message: string;
+}
+
+/**
+ * The one place a `ZodError` becomes `SchemaIssue[]`. Every refusal that originates in a Zod
+ * parse — loading a stored document, and validating one on its way into storage — goes through
+ * here, so the flattening exists once and callers outside the data layer never need to know a
+ * `ZodError` was involved (see `SchemaIssue` above).
+ */
+export function toSchemaIssues(error: z.ZodError): SchemaIssue[] {
+  return error.issues.map((issue) => ({
+    path: issue.path.join('.'),
+    message: issue.message,
+  }));
 }
 
 export type LoadError =
