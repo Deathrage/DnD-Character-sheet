@@ -41,6 +41,10 @@ describe('versionOf', () => {
   });
 
   it('carries both versions on FROM_FUTURE so the message can be specific', () => {
+    // expect.assertions pins that the catch block actually ran. Without it the try holds no
+    // assertion of its own, so this test would go green the day versionOf stopped throwing —
+    // the exact regression it exists to catch.
+    expect.assertions(1);
     try {
       versionOf({ schemaVersion: 99 }, CURRENT);
     } catch (caught) {

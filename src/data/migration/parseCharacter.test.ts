@@ -4,23 +4,32 @@ import { createCharacter } from '../schema/index.js';
 import type { Migration } from './migrations.js';
 import { parseCharacter, type MigrationRegistry } from './parseCharacter.js';
 
-const validRaw = () =>
-  JSON.parse(
-    JSON.stringify(
-      createCharacter({
-        name: 'Sable Nightwind',
-        id: '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e',
-        now: new Date('2026-07-25T09:41:00.000Z'),
-      }),
-    ),
-  ) as unknown;
+const validRaw = () => {
+  const doc = createCharacter({
+    name: 'Sable Nightwind',
+    id: '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e',
+    now: new Date('2026-07-25T09:41:00.000Z'),
+  });
+  // A blank document is almost entirely empty strings and zeroes, against which most silent
+  // rewrites are no-ops. Populating the fields that permit padding — longText does, only names
+  // reject it — is what gives the `toEqual(raw)` assertion below something to lose.
+  doc.journalAndNotes = { journal: ['  Arrived in Barovia.  '], notes: '  Find the Sunsword.\n' };
+  doc.inventory.items = [{ name: "Thieves' Tools", description: '  For locks.  ', count: 1 }];
+  return JSON.parse(JSON.stringify(doc)) as unknown;
+};
 
 describe('parseCharacter', () => {
-  it('returns the document for a valid current-version file', () => {
-    const result = parseCharacter(validRaw());
+  it('returns a valid current-version file completely unaltered', () => {
+    // toEqual against the captured raw input, not a single field. parseCharacter returns Zod's
+    // result.data, so a `.default()`, `.catch()` or `.transform()` added to any primitive later
+    // would silently rewrite a VALID stored document on load — the one silent-repair route no
+    // other test in this file covers, because every other case here is about INVALID input.
+    const raw = validRaw();
+    const result = parseCharacter(raw);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.doc.name).toBe('Sable Nightwind');
+      expect(result.doc).toEqual(raw);
     }
   });
 
@@ -105,8 +114,12 @@ describe('parseCharacter migration chain', () => {
   });
 
   it('passes a document already at the current version straight through', () => {
-    const result = parseCharacter({ schemaVersion: 2, title: 'Wren' }, twoVersionRegistry());
+    const raw = { schemaVersion: 2, title: 'Wren' };
+    const result = parseCharacter(raw, twoVersionRegistry());
     expect(result.ok).toBe(true);
+    // The zero-migration path has no other test, and `ok === true` alone would not notice the
+    // walk quietly running a migration it should have skipped, or altering the document.
+    if (result.ok) expect(result.doc).toEqual(raw);
   });
 
   it('validates before migrating, so a bad v1 file never reaches the migration', () => {
@@ -141,13 +154,50 @@ describe('parseCharacter migration chain', () => {
     }
   });
 
-  it('reports MIGRATION_FAILED when a migration produces something invalid', () => {
+  it('keeps the ORIGINAL input as raw when a failure happens mid-migration', () => {
+    // The repair screen shows `raw` and lets the user hand-edit it. On a multi-step walk the
+    // loader is holding a partially-migrated intermediate by the time it fails, and handing
+    // that back would put a document in front of the user that they never wrote and that does
+    // not exist in storage — edits to it would not correspond to the stored file. Only the
+    // single-step UNVERSIONED path pinned this before; nothing covered the migration path.
+    const V3 = z.object({ schemaVersion: z.literal(3), title: z.string() }).strict();
+    const registry: MigrationRegistry = {
+      current: 3,
+      schemas: { 1: V1, 2: V2, 3: V3 },
+      migrations: new Map<number, Migration>([
+        [1, oneToTwo], // succeeds: { schemaVersion: 1, name } -> { schemaVersion: 2, title }
+        [
+          2,
+          () => {
+            throw new Error('2 -> 3 cannot convert this document');
+          },
+        ],
+      ]),
+    };
+
+    const original = { schemaVersion: 1, name: 'Sable' };
+    const result = parseCharacter(original, registry);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe('MIGRATION_FAILED');
+      // The same object identity the caller passed in — not the { schemaVersion: 2, title }
+      // intermediate the 1->2 step produced, and not a copy of it.
+      expect(result.raw).toBe(original);
+      expect(result.raw).toEqual({ schemaVersion: 1, name: 'Sable' });
+    }
+  });
+
+  it('reports INVALID_AT_VERSION at the target version when a migration produces something invalid', () => {
     const registry = twoVersionRegistry(() => ({ schemaVersion: 2 }));
 
     const result = parseCharacter({ schemaVersion: 1, name: 'Sable' }, registry);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      // The output failed the v2 schema, so it surfaces as invalid at version 2.
+      // Named for what it asserts. A migration that RUNS but yields a document failing the
+      // next version's schema is not MIGRATION_FAILED — the migration itself did not fail, its
+      // output did, so it surfaces as invalid at version 2. Distinguishing the two codes is
+      // this file's whole purpose, so the name must not claim the other one.
       expect(result.error.code).toBe('INVALID_AT_VERSION');
       if (result.error.code === 'INVALID_AT_VERSION') expect(result.error.version).toBe(2);
     }

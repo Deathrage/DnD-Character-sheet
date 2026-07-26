@@ -98,7 +98,11 @@ describe('longText', () => {
     expect(longText.parse('  indented')).toBe('  indented');
   });
 
-  it(`rejects more than ${MAX_LONG_TEXT} characters`, () => {
+  // Both halves, like the two name limits above: the reject-at-+1 case alone pins only that
+  // *some* limit exists at or below MAX_LONG_TEXT, so `.max(19_999)` would satisfy it while
+  // quietly refusing a document that was always legitimately valid.
+  it(`accepts exactly ${MAX_LONG_TEXT} characters and rejects one more`, () => {
+    expect(longText.safeParse('a'.repeat(MAX_LONG_TEXT)).success).toBe(true);
     expect(longText.safeParse('a'.repeat(MAX_LONG_TEXT + 1)).success).toBe(false);
   });
 });
