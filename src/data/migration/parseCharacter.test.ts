@@ -164,8 +164,39 @@ describe('parseCharacter migration chain', () => {
     expect(result.ok).toBe(false);
     if (!result.ok && result.error.code === 'MIGRATION_FAILED') {
       expect(result.error.version).toBe(1);
+      // Pinning the cause string, not just the code, is what distinguishes this branch
+      // (no migration registered) from the sibling "no schema registered" branch below —
+      // both report MIGRATION_FAILED, and a version number alone would not tell them apart
+      // if a bug ever made the wrong one fire.
+      expect(result.error.cause).toBe('no migration registered for version 1');
     } else {
       throw new Error('expected MIGRATION_FAILED');
+    }
+  });
+
+  it('reports MIGRATION_FAILED naming the version whose schema is missing, not the source or current version', () => {
+    // A gap at version 2: schemas exist for 1 and 3, migrations exist for 1 and 2. The walk
+    // validates at 1 (ok), migrates 1→2 (ok), then must validate the result at 2 before
+    // running the 2→3 migration — and there is no schema registered for 2.
+    const V3 = z.object({ schemaVersion: z.literal(3), title: z.string() }).strict();
+    const registry: MigrationRegistry = {
+      current: 3,
+      schemas: { 1: V1, 3: V3 },
+      migrations: new Map<number, Migration>([
+        [1, oneToTwo],
+        [2, (doc) => ({ ...(doc as object), schemaVersion: 3 })],
+      ]),
+    };
+
+    const result = parseCharacter({ schemaVersion: 1, name: 'Sable' }, registry);
+    expect(result.ok).toBe(false);
+    if (!result.ok && result.error.code === 'MIGRATION_FAILED') {
+      // 2, not 1 (the source version) and not 3 (current) — an off-by-one here would send
+      // a repair screen pointing at the wrong version.
+      expect(result.error.version).toBe(2);
+      expect(result.error.cause).toBe('no schema registered for version 2');
+    } else {
+      throw new Error('expected MIGRATION_FAILED at version 2');
     }
   });
 
