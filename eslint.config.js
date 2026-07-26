@@ -62,5 +62,8 @@ export default tseslint.config(
   // split out of the `data` boundary above instead of inheriting the schema-version pattern.
   boundary('data/schema', ['business', 'ui']),
   boundary('business', ['ui'], { extra: [SCHEMA_VERSION_PATTERN] }),
-  boundary('ui', [], { extra: [SCHEMA_VERSION_PATTERN] }),
+  // `ui` may import `business` and `shared` only (spec §2) — reaching past the business layer
+  // into `data` is a violation, so `data` must be listed here. An empty forbidden list would
+  // leave this boundary restricting nothing at all.
+  boundary('ui', ['data'], { extra: [SCHEMA_VERSION_PATTERN] }),
 );
