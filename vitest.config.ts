@@ -12,5 +12,6 @@ export default defineConfig({
     // Fixed, DST-free, non-UTC so date-boundary tests (e.g. exportFilename) are deterministic
     // regardless of the host machine's or CI runner's own timezone.
     env: { TZ: 'Etc/GMT+5' },
+    setupFiles: ['src/test/setupIndexedDb.ts'],
   },
 });
