@@ -1,0 +1,18 @@
+# Build output and dependencies
+node_modules/
+dist/
+coverage/
+package-lock.json
+
+# Scratch
+.superpowers/
+
+# docs/start/ holds the original project inputs — the model sketch, the brief and
+# the wireframe prototype. They are the authority on what was asked for, so they
+# stay exactly as written. `npm run format` must never rewrite them.
+docs/start/
+
+# Specs and plans are historical records of decisions already taken. Prettier's
+# embedded-code formatting would rewrite the TypeScript inside their fences, which
+# is churn on documents nobody edits again.
+docs/superpowers/

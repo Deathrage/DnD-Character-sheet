@@ -39,7 +39,14 @@ npm run lint       # eslint .
 npm run format     # prettier --write .
 ```
 
-All three of test, typecheck and lint must pass before any commit.
+All three of test, typecheck and lint must pass before any commit, and `npx prettier --check .`
+should stay green.
+
+`.prettierignore` excludes `docs/`. That is deliberate, not an oversight. **`docs/start/` holds the
+original project inputs** — the model sketch, the written brief, and an interactive wireframe
+prototype. They are the authority on what was actually asked for, so they stay byte-for-byte as
+written; do not reformat, tidy or "correct" them. `docs/superpowers/` holds specs and plans, which
+are records of decisions already taken.
 
 Environment: Windows, Node 24. Zod 4.4.3, TypeScript 6, ESLint 10 (flat config), Vite 8, Vitest 4,
 `idb` 8, `fake-indexeddb` 6. Several of these are newer majors with breaking changes from the
@@ -57,15 +64,15 @@ cause a stored document to be altered, or a failure to be swallowed. If yes, it 
 ## Invariants — do not break these
 
 Each of these looks like it could be simplified. Each was arrived at deliberately, and several
-were arrived at *after* getting them wrong once.
+were arrived at _after_ getting them wrong once.
 
 ### Schema versions are isolated by construction
 
 Each version owns a self-contained directory under `src/data/schema/`. **Nothing is shared between
 versions.** `v2/` will begin as a literal copy of `v1/` and diverge.
 
-Do not "DRY this up" by extracting shared primitives or a shared base schema. The duplication *is*
-the isolation mechanism. The migration loop validates a document *at its own version*, so a
+Do not "DRY this up" by extracting shared primitives or a shared base schema. The duplication _is_
+the isolation mechanism. The migration loop validates a document _at its own version_, so a
 primitive edited for v2's benefit silently redefines what v1 accepted — tighten a rule and a
 legitimately-valid stored character starts reporting `INVALID_AT_VERSION`, blaming the player's
 file for your change.
@@ -79,7 +86,7 @@ the freeze begins. Read it before touching anything under a version directory.
 export const shortName = z.string().min(1).max(MAX_SHORT_NAME).refine(isTrimmed, NOT_TRIMMED);
 ```
 
-Do not "simplify" this to `.trim()`. `parseCharacter` returns the *parsed* value, so trimming on
+Do not "simplify" this to `.trim()`. `parseCharacter` returns the _parsed_ value, so trimming on
 load would rewrite a stored document — the same silent repair that unknown-key rejection prevents.
 Trimming belongs at the write boundary: `createCharacter` and the business layer's name-editing
 actions. Internal whitespace is preserved on purpose.
@@ -121,7 +128,7 @@ telling you something; do not add an exception without a reason you would defend
 ### IndexedDB uses out-of-line keys
 
 `createObjectStore('characters')` with `put(value, key)` — never a `keyPath`. A `keyPath` reads the
-key *from* the stored value, so a corrupt document would become unlistable and unreachable. A
+key _from_ the stored value, so a corrupt document would become unlistable and unreachable. A
 damaged document must still appear in the list, flagged, and open in a repair screen.
 
 ### The test timezone is pinned
@@ -177,7 +184,7 @@ run years from now against a real character file. The tests build a synthetic th
 
 Two plans remain, in order:
 
-1. **Business layer** — MobX facades over a plain observable document (so `toJS(doc)` *is* the saved
+1. **Business layer** — MobX facades over a plain observable document (so `toJS(doc)` _is_ the saved
    file), the rule-carrying actions, debounced autosave with flush-on-hide, and the persistence
    gate. Spec §6.
 2. **UI** — React, the router, `ResponsiveDialog` (bottom sheet on phone, centred modal on desktop),
