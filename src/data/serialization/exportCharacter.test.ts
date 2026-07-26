@@ -31,9 +31,15 @@ describe('exportFilename', () => {
     );
   });
 
-  it('uses the UTC date, so the name does not shift with the local zone', () => {
+  it('uses the UTC date late in the UTC day, so an east-of-UTC host does not roll the date forward', () => {
     expect(exportFilename('Wren', new Date('2026-07-25T23:30:00.000Z'))).toBe(
       'wren-2026-07-25.json',
+    );
+  });
+
+  it('uses the UTC date early in the UTC day, so a west-of-UTC host does not roll the date back', () => {
+    expect(exportFilename('Fenn', new Date('2026-07-25T00:30:00.000Z'))).toBe(
+      'fenn-2026-07-25.json',
     );
   });
 
