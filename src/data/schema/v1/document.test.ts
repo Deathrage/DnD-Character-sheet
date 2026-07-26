@@ -262,6 +262,17 @@ const unknownKeyLocations: Array<[string, (doc: Doc) => void]> = [
       (doc.inventory.items[0]! as Record<string, unknown>).extra = 'x';
     },
   ],
+  // The `equipment` CONTAINER, not one of its items. This is the schema carrying spec §3.1's
+  // "attuned and equipped are not stored at this level" — a business-layer bug writing a
+  // derived `attuned` or `equipped` list onto `equipment` itself must be rejected, not stripped
+  // on its way past. The equipment-item case below cannot detect that: it exercises
+  // equipmentItem, a different schema instance.
+  [
+    'the equipment container',
+    (doc) => {
+      (doc.equipment as Record<string, unknown>).attuned = ['Cloak of Elvenkind'];
+    },
+  ],
   [
     'an equipment item',
     (doc) => {
@@ -293,6 +304,22 @@ const unknownKeyLocations: Array<[string, (doc: Doc) => void]> = [
     'a feats/traits item',
     (doc) => {
       (doc.featsAndTraits.uncategorized[0]! as Record<string, unknown>).extra = 'x';
+    },
+  ],
+  // The fixed-key MAP built by `fixedKeys`, not one of its entries — the same schema factory
+  // backs `abilities`, `skills` and `counters.spellSlots`, and until this case none of the
+  // three had one. The "requires all six abilities" test deletes a key, which exercises
+  // requiredness; nothing exercised the map rejecting a key it does not know, so a
+  // seventh ability (or a tenth spell-slot level) was silently dropped.
+  [
+    'the abilities fixed-key map',
+    (doc) => {
+      (doc.abilitiesAndSkills.abilities as Record<string, unknown>).luck = {
+        score: 10,
+        modifier: 0,
+        savingThrowModifier: 0,
+        savingThrowProficient: false,
+      };
     },
   ],
   [
