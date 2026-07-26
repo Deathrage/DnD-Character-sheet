@@ -65,9 +65,17 @@ deliberate change go through the same door.
 
 ## Import boundary
 
-Only one entry point in this directory is meant to be imported from outside it; consumers ask for
-"the current schema" or "the schema for version N" through that entry point and never reach into
-a version directory directly. That entry point does not exist yet — it is introduced in the next
-piece of work — but the intent already constrains how these directories are written: nothing in
-`v1/` (or any future version) should assume it will be imported directly by anything other than
-its own colocated test, because it won't be.
+`index.ts` is the only file in this directory meant to be imported from outside it. Consumers ask
+for "the current schema" via `CURRENT_SCHEMA`, or "the schema for version N" via `SCHEMAS`, and
+never reach into a version directory directly. ESLint enforces this: importing `schema/v*/…` from
+anywhere outside `src/data/schema/` fails the build.
+
+So nothing in `v1/`, or any future version, should assume it will be imported directly by anything
+other than its own colocated tests — it won't be.
+
+Note what `index.ts` deliberately does **not** export: the per-version key tuples
+(`ABILITY_KEYS`, `SKILL_KEYS`, `SPELL_SLOT_LEVELS`) and the version-named schema itself. Those are
+facts about one version, and exporting them under a version-neutral name would mean every consumer
+silently switched the day a new version renamed a skill, with nothing at the call site to hint that
+could happen. Anything needing them belongs inside the version directory, which is why the
+blank-document factory lives there.
