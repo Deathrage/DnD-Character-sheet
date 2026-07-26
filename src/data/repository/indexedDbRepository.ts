@@ -32,11 +32,16 @@ export function createIndexedDbRepository(): CharacterRepository {
         let cursor = await db.transaction(CHARACTER_STORE).store.openCursor();
 
         while (cursor) {
+          // The cursor KEY identifies the row, in both branches. The store uses out-of-line
+          // keys so the key survives a damaged value, and the same reasoning applies to a
+          // healthy one: `get(id)` looks a row up by key, so a summary carrying the value's
+          // own `id` would produce a row that cannot be opened the moment the two diverge.
+          // save() keeps them equal, but the raw-JSON repair screen writes user-edited JSON.
           const id = String(cursor.key);
           const parsed = parseCharacter(cursor.value);
           entries.push(
             parsed.ok
-              ? { ok: true, summary: summarize(parsed.doc) }
+              ? { ok: true, summary: { ...summarize(parsed.doc), id } }
               : { ok: false, id, error: parsed.error },
           );
           cursor = await cursor.continue();
