@@ -103,7 +103,15 @@ function validDocument() {
           ],
         },
       ],
-      uncategorized: [],
+      uncategorized: [
+        {
+          id: '33333333-3333-4333-8333-333333333333',
+          name: 'Prestidigitation',
+          description: 'A cantrip with no category.',
+          level: 'c' as const,
+          prepared: false,
+        },
+      ],
     },
     counters: {
       categories: [
@@ -121,7 +129,15 @@ function validDocument() {
           ],
         },
       ],
-      uncategorized: [],
+      uncategorized: [
+        {
+          id: '44444444-4444-4444-8444-444444444444',
+          name: 'Inspiration',
+          description: 'Not tied to a category.',
+          current: 0,
+          total: 1,
+        },
+      ],
       spellSlots: Object.fromEntries(SPELL_SLOT_LEVELS.map((level) => [level, zero()])),
     },
     abilitiesAndSkills: {
@@ -256,16 +272,55 @@ describe('characterDocumentV1Schema', () => {
     expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
   });
 
-  it('rejects the same id used twice in one collection', () => {
-    const doc = validDocument();
-    doc.classes[1]!.id = doc.classes[0]!.id;
-    expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
-  });
+  // Every id-bearing accessor the document-level superRefine walks (document.ts's
+  // idsWithPaths), so a missing or copy-pasted accessor there fails loudly instead of letting
+  // duplicates in that one collection sail through. The victim id is always doc.classes[0]'s —
+  // a fixed, different id from every target below — so each case is a genuine cross-collection
+  // duplicate (the "classes" case duplicates within its own collection instead, matching the
+  // one other case where the target IS classes[0]'s own collection).
+  const duplicateIdCases: Array<[string, (doc: Doc) => void]> = [
+    ['classes', (doc) => (doc.classes[1]!.id = doc.classes[0]!.id)],
+    ['inventory.items', (doc) => (doc.inventory.items[0]!.id = doc.classes[0]!.id)],
+    ['equipment.weapons', (doc) => (doc.equipment.weapons[0]!.id = doc.classes[0]!.id)],
+    ['equipment.other', (doc) => (doc.equipment.other[0]!.id = doc.classes[0]!.id)],
+    [
+      'featsAndTraits category',
+      (doc) => (doc.featsAndTraits.categories[0]!.id = doc.classes[0]!.id),
+    ],
+    [
+      'featsAndTraits item in a category',
+      (doc) => (doc.featsAndTraits.categories[0]!.items[0]!.id = doc.classes[0]!.id),
+    ],
+    [
+      'featsAndTraits item in uncategorized',
+      (doc) => (doc.featsAndTraits.uncategorized[0]!.id = doc.classes[0]!.id),
+    ],
+    ['spellList category', (doc) => (doc.spellList.categories[0]!.id = doc.classes[0]!.id)],
+    [
+      'spellList item in a category',
+      (doc) => (doc.spellList.categories[0]!.items[0]!.id = doc.classes[0]!.id),
+    ],
+    [
+      'spellList item in uncategorized',
+      (doc) => (doc.spellList.uncategorized[0]!.id = doc.classes[0]!.id),
+    ],
+    ['counters category', (doc) => (doc.counters.categories[0]!.id = doc.classes[0]!.id)],
+    [
+      'counters item in a category',
+      (doc) => (doc.counters.categories[0]!.items[0]!.id = doc.classes[0]!.id),
+    ],
+    [
+      'counters item in uncategorized',
+      (doc) => (doc.counters.uncategorized[0]!.id = doc.classes[0]!.id),
+    ],
+  ];
 
-  it('rejects the same id used in two different collections', () => {
-    const doc = validDocument();
-    doc.inventory.items[0]!.id = doc.classes[0]!.id;
-    expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
+  describe('rejects a duplicate id at every id-bearing accessor', () => {
+    it.each(duplicateIdCases)('%s', (_location, injectDuplicate) => {
+      const doc = validDocument();
+      injectDuplicate(doc);
+      expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
+    });
   });
 
   it('reports the duplicate at the second occurrence, not the first', () => {
