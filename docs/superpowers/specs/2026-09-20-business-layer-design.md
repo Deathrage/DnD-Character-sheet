@@ -53,10 +53,23 @@ Every item that lives in a list gains a required `id` field, validated by the ex
 primitive: inventory items, weapons, other equipment, spell-list entries, counters, feats and
 traits, classes, and categories.
 
-**The business layer mints every id**, from an injectable `newId: () => string` defaulting to
-`crypto.randomUUID`, matching how `createCharacter` already takes an injected `id` and `now` so
-results stay assertable. The data layer never generates one: a blank document contains only empty
-collections, so no item id exists until the business layer creates an item.
+**The business layer mints every id**, from a single `createId()` in `src/business/`, imported
+directly by the few files with an `add` method. The data layer never generates one: a blank document
+contains only empty collections, so no item id exists until the business layer creates an item.
+`createCharacter`'s injected `id` and `now` are unchanged; the library supplies them.
+
+It is **not injectable**, which is a deliberate departure from `createCharacter`'s pattern. Injection
+would buy deterministic ids in tests, and the business tests barely want them — rule tests use
+whatever id `add()` returned, and the few assertions that deep-compare `toDocument()` can ignore ids
+or mock the module. That is cheaper than threading a constructor parameter through sixteen classes.
+
+One function is also the only sane place for a fallback: **`crypto.randomUUID()` exists only in a
+secure context.** Over plain HTTP — a phone hitting `http://192.168.x.x:5173` on the LAN, which is
+how a mobile-first PWA actually gets tested — it is `undefined`. Sixteen injection sites would each
+be a place to forget that.
+
+It lives in `src/business/`, not `src/shared/`: shared is for what more than one layer uses, and
+only business mints ids.
 
 Consequence to surface in the UI: `id` is required, so a hand-written document in the raw-JSON
 editor must carry ids or it is rejected. Backfilling a missing id would be exactly the silent repair
@@ -203,8 +216,8 @@ abstract class NamedItemBO<TData> extends NodeBO<TData>   // name, setName, desc
 `NamedItemBO` — five subclasses, so the abstraction is reuse rather than speculation.
 
 **A business object holds its node directly.** An earlier draft had every object resolve itself by
-id on each access, to survive `replaceDocument` orphaning it. That was over-built: the only way a
-node orphans is the raw-JSON editor, which the player navigates away from, remounting the tree.
+id on each access, to survive a document swap orphaning it. That was over-built: nothing swaps a
+document in place — see §4 — so the tree a sheet is built with is the tree it keeps until disposal.
 `GONE` survives as an assertion inside `remove()` — removing something twice is a bug worth hearing
 about — rather than as a check on every read.
 
@@ -247,8 +260,7 @@ reach this layer. The guards therefore catch bugs, not keystrokes.
 
 ```ts
 class CharacterSheetBO {
-  constructor(doc: CharacterDocument,
-              options?: { newId?: () => string })   // defaults to crypto.randomUUID
+  constructor(doc: CharacterDocument)
   readonly id: string
   get name(): string;        setName(v: string): void
   get level(): number                                   // derived, never stored
@@ -264,13 +276,29 @@ class CharacterSheetBO {
   readonly counters: CountersBO                         // CategorizedBO<CounterBO> + .spellSlots
   readonly abilitiesAndSkills: AbilitiesAndSkillsBO
   toDocument(): CharacterDocument                       // toJS — this is the file
-  replaceDocument(doc: CharacterDocument): void         // the one wide door, for raw-JSON
+  dispose(): void                                       // drops any pending save; sheet is dead after
 }
 ```
 
-`replaceDocument` is the deliberate exception: the raw-JSON editor exists to bypass every rule, and
-naming it as an exception is better than disguising it as a setter. It accepts only a document
-`parseCharacter` has already validated.
+**There is no `replaceDocument`.** An earlier draft had one, as a deliberate wide door for the
+raw-JSON editor. It cannot be made safe: every sub-BO holds its node directly (§3.4), so swapping the
+document orphans all sixteen of them at once, and writes through any the UI still holds would land on
+the old tree and never reach the file. Making it safe means rebuilding the whole sub-BO tree, which
+is what the constructor already does — so the method reduces to a worse spelling of
+`new CharacterSheetBO(doc)`. The reasoning for it was also circular: §3.4 drops resolve-by-id
+*because* a document swap remounts the tree, which is exactly why nothing needs to swap in place.
+
+The raw-JSON editor instead takes the replacement path, and the **order matters**:
+
+```
+text → parseCharacter → sheet.dispose() → repository.save(doc) → library re-opens → a new sheet
+```
+
+`dispose()` first, and it **discards** the pending save rather than flushing it. Flushing would write
+the old in-memory document over the JSON the player just committed; not disposing at all would let
+the debounce fire after the write and do the same thing a moment later. This is the one place where
+`dispose` and `flush` mean opposite things, which is why they are separate methods — everywhere else
+(`pagehide`, `visibilitychange`) the last edit must be saved, not dropped.
 
 ```ts
 class CategorizedBO<TItemBO> {           // written once; serves feats, spells and counters
@@ -307,11 +335,8 @@ Collections carrying rules:
 
 Everything else in the tree is assignment behind a guard.
 
-`newId` is injected once at the root and reached by every `add` through the parent chain, so a test
-can mint deterministic ids without touching `crypto`.
-
 A `New*` input omits every field the schema requires but the player has not supplied yet:
-`add({ name: 'Rage' })` fills `description` with `''` and `id` from `newId()`. Defaults are the
+`add({ name: 'Rage' })` fills `description` with `''` and `id` from `createId()`. Defaults are the
 blank-document values from `createCharacter`, never a guess.
 
 ## 5. Library, files, storage
@@ -326,6 +351,24 @@ class CharacterLibraryBO {
   create(name: string): Promise<CharacterSheetBO>
   add(file: CharacterFile): Promise<CharacterSheetBO>
 }
+```
+
+`create` is the only path the UI uses to make a character, so it never handles a
+`CharacterDocument`:
+
+```ts
+// inside CharacterLibraryBO.create(name)
+const doc = createCharacter({ name, id: createId(), now: new Date() })
+await repository.save(doc)
+return new CharacterSheetBO(doc)
+```
+
+The constructor stays public rather than hiding behind a `static blank()`, because `open()`, tests
+and Storybook fixtures all already hold a document. A `blank()` would only wrap `createCharacter`,
+and a test that reads `createCharacter(...)` then `new CharacterSheetBO(doc)` says more than one
+that reads `CharacterSheetBO.blank(...)`.
+
+```ts
 
 class CharacterEntryBO {
   get id(): string
@@ -461,7 +504,8 @@ fail, restore.
 | Ids minted by the business layer | Minted in the data layer's factories | The data layer only ever builds empty collections; no item exists there to identify |
 | Import keeps item ids, reassigns only the document id | Reassigning every id on import | Item ids are scoped within their document, so a collision across two characters is meaningless |
 | Schema permits duplicate names, business prevents them | A schema uniqueness rule | Rejecting a whole document over two same-named categories is the disagreement with the player this app avoids; the raw-JSON editor is deliberately an escape hatch |
-| Objects hold their node | Resolve by id on every access | Over-built. Only `replaceDocument` orphans a node, and it remounts the tree |
+| Objects hold their node | Resolve by id on every access | Over-built. Nothing swaps a document in place, so no node orphans while its sheet is alive |
+| No `replaceDocument` | A wide door for the raw-JSON editor | It orphans all sixteen sub-BOs at once, and making it safe means rebuilding them — which is the constructor. The editor disposes the sheet and re-opens instead |
 | One named setter per field | `set(field, value)`, or `update(partial)` | Explicitness for the reader, at ~45 written methods. Writes arrive one field at a time, so a patch object allocates per keystroke to express one assignment |
 
 ## 10. Open items
@@ -471,9 +515,10 @@ fail, restore.
   the store since `load()`. Either it should mirror `LoadResult`'s `{ ok }` discriminant, or the
   missing-row case should be impossible by construction because the entry came from the list.
   Settle when the list screen is built; both readings are defensible and the UI will say which.
-- **Where `Autosave` is attached.** `CharacterLibraryBO.open()` is the obvious owner, but the
-  raw-JSON editor needs autosave suspended while an invalid draft is being edited. Settle with the
-  raw-JSON screen.
+- **Where `Autosave` is attached.** `CharacterLibraryBO.open()` is the obvious owner, and
+  `sheet.dispose()` the obvious detach. What remains open is the raw-JSON editor: it holds an
+  invalid draft for as long as the player is typing, and disposing on entry means an unrelated
+  navigation away loses nothing but also saves nothing. Settle with the raw-JSON screen.
 - **`equipment.weapons` and `equipment.other` share the document-wide id space** but there is no
   `moveTo` between them. If moving a weapon to "other" is ever wanted, it is `NamedItemBO.moveTo`
   with a different target type.
