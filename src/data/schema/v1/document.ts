@@ -86,10 +86,11 @@ const spellLevel = z.union([
 
 const classItem = z.object({ id: uuid, name: shortName, level: nonNegativeInt }).strict();
 
-const inventoryItem = nameAndDescription.extend({ count: nonNegativeInt }).strict();
+const inventoryItem = nameAndDescription.extend({ id: uuid, count: nonNegativeInt }).strict();
 
 const equipmentItem = nameAndDescription
   .extend({
+    id: uuid,
     attuned: z.boolean(),
     equipped: z.boolean(),
   })

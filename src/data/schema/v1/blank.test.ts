@@ -115,7 +115,13 @@ describe('createCharacter', () => {
     }> = [
       {
         name: 'inventory.items',
-        mutate: (doc) => doc.inventory.items.push({ name: 'Rope', description: '', count: 1 }),
+        mutate: (doc) =>
+          doc.inventory.items.push({
+            id: '30303030-3030-4030-8030-303030303030',
+            name: 'Rope',
+            description: '',
+            count: 1,
+          }),
         read: (doc) => doc.inventory.items,
         original: [],
       },
@@ -165,6 +171,7 @@ describe('createCharacter', () => {
         name: 'equipment.weapons',
         mutate: (doc) =>
           doc.equipment.weapons.push({
+            id: '40404040-4040-4040-8040-404040404040',
             name: 'Sword',
             description: '',
             attuned: false,
@@ -177,6 +184,7 @@ describe('createCharacter', () => {
         name: 'equipment.other',
         mutate: (doc) =>
           doc.equipment.other.push({
+            id: '50505050-5050-4050-8050-505050505050',
             name: 'Torch',
             description: '',
             attuned: false,

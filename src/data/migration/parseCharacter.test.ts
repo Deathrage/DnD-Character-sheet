@@ -10,7 +10,14 @@ const validRaw = () => {
   // rewrites are no-ops. Populating the fields that permit padding — longText does, only names
   // reject it — is what gives the `toEqual(raw)` assertion below something to lose.
   doc.journalAndNotes = { journal: ['  Arrived in Barovia.  '], notes: '  Find the Sunsword.\n' };
-  doc.inventory.items = [{ name: "Thieves' Tools", description: '  For locks.  ', count: 1 }];
+  doc.inventory.items = [
+    {
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      name: "Thieves' Tools",
+      description: '  For locks.  ',
+      count: 1,
+    },
+  ];
   return JSON.parse(JSON.stringify(doc)) as unknown;
 };
 

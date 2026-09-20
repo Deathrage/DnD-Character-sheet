@@ -36,7 +36,14 @@ function validDocument() {
     journalAndNotes: { journal: ['Arrived in Barovia.'], notes: 'Find the Sunsword.' },
     inventory: {
       coins: { pp: 2, gp: 84, ep: 0, sp: 37, cp: 12 },
-      items: [{ name: "Thieves' Tools", description: 'For locks and traps.', count: 1 }],
+      items: [
+        {
+          id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+          name: "Thieves' Tools",
+          description: 'For locks and traps.',
+          count: 1,
+        },
+      ],
     },
     featsAndTraits: {
       categories: [
@@ -61,9 +68,18 @@ function validDocument() {
       ],
     },
     equipment: {
-      weapons: [{ name: 'Rapier', description: '1d8 piercing.', attuned: false, equipped: true }],
+      weapons: [
+        {
+          id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+          name: 'Rapier',
+          description: '1d8 piercing.',
+          attuned: false,
+          equipped: true,
+        },
+      ],
       other: [
         {
+          id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
           name: 'Cloak of Elvenkind',
           description: 'Advantage on Stealth.',
           attuned: true,
@@ -228,6 +244,16 @@ describe('characterDocumentV1Schema', () => {
     expect(ABILITY_KEYS).toHaveLength(6);
     expect(SKILL_KEYS).toHaveLength(18);
     expect(SPELL_SLOT_LEVELS).toHaveLength(9);
+  });
+
+  it.each([
+    ['inventory.items', (doc: Doc) => doc.inventory.items[0]!],
+    ['equipment.weapons', (doc: Doc) => doc.equipment.weapons[0]!],
+    ['equipment.other', (doc: Doc) => doc.equipment.other[0]!],
+  ])('requires an id on every %s entry', (_location, pick) => {
+    const doc = validDocument();
+    delete (pick(doc) as Record<string, unknown>).id;
+    expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
   });
 });
 
