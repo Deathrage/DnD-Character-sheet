@@ -71,11 +71,16 @@ export function createIndexedDbRepository(options: RepositoryOptions = {}): Char
   const openDb = options.openDb ?? makeDefaultOpenDb(onFailure);
 
   return {
-    list(): Promise<ListEntry[]> {
-      return guard(async () => {
+    async list(): Promise<ListEntry[]> {
+      // Fetching is guarded (a storage failure here is genuinely a storage failure); parsing is
+      // not. parseCharacter rethrows anything that isn't a CharacterLoadError, on purpose,
+      // because that means the loader itself is buggy — see the comment on parseCharacter. A
+      // parse call left inside guard() would relabel that bug a StorageError{code:'UNKNOWN'},
+      // crossing the two error families.
+      const rows = await guard(async () => {
         const db = await openDb();
         try {
-          const entries: ListEntry[] = [];
+          const collected: Array<[string, unknown]> = [];
           const tx = db.transaction(CHARACTER_STORE);
           let cursor = await tx.store.openCursor();
 
@@ -85,37 +90,39 @@ export function createIndexedDbRepository(options: RepositoryOptions = {}): Char
             // healthy one: `get(id)` looks a row up by key, so a summary carrying the value's
             // own `id` would produce a row that cannot be opened the moment the two diverge.
             // save() keeps them equal, but the raw-JSON repair screen writes user-edited JSON.
-            const id = String(cursor.key);
-            const parsed = parseCharacter(cursor.value, registry);
-            entries.push(
-              parsed.ok
-                ? { ok: true, summary: { ...summarize(parsed.doc), id } }
-                : { ok: false, id, error: parsed.error },
-            );
+            collected.push([String(cursor.key), cursor.value]);
             cursor = await cursor.continue();
           }
 
           // Awaited so an abort with no in-flight request rejects list() instead of surfacing
           // as an unhandled rejection.
           await tx.done;
-          return entries;
+          return collected;
         } finally {
           db.close();
         }
+      });
+
+      return rows.map(([id, value]) => {
+        const parsed = parseCharacter(value, registry);
+        return parsed.ok
+          ? { ok: true, summary: { ...summarize(parsed.doc), id } }
+          : { ok: false, id, error: parsed.error };
       });
     },
 
-    get(id: string): Promise<LoadResult | null> {
-      return guard(async () => {
+    async get(id: string): Promise<LoadResult | null> {
+      // Same split as list() above: fetching is guarded, parsing is not, so a loader bug
+      // rethrown by parseCharacter escapes as itself instead of being relabeled a StorageError.
+      const stored = await guard(async () => {
         const db = await openDb();
         try {
-          const stored = await db.get(CHARACTER_STORE, id);
-          if (stored === undefined) return null;
-          return parseCharacter(stored, registry);
+          return await db.get(CHARACTER_STORE, id);
         } finally {
           db.close();
         }
       });
+      return stored === undefined ? null : parseCharacter(stored, registry);
     },
 
     getRaw(id: string): Promise<unknown> {
