@@ -29,8 +29,6 @@ still returns a document whose internal `id` could diverge from its key. UI code
 - **`errors.test.ts`'s `indexOf` ordering assertion is brittle.** It is redundant with the two
   role-specific `toContain` assertions above it, and it produces a *false failure* once a version
   number reaches double digits: with `found: 10`, `indexOf('1')` lands inside `"10"`.
-- **`describeLoadError` says "This file…"** for an `INVALID_AT_VERSION`, which is inaccurate when the
-  refusal came from `save()` on a document the app itself built.
 - **`describeLoadError` does not cap its issue list.** A document with hundreds of issues yields one
   unbounded line. Capping is a presentation decision for the repair screen.
 - **`CharacterSummary` restates `classes` and `hitPoints` structurally** rather than deriving from
@@ -38,8 +36,7 @@ still returns a document whose internal `id` could diverge from its key. UI code
   claims three keys.
 - **No test asserts `SCHEMAS` has an entry for every version up to `CURRENT`**, which is step 4 of
   the README's add-a-version recipe.
-- **Unused surface:** `defaultRegistry` and `DB_VERSION` are exported with no consumer outside their
-  own files, and the `@/*` path alias has no users in `src` at all.
+- **Unused surface:** the `@/*` path alias has no users in `src` at all.
 
 ## Done (2026-09-20)
 
