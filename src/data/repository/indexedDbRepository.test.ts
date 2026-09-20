@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { CharacterLoadError } from '../migration/errors.js';
 import { SCHEMAS } from '../schema/index.js';
 import { ID_A, ID_B, createOpener, docFor, putRaw, wipe } from '../../test/fixtures.js';
-import { CHARACTER_STORE, createIndexedDbRepository } from './indexedDbRepository.js';
+import { CHARACTER_STORE, createIndexedDbRepository, type OpenDb } from './indexedDbRepository.js';
+import { StorageError } from './storageFailure.js';
 
 describe('createIndexedDbRepository', () => {
   beforeEach(wipe);
@@ -134,26 +134,56 @@ describe('createIndexedDbRepository', () => {
     expect(await repository.getRaw(ID_A)).toEqual(damaged);
   });
 
-  it('refuses to save a document that does not validate, as a typed CharacterLoadError', async () => {
-    const repository = createIndexedDbRepository();
-    const invalid = { ...docFor(ID_A, 'Sable Nightwind'), armorClass: -1 };
+  it('refuses to save an invalid document and says why', async () => {
+    const repository = createIndexedDbRepository({ openDb: createOpener() });
+    const damaged = { ...docFor(ID_A, 'Sable'), armorClass: -1 };
 
     // A bare .rejects.toThrow() would be satisfied by a TypeError from a refactor. The refusal
-    // is part of the layer's error taxonomy (errors.ts: no Zod type escapes the data layer),
-    // so assert the type, the code, and that the issue actually names the offending field.
-    const caught: unknown = await repository.save(invalid).then(
+    // is part of the layer's error taxonomy (storageFailure.ts: no Zod type escapes the data
+    // layer), so assert the code and that an issue actually names the offending field.
+    const caught: unknown = await repository.save(damaged as never).then(
       () => undefined,
       (error: unknown) => error,
     );
-    expect(caught).toBeInstanceOf(CharacterLoadError);
-    const detail = (caught as CharacterLoadError).detail;
-    expect(detail.code).toBe('INVALID_AT_VERSION');
-    if (detail.code === 'INVALID_AT_VERSION') {
-      expect(detail.version).toBe(1);
+    expect(caught).toBeInstanceOf(StorageError);
+    const detail = (caught as StorageError).detail;
+    expect(detail.code).toBe('SAVE_REFUSED');
+    if (detail.code === 'SAVE_REFUSED') {
       expect(detail.issues.some((issue) => issue.path === 'armorClass')).toBe(true);
     }
 
     expect(await repository.list()).toEqual([]);
+  });
+
+  it('surfaces a quota failure from save as a typed rejection', async () => {
+    // A real connection from the same opener the other tests use, with only `put` swapped out
+    // for a rejection — everything else (close, transaction, get…) is idb's genuine
+    // implementation, backed by fake-indexeddb. This is more faithful than a hand-rolled object
+    // cast through `unknown`, which could drift from idb's real shape without the compiler
+    // noticing.
+    //
+    // Forwarded methods are rebound to `target`: idb's own wrapper functions look up their
+    // real IDBDatabase through a WeakMap keyed by object identity, keyed off `this` at call
+    // time. Forwarding through a plain Proxy `get` (or via Reflect.get with this proxy as
+    // receiver) leaves `this` as this outer proxy on a later call like `db.close()`, which
+    // that WeakMap has never seen, so idb throws reaching into `undefined` instead of closing.
+    const openDb: OpenDb = async () => {
+      const db = await createOpener()();
+      return new Proxy(db, {
+        get(target, prop) {
+          if (prop === 'put') {
+            return () => Promise.reject(new DOMException('full', 'QuotaExceededError'));
+          }
+          const value = target[prop as keyof typeof target];
+          return typeof value === 'function' ? value.bind(target) : value;
+        },
+      });
+    };
+    const repository = createIndexedDbRepository({ openDb });
+
+    await expect(repository.save(docFor(ID_A, 'Sable'))).rejects.toMatchObject({
+      detail: { code: 'QUOTA_EXCEEDED' },
+    });
   });
 
   it('migrates a document written by an older schema version', async () => {
