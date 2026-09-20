@@ -52,7 +52,13 @@ function validDocument() {
           ],
         },
       ],
-      uncategorized: [],
+      uncategorized: [
+        {
+          id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+          name: 'Darkvision',
+          description: '60 ft.',
+        },
+      ],
     },
     equipment: {
       weapons: [{ name: 'Rapier', description: '1d8 piercing.', attuned: false, equipped: true }],
@@ -149,6 +155,12 @@ describe('characterDocumentV1Schema', () => {
     const doc = validDocument();
     doc.classes[1]!.name = 'Rogue';
     expect(characterDocumentV1Schema.safeParse(doc).success).toBe(true);
+  });
+
+  it('rejects an invalid item in the uncategorized bucket, not only inside a category', () => {
+    const doc = validDocument();
+    delete (doc.featsAndTraits.uncategorized[0] as Record<string, unknown>).id;
+    expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
   });
 
   it('rejects a hit-dice key that is not a die size', () => {
@@ -320,6 +332,15 @@ const unknownKeyLocations: Array<[string, (doc: Doc) => void]> = [
     'a feats/traits item',
     (doc) => {
       (doc.featsAndTraits.categories[0]!.items[0]! as Record<string, unknown>).extra = 'x';
+    },
+  ],
+  // The same item schema as the row above, but reached through `uncategorized` rather than
+  // `categories[].items` — a distinct array in the document, so this proves that array is
+  // actually wired through the item schema too, not merely present with the right static type.
+  [
+    'a feats/traits item in uncategorized',
+    (doc) => {
+      (doc.featsAndTraits.uncategorized[0]! as Record<string, unknown>).extra = 'x';
     },
   ],
   // The fixed-key MAP built by `fixedKeys`, not one of its entries — the same schema factory

@@ -225,6 +225,15 @@ describe('nameAndDescription', () => {
   it('requires both fields', () => {
     expect(nameAndDescription.safeParse({ name: 'Sneak Attack' }).success).toBe(false);
   });
+
+  // Every item schema built on nameAndDescription reaches document.ts via `.extend()`, which
+  // re-applies its own `.strict()` on the clone regardless of whether this base is itself
+  // strict — so none of those extended schemas can detect nameAndDescription losing its own
+  // `.strict()`. This is the only place that can.
+  it('rejects an unknown key, so an extending schema is not the only thing standing guard', () => {
+    const value = { name: 'Sneak Attack', description: '+3d6.', extra: 'x' };
+    expect(nameAndDescription.safeParse(value).success).toBe(false);
+  });
 });
 
 describe('categorized', () => {
