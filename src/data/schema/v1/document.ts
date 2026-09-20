@@ -193,6 +193,64 @@ const documentShape = z.object({
     .strict(),
 });
 
-export const characterDocumentV1Schema = documentShape.strict();
+type DocumentShape = z.infer<typeof documentShape>;
+
+/**
+ * Every id in the document, with the path it sits at. An explicit table rather than a recursive
+ * walk: the walk would have to guess which string fields are ids, and the reported path would
+ * lose the collection's name — which is the only part of the message that tells a player editing
+ * raw JSON where to look.
+ *
+ * `doc.id` is deliberately absent. It is the IndexedDB store key, not a member of any collection,
+ * so an item legitimately may carry the same value.
+ */
+function idsWithPaths(doc: DocumentShape): Array<[(string | number)[], string]> {
+  const found: Array<[(string | number)[], string]> = [];
+
+  const fromList = (path: (string | number)[], list: readonly { id: string }[]) => {
+    list.forEach((entry, index) => found.push([[...path, index, 'id'], entry.id]));
+  };
+
+  const fromCategorized = (
+    path: string,
+    value: {
+      categories: readonly { id: string; items: readonly { id: string }[] }[];
+      uncategorized: readonly { id: string }[];
+    },
+  ) => {
+    value.categories.forEach((category, index) => {
+      found.push([[path, 'categories', index, 'id'], category.id]);
+      fromList([path, 'categories', index, 'items'], category.items);
+    });
+    fromList([path, 'uncategorized'], value.uncategorized);
+  };
+
+  fromList(['classes'], doc.classes);
+  fromList(['inventory', 'items'], doc.inventory.items);
+  fromList(['equipment', 'weapons'], doc.equipment.weapons);
+  fromList(['equipment', 'other'], doc.equipment.other);
+  fromCategorized('featsAndTraits', doc.featsAndTraits);
+  fromCategorized('spellList', doc.spellList);
+  fromCategorized('counters', doc.counters);
+
+  return found;
+}
+
+export const characterDocumentV1Schema = documentShape.strict().superRefine((doc, ctx) => {
+  const firstSeenAt = new Map<string, string>();
+
+  for (const [path, id] of idsWithPaths(doc)) {
+    const earlier = firstSeenAt.get(id);
+    if (earlier === undefined) {
+      firstSeenAt.set(id, path.join('.'));
+      continue;
+    }
+    ctx.addIssue({
+      code: 'custom',
+      path,
+      message: `duplicate id "${id}" — already used at ${earlier}`,
+    });
+  }
+});
 
 export type CharacterDocumentV1 = z.infer<typeof characterDocumentV1Schema>;

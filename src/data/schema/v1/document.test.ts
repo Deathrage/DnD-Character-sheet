@@ -255,6 +255,33 @@ describe('characterDocumentV1Schema', () => {
     delete (pick(doc) as Record<string, unknown>).id;
     expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
   });
+
+  it('rejects the same id used twice in one collection', () => {
+    const doc = validDocument();
+    doc.classes[1]!.id = doc.classes[0]!.id;
+    expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
+  });
+
+  it('rejects the same id used in two different collections', () => {
+    const doc = validDocument();
+    doc.inventory.items[0]!.id = doc.classes[0]!.id;
+    expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
+  });
+
+  it('reports the duplicate at the second occurrence, not the first', () => {
+    const doc = validDocument();
+    doc.classes[1]!.id = doc.classes[0]!.id;
+    const result = characterDocumentV1Schema.safeParse(doc);
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.issues[0]!.path.join('.')).toBe('classes.1.id');
+  });
+
+  it('allows a character id that matches an item id, because doc.id is the store key', () => {
+    const doc = validDocument();
+    doc.classes[0]!.id = doc.id;
+    expect(characterDocumentV1Schema.safeParse(doc).success).toBe(true);
+  });
 });
 
 type Doc = ReturnType<typeof validDocument>;
