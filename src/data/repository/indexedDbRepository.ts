@@ -7,7 +7,7 @@ import {
   type MigrationRegistry,
 } from '../migration/parseCharacter.js';
 import { CURRENT_SCHEMA, type CharacterDocument } from '../schema/index.js';
-import { StorageError, toStorageFailure } from './storageFailure.js';
+import { StorageError, toStorageFailure, type StorageFailure } from './storageFailure.js';
 import { summarize } from './summarize.js';
 import type { CharacterRepository, ListEntry } from './types.js';
 
@@ -25,17 +25,30 @@ export type OpenDb = () => Promise<IDBPDatabase<CharacterDb>>;
 export interface RepositoryOptions {
   registry?: MigrationRegistry;
   openDb?: OpenDb;
+  /**
+   * For failures that arrive outside any call: another tab pinning an old version, or the browser
+   * terminating the connection. These cannot be rejections because no call is in flight.
+   */
+  onFailure?: (failure: StorageFailure) => void;
 }
 
 /** Not exported: a second connection opened outside the repository is what blocks a version bump. */
-const defaultOpenDb: OpenDb = () =>
-  openDB<CharacterDb>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(CHARACTER_STORE)) {
-        db.createObjectStore(CHARACTER_STORE);
-      }
-    },
-  });
+const makeDefaultOpenDb =
+  (onFailure: (failure: StorageFailure) => void): OpenDb =>
+  () =>
+    openDB<CharacterDb>(DB_NAME, DB_VERSION, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains(CHARACTER_STORE)) {
+          db.createObjectStore(CHARACTER_STORE);
+        }
+      },
+      // Another tab holds an older version open; our upgrade cannot proceed until it closes.
+      blocked: () => onFailure({ code: 'BLOCKED' }),
+      // We are the old tab holding someone else's upgrade back.
+      blocking: () => onFailure({ code: 'BLOCKED' }),
+      // The browser dropped the connection, typically under storage pressure.
+      terminated: () => onFailure({ code: 'UNAVAILABLE', cause: 'connection terminated' }),
+    });
 
 /**
  * Routes a repository operation's rejection through the storage taxonomy, so no raw
@@ -54,7 +67,8 @@ async function guard<T>(operation: () => Promise<T>): Promise<T> {
 
 export function createIndexedDbRepository(options: RepositoryOptions = {}): CharacterRepository {
   const registry = options.registry ?? defaultRegistry;
-  const openDb = options.openDb ?? defaultOpenDb;
+  const onFailure = options.onFailure ?? (() => {});
+  const openDb = options.openDb ?? makeDefaultOpenDb(onFailure);
 
   return {
     list(): Promise<ListEntry[]> {

@@ -1,9 +1,16 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { openDB } from 'idb';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { SCHEMAS } from '../schema/index.js';
 import { ID_A, ID_B, createOpener, docFor, putRaw, wipe } from '../../test/fixtures.js';
 import { CHARACTER_STORE, createIndexedDbRepository, type OpenDb } from './indexedDbRepository.js';
-import { StorageError } from './storageFailure.js';
+import { StorageError, type StorageFailure } from './storageFailure.js';
+
+// Autospy: every export of 'idb' still calls through to the real implementation (so every other
+// test in this file gets the genuine, fake-indexeddb-backed behavior) unless a test overrides it
+// with mockImplementationOnce — which is how the blocked/terminated wiring tests below capture
+// the callbacks object passed to the real openDB() without touching a live connection.
+vi.mock('idb', { spy: true });
 
 describe('createIndexedDbRepository', () => {
   beforeEach(wipe);
@@ -156,34 +163,104 @@ describe('createIndexedDbRepository', () => {
   });
 
   it('surfaces a quota failure from save as a typed rejection', async () => {
-    // A real connection from the same opener the other tests use, with only `put` swapped out
-    // for a rejection — everything else (close, transaction, get…) is idb's genuine
-    // implementation, backed by fake-indexeddb. This is more faithful than a hand-rolled object
-    // cast through `unknown`, which could drift from idb's real shape without the compiler
-    // noticing.
-    //
-    // Forwarded methods are rebound to `target`: idb's own wrapper functions look up their
-    // real IDBDatabase through a WeakMap keyed by object identity, keyed off `this` at call
-    // time. Forwarding through a plain Proxy `get` (or via Reflect.get with this proxy as
-    // receiver) leaves `this` as this outer proxy on a later call like `db.close()`, which
-    // that WeakMap has never seen, so idb throws reaching into `undefined` instead of closing.
-    const openDb: OpenDb = async () => {
-      const db = await createOpener()();
-      return new Proxy(db, {
-        get(target, prop) {
-          if (prop === 'put') {
-            return () => Promise.reject(new DOMException('full', 'QuotaExceededError'));
-          }
-          const value = target[prop as keyof typeof target];
-          return typeof value === 'function' ? value.bind(target) : value;
-        },
-      });
-    };
+    // A two-method stub, not a Proxy wrapping a real connection: save() only ever calls put()
+    // and close(), so faking the rest of IDBPDatabase's surface buys nothing. A Proxy forwarding
+    // to a real connection was tried here and reverted — idb's wrapper functions look up the
+    // real IDBDatabase through a WeakMap keyed by exact object identity, and a leaked forwarding
+    // reference outlived its test, corrupting an unrelated test with a `deleteDatabase was
+    // blocked` failure. Faithfulness to idb's full shape isn't worth that fragility here.
+    const openDb = (() =>
+      Promise.resolve({
+        put: () => Promise.reject(new DOMException('full', 'QuotaExceededError')),
+        close: () => {},
+      })) as unknown as OpenDb;
     const repository = createIndexedDbRepository({ openDb });
 
     await expect(repository.save(docFor(ID_A, 'Sable'))).rejects.toMatchObject({
       detail: { code: 'QUOTA_EXCEEDED' },
     });
+  });
+
+  it('rejects list() when its transaction aborts', async () => {
+    // Proves the transaction-abort path: list() awaits tx.done, so an abort with no in-flight
+    // request rejects the call instead of surfacing as an unhandled rejection.
+    const openDb = (() =>
+      Promise.resolve({
+        transaction: () => ({
+          store: { openCursor: () => Promise.resolve(null) },
+          done: Promise.reject(new DOMException('aborted', 'AbortError')),
+        }),
+        close: () => {},
+      })) as unknown as OpenDb;
+    const repository = createIndexedDbRepository({ openDb });
+
+    await expect(repository.list()).rejects.toMatchObject({ detail: { code: 'UNKNOWN' } });
+  });
+
+  it('wires the default opener to report a blocked version bump to onFailure', async () => {
+    // This proves the WIRING — that makeDefaultOpenDb's `blocked` callback forwards to
+    // onFailure with the right StorageFailure — not that a browser ever fires `blocked`.
+    // Racing a real second connection against fake-indexeddb was tried and is not
+    // deterministic there, and a leaked connection from that approach is exactly what
+    // corrupted an unrelated test above. Mocking idb's openDB captures the callbacks object
+    // the real (non-test-overridden) opener passes, with no live connection involved.
+    type Callbacks = { blocked?: () => void; blocking?: () => void; terminated?: () => void };
+    const failures: StorageFailure[] = [];
+    let blocked: (() => void) | undefined;
+    vi.mocked(openDB).mockImplementationOnce(((
+      _name: string,
+      _version: number | undefined,
+      callbacks: Callbacks | undefined,
+    ) => {
+      blocked = callbacks?.blocked;
+      return Promise.resolve({
+        transaction: () => ({
+          store: { openCursor: () => Promise.resolve(null) },
+          done: Promise.resolve(),
+        }),
+        close: () => {},
+      });
+    }) as never);
+
+    const repository = createIndexedDbRepository({
+      onFailure: (failure) => failures.push(failure),
+    });
+    await repository.list();
+
+    expect(blocked).toBeTypeOf('function');
+    blocked?.();
+    expect(failures).toContainEqual({ code: 'BLOCKED' });
+  });
+
+  it('wires the default opener to report a terminated connection to onFailure', async () => {
+    // Same judgement as the blocked test above: this proves the callback is wired to
+    // onFailure, not that the browser ever calls `terminated`.
+    type Callbacks = { blocked?: () => void; blocking?: () => void; terminated?: () => void };
+    const failures: StorageFailure[] = [];
+    let terminated: (() => void) | undefined;
+    vi.mocked(openDB).mockImplementationOnce(((
+      _name: string,
+      _version: number | undefined,
+      callbacks: Callbacks | undefined,
+    ) => {
+      terminated = callbacks?.terminated;
+      return Promise.resolve({
+        transaction: () => ({
+          store: { openCursor: () => Promise.resolve(null) },
+          done: Promise.resolve(),
+        }),
+        close: () => {},
+      });
+    }) as never);
+
+    const repository = createIndexedDbRepository({
+      onFailure: (failure) => failures.push(failure),
+    });
+    await repository.list();
+
+    expect(terminated).toBeTypeOf('function');
+    terminated?.();
+    expect(failures).toContainEqual({ code: 'UNAVAILABLE', cause: 'connection terminated' });
   });
 
   it('migrates a document written by an older schema version', async () => {
