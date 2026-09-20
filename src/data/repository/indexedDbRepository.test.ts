@@ -141,6 +141,29 @@ describe('createIndexedDbRepository', () => {
     expect(await repository.getRaw(ID_A)).toEqual(damaged);
   });
 
+  it('rethrows a loader bug from get() rather than relabeling it a storage failure', async () => {
+    // parseCharacter deliberately rethrows anything that is not a CharacterLoadError, because
+    // such a throw means the loader itself is buggy (see the comment on parseCharacter). get()
+    // must let that escape untouched — routing the parse call through guard() would relabel it
+    // StorageError{code:'UNKNOWN'}, crossing the loader-bug and storage-failure error families.
+    await putRaw(ID_A, { schemaVersion: 1 });
+    const bug = new Error('schema exploded');
+    const registry = {
+      current: 1,
+      schemas: {
+        1: {
+          safeParse: () => {
+            throw bug;
+          },
+        } as unknown as z.ZodType,
+      },
+      migrations: new Map(),
+    };
+    const repository = createIndexedDbRepository({ registry, openDb: createOpener() });
+
+    await expect(repository.get(ID_A)).rejects.toBe(bug);
+  });
+
   it('refuses to save an invalid document and says why', async () => {
     const repository = createIndexedDbRepository({ openDb: createOpener() });
     const damaged = { ...docFor(ID_A, 'Sable'), armorClass: -1 };
