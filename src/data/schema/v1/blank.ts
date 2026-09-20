@@ -25,7 +25,7 @@ const zero = () => ({ current: 0, total: 0 });
 // this object into a local variable before returning would drop that context and force an
 // explicit type argument (or `any`) at each call site instead.
 const emptyCategorized = <Item>() => ({
-  categories: {} as Record<string, Item[]>,
+  categories: [] as { id: string; name: string; items: Item[] }[],
   uncategorized: [] as Item[],
 });
 

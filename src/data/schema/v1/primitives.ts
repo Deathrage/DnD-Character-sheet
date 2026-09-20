@@ -69,13 +69,21 @@ export const nameAndDescription = z
   .strict();
 
 /**
- * Categorized<T> (spec §3.2). Display order is object-key insertion order,
- * so there is no order array — see §3.4.
+ * Categorized<T> (spec §3.2). Categories are an ordered array, so display order is array
+ * position and a rename is a plain field write — see the 2026-09-20 business layer spec §2.2.
  */
 export const categorized = <Item extends z.ZodType>(item: Item) =>
   z
     .object({
-      categories: z.record(categoryName, z.array(item)),
+      categories: z.array(
+        z
+          .object({
+            id: uuid,
+            name: categoryName,
+            items: z.array(item),
+          })
+          .strict(),
+      ),
       uncategorized: z.array(item),
     })
     .strict();

@@ -228,38 +228,43 @@ describe('nameAndDescription', () => {
 });
 
 describe('categorized', () => {
-  const schema = categorized(nameAndDescription);
-
-  it('accepts categories plus an uncategorized bucket', () => {
-    const value = {
-      categories: { Rogue: [{ name: 'Sneak Attack', description: '+3d6.' }] },
-      uncategorized: [{ name: 'Darkvision', description: '60 ft.' }],
-    };
-    expect(schema.parse(value)).toEqual(value);
+  const schema = categorized(z.object({ id: uuid, name: shortName }).strict());
+  const item = { id: '33333333-3333-4333-8333-333333333333', name: 'Rage' };
+  const valid = () => ({
+    categories: [{ id: '44444444-4444-4444-8444-444444444444', name: 'Combat', items: [item] }],
+    uncategorized: [] as unknown[],
   });
 
-  it('accepts an empty structure', () => {
-    expect(schema.parse({ categories: {}, uncategorized: [] })).toEqual({
-      categories: {},
-      uncategorized: [],
-    });
+  it('accepts categories as an ordered array', () => {
+    expect(schema.safeParse(valid()).success).toBe(true);
   });
 
-  it('rejects a category name that is too long', () => {
-    const value = {
-      categories: { ['a'.repeat(MAX_CATEGORY_NAME + 1)]: [] },
-      uncategorized: [],
-    };
+  it('requires an id on every category', () => {
+    const value = valid();
+    delete (value.categories[0] as Record<string, unknown>).id;
     expect(schema.safeParse(value).success).toBe(false);
   });
 
-  it('preserves key insertion order through a JSON round-trip (spec §3.4)', () => {
-    const value = {
-      categories: { Zebra: [], Apple: [], Middle: [] },
-      uncategorized: [],
-    };
-    const roundTripped = schema.parse(JSON.parse(JSON.stringify(value)));
-    expect(Object.keys(roundTripped.categories)).toEqual(['Zebra', 'Apple', 'Middle']);
+  it('rejects an unknown key on a category', () => {
+    const value = valid();
+    (value.categories[0] as Record<string, unknown>).extra = 'x';
+    expect(schema.safeParse(value).success).toBe(false);
+  });
+
+  it('rejects a padded category name rather than trimming it', () => {
+    const value = valid();
+    value.categories[0]!.name = ' Combat ';
+    expect(schema.safeParse(value).success).toBe(false);
+  });
+
+  it('accepts two categories sharing a name, which the business layer rejects rather than the schema', () => {
+    const value = valid();
+    value.categories.push({
+      id: '55555555-5555-4555-8555-555555555555',
+      name: 'Combat',
+      items: [],
+    });
+    expect(schema.safeParse(value).success).toBe(true);
   });
 
   it('is a ZodObject, so document sections can extend it', () => {

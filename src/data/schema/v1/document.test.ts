@@ -39,8 +39,20 @@ function validDocument() {
       items: [{ name: "Thieves' Tools", description: 'For locks and traps.', count: 1 }],
     },
     featsAndTraits: {
-      categories: { Rogue: [{ name: 'Sneak Attack', description: '+3d6.' }] },
-      uncategorized: [{ name: 'Darkvision', description: '60 ft.' }],
+      categories: [
+        {
+          id: '66666666-6666-4666-8666-666666666666',
+          name: 'Combat',
+          items: [
+            {
+              id: '77777777-7777-4777-8777-777777777777',
+              name: 'Sneak Attack',
+              description: 'Once per turn.',
+            },
+          ],
+        },
+      ],
+      uncategorized: [],
     },
     equipment: {
       weapons: [{ name: 'Rapier', description: '1d8 piercing.', attuned: false, equipped: true }],
@@ -54,19 +66,41 @@ function validDocument() {
       ],
     },
     spellList: {
-      categories: {
-        Combat: [{ name: 'Fireball', description: '8d6 fire.', level: 3, prepared: true }],
-      },
-      uncategorized: [{ name: 'Fire Bolt', description: '2d10 fire.', level: 'c', prepared: true }],
+      categories: [
+        {
+          id: '88888888-8888-4888-8888-888888888888',
+          name: 'Evocation',
+          items: [
+            {
+              id: '99999999-9999-4999-8999-999999999999',
+              name: 'Fire Bolt',
+              description: 'A mote of fire.',
+              level: 'c' as const,
+              prepared: true,
+            },
+          ],
+        },
+      ],
+      uncategorized: [],
     },
     counters: {
-      spellSlots: Object.fromEntries(SPELL_SLOT_LEVELS.map((level) => [level, zero()])),
-      categories: {
-        'Class Features': [
-          { name: 'Arcane Recovery', description: 'Once per day.', current: 1, total: 1 },
-        ],
-      },
+      categories: [
+        {
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          name: 'Class features',
+          items: [
+            {
+              id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+              name: 'Rage',
+              description: 'Per long rest.',
+              current: 1,
+              total: 3,
+            },
+          ],
+        },
+      ],
       uncategorized: [],
+      spellSlots: Object.fromEntries(SPELL_SLOT_LEVELS.map((level) => [level, zero()])),
     },
     abilitiesAndSkills: {
       proficiencyBonus: 3,
@@ -111,26 +145,10 @@ describe('characterDocumentV1Schema', () => {
     expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
   });
 
-  it('preserves class order through a JSON round trip, so display order needs no order array', () => {
-    const doc = validDocument();
-    const parsed = characterDocumentV1Schema.parse(JSON.parse(JSON.stringify(doc)));
-    expect(parsed.classes.map((entry) => entry.name)).toEqual(['Rogue', 'Wizard']);
-  });
-
   it('accepts two classes sharing a name, which the business layer rejects rather than the schema', () => {
     const doc = validDocument();
     doc.classes[1]!.name = 'Rogue';
     expect(characterDocumentV1Schema.safeParse(doc).success).toBe(true);
-  });
-
-  it('rejects a category name with leading/trailing whitespace (categoryName as a record key)', () => {
-    const doc = validDocument();
-    doc.featsAndTraits.categories = { ' Rogue': doc.featsAndTraits.categories.Rogue } as never;
-    const result = characterDocumentV1Schema.safeParse(doc);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues.some((issue) => issue.code === 'invalid_key')).toBe(true);
-    }
   });
 
   it('rejects a hit-dice key that is not a die size', () => {
@@ -142,12 +160,12 @@ describe('characterDocumentV1Schema', () => {
   it('accepts "c" and 1 through 9 as spell levels, and rejects 0 and 10', () => {
     for (const level of ['c', 1, 5, 9]) {
       const doc = validDocument();
-      doc.spellList.uncategorized[0]!.level = level as never;
+      doc.spellList.categories[0]!.items[0]!.level = level as never;
       expect(characterDocumentV1Schema.safeParse(doc).success).toBe(true);
     }
     for (const level of [0, 10, '3']) {
       const doc = validDocument();
-      doc.spellList.uncategorized[0]!.level = level as never;
+      doc.spellList.categories[0]!.items[0]!.level = level as never;
       expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
     }
   });
@@ -273,13 +291,13 @@ const unknownKeyLocations: Array<[string, (doc: Doc) => void]> = [
   [
     'a spell entry',
     (doc) => {
-      (doc.spellList.uncategorized[0]! as Record<string, unknown>).extra = 'x';
+      (doc.spellList.categories[0]!.items[0]! as Record<string, unknown>).extra = 'x';
     },
   ],
   [
     'a counter entry',
     (doc) => {
-      (doc.counters.categories['Class Features'][0]! as Record<string, unknown>).extra = 'x';
+      (doc.counters.categories[0]!.items[0]! as Record<string, unknown>).extra = 'x';
     },
   ],
   [
@@ -288,13 +306,20 @@ const unknownKeyLocations: Array<[string, (doc: Doc) => void]> = [
       (doc.featsAndTraits as Record<string, unknown>).extra = 'x';
     },
   ],
-  // The only place bare `nameAndDescription` (not `.extend()`-ed) is used as an item schema.
-  // Every schema derived via `.extend()` re-applies its own `.strict()` on the clone, so none
-  // of those cases can detect nameAndDescription itself losing strictness — this one can.
+  // The {id, name, items} wrapper `categorized` builds for each category, not one of its
+  // items — a new nested location since categories became an array (Task 3). The generic
+  // contract (any unknown key rejected) is covered once, at the primitive, in
+  // primitives.test.ts; this exercises the same wrapper as it actually appears in a document.
+  [
+    'a category entry',
+    (doc) => {
+      (doc.featsAndTraits.categories[0]! as Record<string, unknown>).extra = 'x';
+    },
+  ],
   [
     'a feats/traits item',
     (doc) => {
-      (doc.featsAndTraits.uncategorized[0]! as Record<string, unknown>).extra = 'x';
+      (doc.featsAndTraits.categories[0]!.items[0]! as Record<string, unknown>).extra = 'x';
     },
   ],
   // The fixed-key MAP built by `fixedKeys`, not one of its entries — the same schema factory

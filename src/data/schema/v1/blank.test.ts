@@ -43,7 +43,7 @@ describe('createCharacter', () => {
     expect(doc.inventory.items).toEqual([]);
     expect(doc.equipment).toEqual({ weapons: [], other: [] });
     for (const section of [doc.featsAndTraits, doc.spellList, doc.counters]) {
-      expect(section.categories).toEqual({});
+      expect(section.categories).toEqual([]);
       expect(section.uncategorized).toEqual([]);
     }
   });
@@ -188,22 +188,31 @@ describe('createCharacter', () => {
       {
         name: 'featsAndTraits.uncategorized',
         mutate: (doc) =>
-          doc.featsAndTraits.uncategorized.push({ name: 'Darkvision', description: '' }),
+          doc.featsAndTraits.uncategorized.push({
+            id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+            name: 'Darkvision',
+            description: '',
+          }),
         read: (doc) => doc.featsAndTraits.uncategorized,
         original: [],
       },
       {
         name: 'featsAndTraits.categories',
         mutate: (doc) => {
-          doc.featsAndTraits.categories['Racial'] = [];
+          doc.featsAndTraits.categories.push({
+            id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+            name: 'Racial',
+            items: [],
+          });
         },
         read: (doc) => doc.featsAndTraits.categories,
-        original: {},
+        original: [],
       },
       {
         name: 'spellList.uncategorized',
         mutate: (doc) =>
           doc.spellList.uncategorized.push({
+            id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
             name: 'Fireball',
             description: '',
             level: 3,
@@ -215,25 +224,39 @@ describe('createCharacter', () => {
       {
         name: 'spellList.categories',
         mutate: (doc) => {
-          doc.spellList.categories['Evocation'] = [];
+          doc.spellList.categories.push({
+            id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+            name: 'Evocation',
+            items: [],
+          });
         },
         read: (doc) => doc.spellList.categories,
-        original: {},
+        original: [],
       },
       {
         name: 'counters.uncategorized',
         mutate: (doc) =>
-          doc.counters.uncategorized.push({ name: 'Ki', description: '', current: 0, total: 0 }),
+          doc.counters.uncategorized.push({
+            id: '10101010-1010-4010-8010-101010101010',
+            name: 'Ki',
+            description: '',
+            current: 0,
+            total: 0,
+          }),
         read: (doc) => doc.counters.uncategorized,
         original: [],
       },
       {
         name: 'counters.categories',
         mutate: (doc) => {
-          doc.counters.categories['Class'] = [];
+          doc.counters.categories.push({
+            id: '20202020-2020-4020-8020-202020202020',
+            name: 'Class',
+            items: [],
+          });
         },
         read: (doc) => doc.counters.categories,
-        original: {},
+        original: [],
       },
       {
         name: 'counters.spellSlots',

@@ -95,14 +95,17 @@ const equipmentItem = nameAndDescription
   })
   .strict();
 
+const featItem = nameAndDescription.extend({ id: uuid }).strict();
+
 const spellListItem = nameAndDescription
   .extend({
+    id: uuid,
     level: spellLevel,
     prepared: z.boolean(),
   })
   .strict();
 
-const countersItem = nameAndDescription.extend(currentAndTotal.shape).strict();
+const countersItem = nameAndDescription.extend({ id: uuid, ...currentAndTotal.shape }).strict();
 
 /** No `proficient`: ability-check proficiency has no referent in the rules (spec §3.1). */
 const abilitiesItem = z
@@ -161,7 +164,7 @@ const documentShape = z.object({
     })
     .strict(),
 
-  featsAndTraits: categorized(nameAndDescription),
+  featsAndTraits: categorized(featItem),
 
   equipment: z
     .object({
