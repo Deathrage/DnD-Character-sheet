@@ -32,16 +32,23 @@ export interface RepositoryOptions {
   onFailure?: (failure: StorageFailure) => void;
 }
 
+/**
+ * Creates the character store if it does not already exist yet. Exported so the test opener in
+ * `src/test/fixtures.ts` shares this instead of re-implementing it — two copies would let a
+ * future change to the store's shape silently diverge the test database from the real one.
+ */
+export function upgradeCharacterDb(db: IDBPDatabase<CharacterDb>): void {
+  if (!db.objectStoreNames.contains(CHARACTER_STORE)) {
+    db.createObjectStore(CHARACTER_STORE);
+  }
+}
+
 /** Not exported: a second connection opened outside the repository is what blocks a version bump. */
 const makeDefaultOpenDb =
   (onFailure: (failure: StorageFailure) => void): OpenDb =>
   () =>
     openDB<CharacterDb>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        if (!db.objectStoreNames.contains(CHARACTER_STORE)) {
-          db.createObjectStore(CHARACTER_STORE);
-        }
-      },
+      upgrade: upgradeCharacterDb,
       // Another tab holds an older version open; our upgrade cannot proceed until it closes.
       blocked: () => onFailure({ code: 'BLOCKED' }),
       // We are the old tab, blocking someone ELSE's upgrade — the exact inverse of `blocked`

@@ -4,6 +4,7 @@ import {
   CHARACTER_STORE,
   DB_NAME,
   DB_VERSION,
+  upgradeCharacterDb,
   type OpenDb,
 } from '../data/repository/indexedDbRepository.js';
 
@@ -15,15 +16,14 @@ export function docFor(id: string, name: string): CharacterDocument {
   return createCharacter({ name, id, now: FIXED_NOW });
 }
 
-/** The tests' own opener, so the repository need not export one. */
+/**
+ * The tests' own opener, so the repository need not export `openDb` itself — a second connection
+ * opened outside the repository is what blocks a version bump in an installed PWA. It shares the
+ * real opener's `upgradeCharacterDb`, so a future change to the object store cannot silently
+ * diverge this test database from the real one.
+ */
 export const createOpener = (): OpenDb => () =>
-  openDB(DB_NAME, DB_VERSION, {
-    upgrade(db) {
-      if (!db.objectStoreNames.contains(CHARACTER_STORE)) {
-        db.createObjectStore(CHARACTER_STORE);
-      }
-    },
-  });
+  openDB(DB_NAME, DB_VERSION, { upgrade: upgradeCharacterDb });
 
 /**
  * Writes a value straight into the store, bypassing validation, to simulate damage.
