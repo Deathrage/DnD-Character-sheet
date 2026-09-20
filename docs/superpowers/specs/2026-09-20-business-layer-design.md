@@ -134,7 +134,7 @@ single thing this app exists not to do.
 | Kind | Form | Example |
 | --- | --- | --- |
 | Business object | `*BO` | `FeatBO`, `CategoryBO`, `CharacterSheetBO` |
-| Stored shape | bare noun, **never exported** from `src/business/` | `type Feat = { id, name, description }` |
+| Stored shape | `*Data`, **never exported** from `src/business/` | `type FeatData = { id, name, description }` |
 | Creation input | `New*` | `type NewFeat = { name: string; description?: string }` |
 
 The `BO` suffix is for the reader who is new to a file: what they are looking at is legible without
@@ -142,8 +142,26 @@ tracing an import. It resolves from the directory name (`src/business/`) and the
 AGENTS.md already uses. `ViewModel` is the more accurate pattern name but implies a UI coupling this
 layer deliberately does not have, and costs nine characters instead of two.
 
-Suffixing the object frees the bare noun for the stored shape, which is what removes the genuinely
-confusable pair — the two *data* shapes per concept, not object-versus-data.
+`*Data` is marked for the same reason rather than left as a bare noun. A convention whose members
+are identified by the *absence* of a suffix has a hole exactly where a newcomer is looking, and one
+silently-unmarked member is where conventions begin to erode. `*Node` would be more precise — these
+are nodes in the document tree — but it overlaps with the DOM's `Node` in a browser app, and `Data`
+pairs with `BO` at a glance, which is the property being bought. `NewFeat` does not become
+`NewFeatData`: it names its purpose rather than its layer, which is why it needs no layer mark.
+
+**A `*Data` type is not a data-layer export.** `src/data/` names no per-item types at all — its item
+schemas are unexported `const`s. Each `*Data` is a business-internal alias for a slice of
+`CharacterDocument`:
+
+```ts
+type InventoryData = CharacterDocument['inventory']
+type FeatData = CharacterDocument['featsAndTraits']['uncategorized'][number]
+```
+
+The data layer's own exported types — `CharacterDocument`, `CharacterSummary`, `ListEntry`,
+`LoadError`, `LoadResult`, `ParseTextResult`, `SchemaIssue` — keep their role names unchanged. They
+are already named for what they are, which is this repo's established habit, and
+`CharacterDocumentData` would be worse than what it replaced.
 
 Collections take the document's own field name, so `hitDices` stays `hitDices`. Renaming a schema
 field to correct its English is not worth the churn.
@@ -176,9 +194,9 @@ compile-time-only enforcement would not deliver it.
 ### 3.4 Base classes
 
 ```ts
-abstract class NodeBO<T>                          // holds its parent and its node
-abstract class NamedItemBO<T> extends NodeBO<T>   // name, setName, description,
-                                                  // setDescription, moveTo(category), remove()
+abstract class NodeBO<TData>                              // holds its parent and its node
+abstract class NamedItemBO<TData> extends NodeBO<TData>   // name, setName, description,
+                                                          // setDescription, moveTo(category), remove()
 ```
 
 `FeatBO`, `SpellBO`, `CounterBO`, `InventoryItemBO` and `EquipmentItemBO` all extend
@@ -255,22 +273,22 @@ naming it as an exception is better than disguising it as a setter. It accepts o
 `parseCharacter` has already validated.
 
 ```ts
-class CategorizedBO<T> {                 // written once; serves feats, spells and counters
-  get categories(): CategoryBO<T>[]
-  get uncategorized(): T[]
-  createCategory(name: string): CategoryBO<T>     // rejects empty and duplicate
-  add(init): T                                    // lands in uncategorized
+class CategorizedBO<TItemBO> {           // written once; serves feats, spells and counters
+  get categories(): CategoryBO<TItemBO>[]
+  get uncategorized(): TItemBO[]
+  createCategory(name: string): CategoryBO<TItemBO>   // rejects empty and duplicate
+  add(init): TItemBO                                  // lands in uncategorized
 }
 
-class CategoryBO<T> {
+class CategoryBO<TItemBO> {
   get id(): string
-  get name(): string;  setName(v: string): void   // plain write; array position is preserved
-  get items(): T[]
-  add(init): T
-  remove(): void                                  // rehomes its items to uncategorized first
+  get name(): string;  setName(v: string): void       // plain write; array position is preserved
+  get items(): TItemBO[]
+  add(init): TItemBO
+  remove(): void                                      // moves items to uncategorized first
 }
 
-class FeatBO extends NamedItemBO<Feat> {          // and SpellBO, CounterBO, InventoryItemBO,
+class FeatBO extends NamedItemBO<FeatData> {      // and SpellBO, CounterBO, InventoryItemBO,
   // name, setName, description, setDescription,  // EquipmentItemBO
   // moveTo(category | null), remove()
 }
@@ -284,7 +302,7 @@ Collections carrying rules:
 | `HitDicesBO` | `add(size)` rejects a size already present; `HitDieBO.remove()` deletes the key |
 | `JournalAndNotesBO` | `appendDay()` appends at the end only; `deleteNewestDay()` deletes the last entry only, and no other index is deletable |
 | `CategorizedBO` | `createCategory` rejects empty and duplicate names |
-| `CategoryBO` | `remove()` rehomes items to `uncategorized` before deleting the category |
+| `CategoryBO` | `remove()` moves its items to `uncategorized` before deleting the category |
 | `NamedItemBO` | `moveTo` keeps `categories` and `uncategorized` mutually exclusive |
 
 Everything else in the tree is assignment behind a guard.
