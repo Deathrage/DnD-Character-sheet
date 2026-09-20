@@ -1,15 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { createCharacter } from '../schema/index.js';
+import { ID_A, docFor } from '../../test/fixtures.js';
 import type { Migration } from './migrations.js';
 import { parseCharacter, type MigrationRegistry } from './parseCharacter.js';
 
 const validRaw = () => {
-  const doc = createCharacter({
-    name: 'Sable Nightwind',
-    id: '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e',
-    now: new Date('2026-07-25T09:41:00.000Z'),
-  });
+  const doc = docFor(ID_A, 'Sable Nightwind');
   // A blank document is almost entirely empty strings and zeroes, against which most silent
   // rewrites are no-ops. Populating the fields that permit padding — longText does, only names
   // reject it — is what gives the `toEqual(raw)` assertion below something to lose.

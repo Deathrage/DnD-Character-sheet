@@ -1,13 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createCharacter } from '../schema/index.js';
+import { ID_A, docFor } from '../../test/fixtures.js';
 import { summarize } from './summarize.js';
 
-const base = () =>
-  createCharacter({
-    name: 'Sable Nightwind',
-    id: '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e',
-    now: new Date('2026-07-25T09:41:00.000Z'),
-  });
+const base = () => docFor(ID_A, 'Sable Nightwind');
 
 describe('summarize', () => {
   it('carries identity and hit points across', () => {

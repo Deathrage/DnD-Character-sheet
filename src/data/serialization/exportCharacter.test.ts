@@ -1,18 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { createCharacter } from '../schema/index.js';
+import { ID_A, FIXED_NOW, docFor } from '../../test/fixtures.js';
 import { exportFilename, toJsonText } from './exportCharacter.js';
 
-const doc = createCharacter({
-  name: 'Sable Nightwind',
-  id: '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e',
-  now: new Date('2026-07-25T09:41:00.000Z'),
-});
+const doc = docFor(ID_A, 'Sable Nightwind');
 
 describe('toJsonText', () => {
   it('pretty-prints with two-space indentation, so the file is diffable', () => {
     const text = toJsonText(doc);
     expect(text.split('\n').length).toBeGreaterThan(20);
-    expect(text).toContain('\n  "id": "3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e"');
+    expect(text).toContain(`\n  "id": "${ID_A}"`);
   });
 
   it('ends with a newline, as text files should', () => {
@@ -26,9 +22,7 @@ describe('toJsonText', () => {
 
 describe('exportFilename', () => {
   it('combines a slug and the date', () => {
-    expect(exportFilename('Sable Nightwind', new Date('2026-07-25T09:41:00.000Z'))).toBe(
-      'sable-nightwind-2026-07-25.json',
-    );
+    expect(exportFilename('Sable Nightwind', FIXED_NOW)).toBe('sable-nightwind-2026-07-25.json');
   });
 
   it('uses the UTC date late in the UTC day, so an east-of-UTC host does not roll the date forward', () => {

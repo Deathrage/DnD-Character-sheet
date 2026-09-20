@@ -1,18 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CharacterLoadError } from '../migration/errors.js';
-import { createCharacter } from '../schema/index.js';
-import {
-  CHARACTER_STORE,
-  DB_NAME,
-  createIndexedDbRepository,
-  openDb,
-} from './indexedDbRepository.js';
-
-const ID_A = '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e';
-const ID_B = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
-
-const docFor = (id: string, name: string) =>
-  createCharacter({ name, id, now: new Date('2026-07-25T09:41:00.000Z') });
+import { ID_A, ID_B, docFor, wipe } from '../../test/fixtures.js';
+import { CHARACTER_STORE, createIndexedDbRepository, openDb } from './indexedDbRepository.js';
 
 /**
  * Writes a value straight into the store, bypassing validation, to simulate damage.
@@ -26,20 +15,6 @@ async function putRaw(id: string, value: unknown): Promise<void> {
   } finally {
     db.close();
   }
-}
-
-async function wipe(): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    const request = indexedDB.deleteDatabase(DB_NAME);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-    // Reject rather than resolve: `blocked` means an open connection somewhere is holding the
-    // database, so the delete has NOT happened and may complete later, mid-test, wiping the
-    // store out from under whatever is running. Resolving here turned a leaked connection into
-    // an intermittent, far-away failure; rejecting fails loudly at the leak.
-    request.onblocked = () =>
-      reject(new Error('deleteDatabase was blocked — a connection was left open by a test'));
-  });
 }
 
 describe('createIndexedDbRepository', () => {

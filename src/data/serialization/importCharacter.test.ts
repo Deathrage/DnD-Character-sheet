@@ -1,50 +1,40 @@
 import { describe, expect, it } from 'vitest';
-import { createCharacter } from '../schema/index.js';
+import { ID_A, ID_B, docFor } from '../../test/fixtures.js';
 import { toJsonText } from './exportCharacter.js';
 import { fromJsonText } from './importCharacter.js';
 
-const ORIGINAL_ID = '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e';
-const NEW_ID = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
-
-const exported = () =>
-  toJsonText(
-    createCharacter({
-      name: 'Sable Nightwind',
-      id: ORIGINAL_ID,
-      now: new Date('2026-07-25T09:41:00.000Z'),
-    }),
-  );
+const exported = () => toJsonText(docFor(ID_A, 'Sable Nightwind'));
 
 describe('fromJsonText', () => {
   it('reads a document this app exported', () => {
-    const result = fromJsonText(exported(), { assignId: NEW_ID });
+    const result = fromJsonText(exported(), { assignId: ID_B });
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.doc.name).toBe('Sable Nightwind');
   });
 
   it('always assigns the new id, so import can never overwrite a character', () => {
-    const result = fromJsonText(exported(), { assignId: NEW_ID });
+    const result = fromJsonText(exported(), { assignId: ID_B });
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.doc.id).toBe(NEW_ID);
+    if (result.ok) expect(result.doc.id).toBe(ID_B);
   });
 
   it('preserves everything except the id', () => {
-    const result = fromJsonText(exported(), { assignId: NEW_ID });
+    const result = fromJsonText(exported(), { assignId: ID_B });
     expect(result.ok).toBe(true);
     if (result.ok) {
       const original = JSON.parse(exported()) as Record<string, unknown>;
-      expect({ ...result.doc, id: ORIGINAL_ID }).toEqual(original);
+      expect({ ...result.doc, id: ID_A }).toEqual(original);
     }
   });
 
   it('reports a syntax failure separately from a schema failure', () => {
-    const result = fromJsonText('{ "schemaVersion": 1, ', { assignId: NEW_ID });
+    const result = fromJsonText('{ "schemaVersion": 1, ', { assignId: ID_B });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.kind).toBe('syntax');
   });
 
   it('includes the parser message so the editor can point at the problem', () => {
-    const result = fromJsonText('nonsense', { assignId: NEW_ID });
+    const result = fromJsonText('nonsense', { assignId: ID_B });
     expect(result.ok).toBe(false);
     if (!result.ok && result.kind === 'syntax') {
       expect(result.message.length).toBeGreaterThan(0);
@@ -54,7 +44,7 @@ describe('fromJsonText', () => {
   });
 
   it('reports a document failure for well-formed JSON that is not a character', () => {
-    const result = fromJsonText('{"schemaVersion": 1}', { assignId: NEW_ID });
+    const result = fromJsonText('{"schemaVersion": 1}', { assignId: ID_B });
     expect(result.ok).toBe(false);
     if (!result.ok && result.kind === 'document') {
       expect(result.error.code).toBe('INVALID_AT_VERSION');
@@ -65,7 +55,7 @@ describe('fromJsonText', () => {
   });
 
   it('treats an empty file as a syntax failure, not an empty character', () => {
-    const result = fromJsonText('', { assignId: NEW_ID });
+    const result = fromJsonText('', { assignId: ID_B });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.kind).toBe('syntax');
   });

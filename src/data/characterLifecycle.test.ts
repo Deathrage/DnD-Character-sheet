@@ -6,21 +6,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { toJsonText } from './serialization/exportCharacter.js';
 import { fromJsonText } from './serialization/importCharacter.js';
-import { DB_NAME, createIndexedDbRepository } from './repository/indexedDbRepository.js';
-import { createCharacter } from './schema/index.js';
-
-const ORIGINAL_ID = '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e';
-const IMPORTED_ID = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
-
-async function wipe(): Promise<void> {
-  await new Promise<void>((resolve, reject) => {
-    const request = indexedDB.deleteDatabase(DB_NAME);
-    request.onsuccess = () => resolve();
-    request.onerror = () => reject(request.error);
-    request.onblocked = () =>
-      reject(new Error('deleteDatabase was blocked — a connection was left open by a test'));
-  });
-}
+import { createIndexedDbRepository } from './repository/indexedDbRepository.js';
+import { ID_A, ID_B, docFor, wipe } from '../test/fixtures.js';
 
 describe('the character lifecycle, end to end across the data layer', () => {
   beforeEach(wipe);
@@ -29,11 +16,7 @@ describe('the character lifecycle, end to end across the data layer', () => {
     const repository = createIndexedDbRepository();
 
     // 1. create — schema/v1/blank.ts
-    const created = createCharacter({
-      name: 'Sable Nightwind',
-      id: ORIGINAL_ID,
-      now: new Date('2026-07-25T09:41:00.000Z'),
-    });
+    const created = docFor(ID_A, 'Sable Nightwind');
     created.classes = { Rogue: { name: 'Rogue', level: 5 }, Wizard: { name: 'Wizard', level: 2 } };
     created.hitPoints = { current: 38, total: 45, temporary: 5 };
     // Deliberate leading and trailing whitespace in the longText fields, which permit it (only
@@ -50,10 +33,10 @@ describe('the character lifecycle, end to end across the data layer', () => {
 
     // 3. import — serialization/importCharacter.ts, via migration/parseCharacter.ts.
     // Import always creates, so it takes a fresh id (spec §5).
-    const imported = fromJsonText(text, { assignId: IMPORTED_ID });
+    const imported = fromJsonText(text, { assignId: ID_B });
     expect(imported.ok).toBe(true);
     if (!imported.ok) return;
-    expect(imported.doc).toEqual({ ...created, id: IMPORTED_ID });
+    expect(imported.doc).toEqual({ ...created, id: ID_B });
 
     // 4. save — repository/indexedDbRepository.ts
     await repository.save(imported.doc);
@@ -64,7 +47,7 @@ describe('the character lifecycle, end to end across the data layer', () => {
     expect(entries[0]?.ok).toBe(true);
     if (entries[0]?.ok) {
       expect(entries[0].summary).toEqual({
-        id: IMPORTED_ID,
+        id: ID_B,
         name: 'Sable Nightwind',
         totalLevel: 7,
         classes: [
@@ -77,13 +60,13 @@ describe('the character lifecycle, end to end across the data layer', () => {
 
     // 6. get — the round trip must be lossless. toEqual against the imported document is the
     // assertion that would catch any hop quietly altering, defaulting or stripping a field.
-    const loaded = await repository.get(IMPORTED_ID);
+    const loaded = await repository.get(ID_B);
     expect(loaded?.ok).toBe(true);
     if (loaded?.ok) expect(loaded.doc).toEqual(imported.doc);
 
     // 7. delete
-    await repository.delete(IMPORTED_ID);
-    expect(await repository.get(IMPORTED_ID)).toBeNull();
+    await repository.delete(ID_B);
+    expect(await repository.get(ID_B)).toBeNull();
     expect(await repository.list()).toEqual([]);
   });
 });
