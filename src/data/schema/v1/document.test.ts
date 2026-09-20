@@ -26,10 +26,10 @@ function validDocument() {
     id: '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e',
     name: 'Sable Nightwind',
     updatedAt: '2026-07-25T09:41:00.000Z',
-    classes: {
-      Rogue: { name: 'Rogue', level: 5 },
-      Wizard: { name: 'Wizard', level: 2 },
-    },
+    classes: [
+      { id: '11111111-1111-4111-8111-111111111111', name: 'Rogue', level: 5 },
+      { id: '22222222-2222-4222-8222-222222222222', name: 'Wizard', level: 2 },
+    ],
     hitPoints: { current: 38, total: 45, temporary: 5 },
     hitDices: { '8': { current: 3, total: 5 }, '6': { current: 2, total: 2 } },
     armorClass: 15,
@@ -105,31 +105,22 @@ describe('characterDocumentV1Schema', () => {
     expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
   });
 
-  it('rejects a class whose map key disagrees with its name (spec §3.3)', () => {
+  it('requires an id on every class', () => {
     const doc = validDocument();
-    doc.classes = { Rogue: { name: 'Wizard', level: 5 } } as never;
-    const result = characterDocumentV1Schema.safeParse(doc);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0]?.message).toMatch(/key/i);
-    }
+    delete (doc.classes[0] as Record<string, unknown>).id;
+    expect(characterDocumentV1Schema.safeParse(doc).success).toBe(false);
   });
 
-  it('rejects a class key with leading/trailing whitespace (shortName as a record key)', () => {
+  it('preserves class order through a JSON round trip, so display order needs no order array', () => {
     const doc = validDocument();
-    // The key and classItem.name are both padded and identical, because spec §3.3 requires
-    // them equal. That means asserting `success === false` alone would not isolate the record
-    // key's own refinement from classItem.name's (redundant, but independently sufficient)
-    // rejection of the same padded string — the document would still fail even if the record
-    // key stopped enforcing padding. Zod reports a key-level rejection as its own issue with
-    // code 'invalid_key', which neither the name field's refinement nor the class-key/name
-    // superRefine can produce, so asserting that code specifically is what isolates it.
-    doc.classes = { ' Rogue': { name: ' Rogue', level: 5 } } as never;
-    const result = characterDocumentV1Schema.safeParse(doc);
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues.some((issue) => issue.code === 'invalid_key')).toBe(true);
-    }
+    const parsed = characterDocumentV1Schema.parse(JSON.parse(JSON.stringify(doc)));
+    expect(parsed.classes.map((entry) => entry.name)).toEqual(['Rogue', 'Wizard']);
+  });
+
+  it('accepts two classes sharing a name, which the business layer rejects rather than the schema', () => {
+    const doc = validDocument();
+    doc.classes[1]!.name = 'Rogue';
+    expect(characterDocumentV1Schema.safeParse(doc).success).toBe(true);
   });
 
   it('rejects a category name with leading/trailing whitespace (categoryName as a record key)', () => {
@@ -232,7 +223,7 @@ const unknownKeyLocations: Array<[string, (doc: Doc) => void]> = [
   [
     'a class entry',
     (doc) => {
-      (doc.classes.Rogue as Record<string, unknown>).extra = 'x';
+      (doc.classes[0] as Record<string, unknown>).extra = 'x';
     },
   ],
   [

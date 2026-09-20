@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ID_A, docFor } from '../../test/fixtures.js';
+import { ID_A, ID_B, docFor } from '../../test/fixtures.js';
 import { summarize } from './summarize.js';
 
 const base = () => docFor(ID_A, 'Sable Nightwind');
@@ -16,7 +16,10 @@ describe('summarize', () => {
 
   it('sums class levels into totalLevel', () => {
     const doc = base();
-    doc.classes = { Rogue: { name: 'Rogue', level: 5 }, Wizard: { name: 'Wizard', level: 2 } };
+    doc.classes = [
+      { id: ID_A, name: 'Rogue', level: 5 },
+      { id: ID_B, name: 'Wizard', level: 2 },
+    ];
     expect(summarize(doc).totalLevel).toBe(7);
   });
 
@@ -26,10 +29,10 @@ describe('summarize', () => {
 
   it('flattens classes in creation order (spec §3.4)', () => {
     const doc = base();
-    doc.classes = {
-      Wizard: { name: 'Wizard', level: 2 },
-      Rogue: { name: 'Rogue', level: 5 },
-    };
+    doc.classes = [
+      { id: ID_A, name: 'Wizard', level: 2 },
+      { id: ID_B, name: 'Rogue', level: 5 },
+    ];
     expect(summarize(doc).classes).toEqual([
       { name: 'Wizard', level: 2 },
       { name: 'Rogue', level: 5 },
@@ -50,7 +53,7 @@ describe('summarize', () => {
     // defensive copy in summarize.ts with a direct reference leaves every other test green.
     const doc = base();
     doc.hitPoints = { current: 38, total: 45, temporary: 5 };
-    doc.classes = { Rogue: { name: 'Rogue', level: 5 } };
+    doc.classes = [{ id: ID_A, name: 'Rogue', level: 5 }];
     const before = JSON.stringify(doc);
 
     const summary = summarize(doc);
@@ -65,6 +68,6 @@ describe('summarize', () => {
 
     expect(JSON.stringify(doc)).toBe(before);
     expect(doc.hitPoints).toEqual({ current: 38, total: 45, temporary: 5 });
-    expect(doc.classes).toEqual({ Rogue: { name: 'Rogue', level: 5 } });
+    expect(doc.classes).toEqual([{ id: ID_A, name: 'Rogue', level: 5 }]);
   });
 });

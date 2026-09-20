@@ -33,7 +33,7 @@ describe('createCharacter', () => {
   });
 
   it('starts with no classes, so total level is zero', () => {
-    expect(createCharacter(INPUT).classes).toEqual({});
+    expect(createCharacter(INPUT).classes).toEqual([]);
   });
 
   it('starts every collection empty', () => {
@@ -146,10 +146,14 @@ describe('createCharacter', () => {
       {
         name: 'classes',
         mutate: (doc) => {
-          doc.classes['Wizard'] = { name: 'Wizard', level: 1 };
+          doc.classes.push({
+            id: '11111111-1111-4111-8111-111111111111',
+            name: 'Wizard',
+            level: 1,
+          });
         },
         read: (doc) => doc.classes,
-        original: {},
+        original: [],
       },
       {
         name: 'journalAndNotes.journal',

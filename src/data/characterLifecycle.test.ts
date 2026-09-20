@@ -17,7 +17,10 @@ describe('the character lifecycle, end to end across the data layer', () => {
 
     // 1. create — schema/v1/blank.ts
     const created = docFor(ID_A, 'Sable Nightwind');
-    created.classes = { Rogue: { name: 'Rogue', level: 5 }, Wizard: { name: 'Wizard', level: 2 } };
+    created.classes = [
+      { id: ID_A, name: 'Rogue', level: 5 },
+      { id: ID_B, name: 'Wizard', level: 2 },
+    ];
     created.hitPoints = { current: 38, total: 45, temporary: 5 };
     // Deliberate leading and trailing whitespace in the longText fields, which permit it (only
     // names reject padding). A `.trim()`/`.transform()` added to a primitive later would alter

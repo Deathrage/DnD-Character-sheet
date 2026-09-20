@@ -84,7 +84,7 @@ const spellLevel = z.union([
   z.literal(9),
 ]);
 
-const classItem = z.object({ name: shortName, level: nonNegativeInt }).strict();
+const classItem = z.object({ id: uuid, name: shortName, level: nonNegativeInt }).strict();
 
 const inventoryItem = nameAndDescription.extend({ count: nonNegativeInt }).strict();
 
@@ -133,7 +133,7 @@ const documentShape = z.object({
   name: shortName,
   updatedAt: isoDateTime,
 
-  classes: z.record(shortName, classItem),
+  classes: z.array(classItem),
 
   hitPoints: currentAndTotal.extend({ temporary: nonNegativeInt }).strict(),
   hitDices: z.record(dieSizeKey, currentAndTotal),
@@ -189,16 +189,6 @@ const documentShape = z.object({
     .strict(),
 });
 
-export const characterDocumentV1Schema = documentShape.strict().superRefine((doc, ctx) => {
-  for (const [key, value] of Object.entries(doc.classes)) {
-    if (value.name !== key) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['classes', key, 'name'],
-        message: `class map key "${key}" must equal its name "${value.name}" (spec §3.3)`,
-      });
-    }
-  }
-});
+export const characterDocumentV1Schema = documentShape.strict();
 
 export type CharacterDocumentV1 = z.infer<typeof characterDocumentV1Schema>;

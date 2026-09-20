@@ -36,7 +36,7 @@ export function createCharacter({ name, id, now }: CreateCharacterInput): Charac
     name: name.trim(),
     updatedAt: now.toISOString(),
 
-    classes: {},
+    classes: [],
 
     hitPoints: { current: 0, total: 0, temporary: 0 },
     hitDices: {},

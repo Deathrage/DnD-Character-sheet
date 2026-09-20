@@ -2,7 +2,7 @@ import type { CharacterDocument } from '../schema/index.js';
 import type { CharacterSummary } from './types.js';
 
 export function summarize(doc: CharacterDocument): CharacterSummary {
-  const classes = Object.values(doc.classes).map(({ name, level }) => ({ name, level }));
+  const classes = doc.classes.map(({ name, level }) => ({ name, level }));
 
   return {
     id: doc.id,
