@@ -13,6 +13,17 @@ its directory was authored. Before that point the directory is ordinary work-in-
 be edited freely, no migration required. If you are unsure which side of that line a version is
 on, treat it as frozen and ask.
 
+## v1 was restructured before its freeze began
+
+On 2026-09-20, `v1/` was edited in place: `classes` became an array of `{ id, name, level }`
+instead of a name-keyed map, `featsAndTraits`/`spellList`/`counters` gained the shared
+`Categorized<T>` shape, and a required uuid `id` was added to every collection item, closed off
+by a document-level check that rejects any id reused anywhere in the document. That is not an
+exception to the rule above — by that date nothing built against `v1/` had shipped and no real
+document had ever been stored under it (see `AGENTS.md`'s "Current state"), so the freeze had not
+started yet. The freeze rule itself is unchanged: this is what editing `v1/` looks like on the
+side of the line where it is still allowed, not a precedent for editing it once it is not.
+
 ## Why
 
 The migration loop that opens a stored character document validates it _at the version it claims

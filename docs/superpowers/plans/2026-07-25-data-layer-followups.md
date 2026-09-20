@@ -8,19 +8,6 @@ Nothing below blocks merge. The list exists so these get scheduled rather than q
 
 ## Schedule into the business-layer plan
 
-**Storage-level failure handling.** `createIndexedDbRepository` declares no `blocked`, `blocking` or
-`terminated` callbacks, so in an installed PWA a second tab holding a connection would block a
-future version bump indefinitely. Quota-exceeded and IndexedDB-unavailable (private browsing)
-propagate as raw `DOMException`s from `save()`. `list()` never awaits `tx.done`, so a transaction
-abort with no in-flight request surfaces as an unhandled rejection rather than a rejected `list()`.
-This is real user-visible behaviour on the platform the spec's §11 calls the sharpest risk in the
-design, so it should be a planned item rather than a deferred minor.
-
-**An injectable `MigrationRegistry` on the repository.** `parseCharacter` takes one specifically so
-migration is testable, but `indexedDbRepository` hardcodes the default. Spec §9 lists "loading a
-document written by an older schema" as repository coverage, and it cannot be written today. Pairs
-with the `openDb` note below — both are the same question about how the repository is made testable.
-
 **Trim at the write boundary.** The schema rejects padded names rather than trimming them, because
 trimming on load would silently rewrite a stored document. `createCharacter` trims its input; every
 business-layer action that writes a name must do the same.
@@ -34,28 +21,16 @@ still returns a document whose internal `id` could diverge from its key. UI code
 
 ## Worth doing when the code is next touched
 
-- **`openDb` is exported production surface** existing only as a test seam for `putRaw`. A consumer
-  importing it can write straight past `save()`'s validation guarantee.
 - **`toSchemaIssues` takes a `z.ZodError` parameter** and is exported from the same module the
   business layer will import `describeLoadError` from. The value contract still holds — no Zod type
   escapes at runtime — but an `@internal` marker or a move would make that literally true.
-- **`openDb` omits `idb`'s `DBSchema` type parameter**, so `cursor.value` is `any` flowing into
-  `parseCharacter`. Safe because that parameter is `unknown`, but unchecked: ESLint runs
-  `tseslint.configs.recommended`, not the type-checked config, so `no-unsafe-argument` is off.
 - **No `src/data/index.ts` barrel.** The schema module has a rigorously designed single entry point;
   the data layer as a whole does not, so consumers will import from several deep paths.
-- **Test fixtures are duplicated across six files** — the same `createCharacter({ name, id, now })`
-  call. `src/test/` already exists and is the obvious home.
-- **`wipe()` is duplicated** between `indexedDbRepository.test.ts` and `characterLifecycle.test.ts`,
-  and both target the same database name. Safe only because Vitest isolates per file; setting
-  `isolate: false` or sharing a pool would make them race.
 - **`errors.test.ts`'s `indexOf` ordering assertion is brittle.** It is redundant with the two
   role-specific `toContain` assertions above it, and it produces a *false failure* once a version
   number reaches double digits: with `found: 10`, `indexOf('1')` lands inside `"10"`.
 - **`describeLoadError` says "This file…"** for an `INVALID_AT_VERSION`, which is inaccurate when the
   refusal came from `save()` on a document the app itself built.
-- **`toJsonText` takes `CharacterDocument`,** so it cannot pretty-print `getRaw()`'s `unknown` — the
-  exact case the raw-JSON repair screen needs. Widening the parameter is a one-word change.
 - **`describeLoadError` does not cap its issue list.** A document with hundreds of issues yields one
   unbounded line. Capping is a presentation decision for the repair screen.
 - **`CharacterSummary` restates `classes` and `hitPoints` structurally** rather than deriving from
@@ -65,6 +40,35 @@ still returns a document whose internal `id` could diverge from its key. UI code
   the README's add-a-version recipe.
 - **Unused surface:** `defaultRegistry` and `DB_VERSION` are exported with no consumer outside their
   own files, and the `@/*` path alias has no users in `src` at all.
+
+## Done (2026-09-20)
+
+Closed by the same-day data-layer restructure. Kept here for the record, not because anything
+below still needs doing.
+
+- **Storage-level failure handling.** `createIndexedDbRepository` now takes `blocked`, `blocking`
+  and `terminated` callbacks on its `openDb` — surfaced to the caller as one `onFailure`, since
+  reacting to any of the three means the same thing (a connection outside the app's control) — and
+  `list()` awaits `tx.done`, so a mid-scan abort rejects the call instead of leaking an unhandled
+  rejection. `save()`, `get()`, `getRaw()` and `delete()` route quota-exceeded and
+  unavailable-database `DOMException`s through the typed `StorageFailure` taxonomy in the new
+  `src/data/repository/storageFailure.ts`, instead of letting a raw `DOMException` escape.
+- **An injectable `MigrationRegistry` on the repository.** `createIndexedDbRepository({ registry })`
+  takes the same registry shape `parseCharacter` already accepted, so "loading a document written
+  by an older schema" (spec §9) is now something a repository test can construct, the same way
+  `parseCharacter`'s own tests already did.
+- **`openDb` omitted `idb`'s `DBSchema` type parameter.** The store is now typed through `idb`'s
+  `DBSchema` as `{ key: string; value: unknown }`, so a cursor's value is `unknown` flowing into
+  `parseCharacter`, not `any`.
+- **`openDb` was exported production surface.** It no longer is: only the `OpenDb` *type* and the
+  constants `DB_NAME`, `DB_VERSION`, `CHARACTER_STORE` are exported. `createIndexedDbRepository`
+  takes an optional `openDb` for tests; the default opener is a private closure a production
+  consumer cannot reach, so there is no way left to write straight past `save()`'s validation.
+- **`toJsonText` took `CharacterDocument`.** It takes `unknown` now, so the repair screen can
+  pretty-print a document that failed validation — the exact case it exists for.
+- **Test fixtures were duplicated across six files, and `wipe()` between two.** Both now live once,
+  in `src/test/fixtures.ts` (`ID_A`, `ID_B`, `FIXED_NOW`, `docFor`, `wipe`, `createOpener`,
+  `putRaw`), imported everywhere they used to be redefined.
 
 ## Judged and dismissed
 

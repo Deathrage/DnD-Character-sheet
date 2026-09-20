@@ -21,9 +21,24 @@ and the authority on intent. Section numbers referenced below (§3.4, §11) poin
 The **data-access layer is complete**. Nothing else exists — no business layer, no UI, no build,
 no app you can run.
 
-- 203 tests across 12 files, `eslint .` and `tsc --noEmit` clean.
+- 226 tests across 13 files, `eslint .` and `tsc --noEmit` clean.
 - On branch `feature/character-sheet-foundation`, open as PR #1 against `main`. Not merged.
 - `main` is still at the initial commit.
+- Schema v1 was restructured in place on 2026-09-20 — see `src/data/schema/README.md` for why an
+  in-place edit was still safe: nothing built against `v1/` had shipped or stored a real document
+  yet, so its freeze had not begun. `classes` is now an array of `{ id, name, level }`, not a
+  name-keyed map. `featsAndTraits`, `spellList` and `counters` all share a `Categorized<T>` shape:
+  `{ categories: { id, name, items }[], uncategorized: T[] }`. Every collection item — classes,
+  categories, feats, spells, counters, inventory items, weapons, other equipment — now carries a
+  required uuid `id`, and a document-level check rejects any id reused anywhere in the document
+  (`doc.id` is excluded from that check: it is the IndexedDB store key, not a collection member).
+  Duplicate _names_ are representable now; rejecting them is the business layer's job, not the
+  schema's.
+- The storage-layer work the followups doc called the sharpest risk is done: `createIndexedDbRepository`
+  takes an injectable `registry` and `openDb`, reports `blocked`, `blocking` and `terminated`
+  through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
+  the call instead of surfacing as an unhandled rejection. `save()` now throws a `StorageError`
+  (`src/data/repository/storageFailure.ts`) instead of a `CharacterLoadError`.
 
 What is built: the versioned schema, the migration loop and its error taxonomy, export/import, and
 the IndexedDB repository. What is not: `src/business/`, `src/ui/`, React, MobX, the router,
@@ -172,6 +187,8 @@ src/data/serialization/ export and import (three-outcome ParseTextResult)
 src/data/repository/   the IndexedDB repository, ListEntry, summarize
 src/data/characterLifecycle.test.ts   end-to-end across all four modules
 src/test/              fake-indexeddb setup
+src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, wipe, createOpener, putRaw — shared so the
+                       data-layer test files stop each defining their own
 ```
 
 Tests are colocated: `foo.ts` is tested by `foo.test.ts` beside it.
@@ -192,9 +209,11 @@ Two plans remain, in order:
 
 `docs/superpowers/plans/2026-07-25-data-layer-followups.md` lists everything found and consciously
 deferred, split into what to schedule into the business-layer plan and what to fix opportunistically.
-The two that matter most: iOS storage-failure handling, which spec §11 calls the sharpest risk in
-the design, and making the repository's migration registry injectable so an older-schema load
-becomes testable.
+The two items that mattered most — iOS storage-failure handling, which spec §11 calls the sharpest
+risk in the design, and making the repository's migration registry injectable — are both done; see
+"Current state" above. What is left in that doc is scoped to the business layer: trimming names at
+the write boundary, re-exporting `describeLoadError` for `ui` (which may not import `data`
+directly), and reading a list row's id from its summary rather than re-deriving it from `doc.id`.
 
 ## How to work here
 
