@@ -102,9 +102,9 @@ describe('createCharacter', () => {
   });
 
   describe('does not share substructure between documents', () => {
-    // Task 3's fixture had a single shared object sitting behind every spell-slot entry, so a
-    // mutation on one slot silently poisoned the rest of module state. Tasks 5-7 all build their
-    // fixtures on this factory, so a regression here would surface as confusing failures
+    // An earlier fixture had a single shared object sitting behind every spell-slot entry, so a
+    // mutation on one slot silently poisoned the rest of module state. Other test files build
+    // their fixtures on this factory, so a regression here would surface as confusing failures
     // somewhere else entirely. Every mutable location gets its own case below rather than
     // trusting one sampled field (inventory.items) to stand in for the rest.
     const cases: Array<{
