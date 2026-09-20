@@ -1,21 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import { CharacterLoadError } from '../migration/errors.js';
-import { ID_A, ID_B, docFor, wipe } from '../../test/fixtures.js';
-import { CHARACTER_STORE, createIndexedDbRepository, openDb } from './indexedDbRepository.js';
-
-/**
- * Writes a value straight into the store, bypassing validation, to simulate damage.
- * try/finally, so a rejected put closes the connection instead of leaking it — a leaked
- * handle is exactly what would block the next test's `wipe()`.
- */
-async function putRaw(id: string, value: unknown): Promise<void> {
-  const db = await openDb();
-  try {
-    await db.put(CHARACTER_STORE, value, id);
-  } finally {
-    db.close();
-  }
-}
+import { SCHEMAS } from '../schema/index.js';
+import { ID_A, ID_B, createOpener, docFor, putRaw, wipe } from '../../test/fixtures.js';
+import { CHARACTER_STORE, createIndexedDbRepository } from './indexedDbRepository.js';
 
 describe('createIndexedDbRepository', () => {
   beforeEach(wipe);
@@ -166,5 +154,31 @@ describe('createIndexedDbRepository', () => {
     }
 
     expect(await repository.list()).toEqual([]);
+  });
+
+  it('migrates a document written by an older schema version', async () => {
+    const v1Doc = docFor(ID_A, 'Sable');
+    // A synthetic two-version world: version 1 is the real schema, version 2 is what this
+    // build claims to write, and the migration from 1 to 2 is the identity plus a version bump.
+    const registry = {
+      current: 2,
+      schemas: {
+        1: SCHEMAS[1]!,
+        2: z.looseObject({ schemaVersion: z.literal(2) }),
+      },
+      migrations: new Map([[1, (doc: unknown) => ({ ...(doc as object), schemaVersion: 2 })]]),
+    };
+    const repository = createIndexedDbRepository({ registry, openDb: createOpener() });
+
+    const db = await createOpener()();
+    try {
+      await db.put(CHARACTER_STORE, v1Doc, ID_A);
+    } finally {
+      db.close();
+    }
+
+    const loaded = await repository.get(ID_A);
+    expect(loaded?.ok).toBe(true);
+    expect((loaded as { doc: { schemaVersion: number } }).doc.schemaVersion).toBe(2);
   });
 });

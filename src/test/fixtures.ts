@@ -1,5 +1,11 @@
+import { openDB } from 'idb';
 import { createCharacter, type CharacterDocument } from '../data/schema/index.js';
-import { DB_NAME } from '../data/repository/indexedDbRepository.js';
+import {
+  CHARACTER_STORE,
+  DB_NAME,
+  DB_VERSION,
+  type OpenDb,
+} from '../data/repository/indexedDbRepository.js';
 
 export const ID_A = '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e';
 export const ID_B = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
@@ -7,6 +13,30 @@ export const FIXED_NOW = new Date('2026-07-25T09:41:00.000Z');
 
 export function docFor(id: string, name: string): CharacterDocument {
   return createCharacter({ name, id, now: FIXED_NOW });
+}
+
+/** The tests' own opener, so the repository need not export one. */
+export const createOpener = (): OpenDb => () =>
+  openDB(DB_NAME, DB_VERSION, {
+    upgrade(db) {
+      if (!db.objectStoreNames.contains(CHARACTER_STORE)) {
+        db.createObjectStore(CHARACTER_STORE);
+      }
+    },
+  });
+
+/**
+ * Writes a value straight into the store, bypassing validation, to simulate damage.
+ * try/finally, so a rejected put closes the connection instead of leaking it — a leaked
+ * handle is exactly what would block the next test's `wipe()`.
+ */
+export async function putRaw(id: string, value: unknown): Promise<void> {
+  const db = await createOpener()();
+  try {
+    await db.put(CHARACTER_STORE, value, id);
+  } finally {
+    db.close();
+  }
 }
 
 /**
