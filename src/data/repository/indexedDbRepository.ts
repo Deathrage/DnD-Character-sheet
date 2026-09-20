@@ -44,7 +44,14 @@ const makeDefaultOpenDb =
       },
       // Another tab holds an older version open; our upgrade cannot proceed until it closes.
       blocked: () => onFailure({ code: 'BLOCKED' }),
-      // We are the old tab holding someone else's upgrade back.
+      // We are the old tab, blocking someone ELSE's upgrade — the exact inverse of `blocked`
+      // above. Mapped to the same code deliberately, not by oversight: the player's remediation
+      // is identical either way (close the other tabs), so the business layer needs only one
+      // signal to act on. It is also close to unreachable here: this repository closes every
+      // connection at the end of each call, so `blocking` would require another tab to start its
+      // own upgrade in the narrow window while this one is still open — and even then, this
+      // connection closing (moments later, when the current call finishes) resolves it without
+      // any code needing to run.
       blocking: () => onFailure({ code: 'BLOCKED' }),
       // The browser dropped the connection, typically under storage pressure.
       terminated: () => onFailure({ code: 'UNAVAILABLE', cause: 'connection terminated' }),

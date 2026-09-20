@@ -255,6 +255,39 @@ describe('createIndexedDbRepository', () => {
     expect(failures).toContainEqual({ code: 'BLOCKED' });
   });
 
+  it('wires the default opener to report a blocking connection to onFailure', async () => {
+    // Same judgement as the blocked test above: this proves the callback is wired to
+    // onFailure, not that the browser ever calls `blocking`. `blocked` and `blocking` are
+    // opposite events (another tab holding us up, versus us holding another tab up) that are
+    // deliberately mapped to the same BLOCKED code — see the comment at the mapping.
+    type Callbacks = { blocked?: () => void; blocking?: () => void; terminated?: () => void };
+    const failures: StorageFailure[] = [];
+    let blocking: (() => void) | undefined;
+    vi.mocked(openDB).mockImplementationOnce(((
+      _name: string,
+      _version: number | undefined,
+      callbacks: Callbacks | undefined,
+    ) => {
+      blocking = callbacks?.blocking;
+      return Promise.resolve({
+        transaction: () => ({
+          store: { openCursor: () => Promise.resolve(null) },
+          done: Promise.resolve(),
+        }),
+        close: () => {},
+      });
+    }) as never);
+
+    const repository = createIndexedDbRepository({
+      onFailure: (failure) => failures.push(failure),
+    });
+    await repository.list();
+
+    expect(blocking).toBeTypeOf('function');
+    blocking?.();
+    expect(failures).toContainEqual({ code: 'BLOCKED' });
+  });
+
   it('wires the default opener to report a terminated connection to onFailure', async () => {
     // Same judgement as the blocked test above: this proves the callback is wired to
     // onFailure, not that the browser ever calls `terminated`.
