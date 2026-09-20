@@ -18,6 +18,13 @@ describe('toJsonText', () => {
   it('round-trips through JSON.parse unchanged', () => {
     expect(JSON.parse(toJsonText(doc))).toEqual(doc);
   });
+
+  it('pretty-prints a value that failed validation, for the repair screen', () => {
+    const damaged: unknown = { schemaVersion: 1, name: 'Sable', broken: true };
+    expect(toJsonText(damaged)).toBe(
+      '{\n  "schemaVersion": 1,\n  "name": "Sable",\n  "broken": true\n}\n',
+    );
+  });
 });
 
 describe('exportFilename', () => {
