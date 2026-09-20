@@ -354,14 +354,29 @@ class CharacterLibraryBO {
 ```
 
 `create` is the only path the UI uses to make a character, so it never handles a
-`CharacterDocument`:
+`CharacterDocument`. Every method here is an instance method: they need the repository and they
+mutate `entries`.
 
 ```ts
 // inside CharacterLibraryBO.create(name)
 const doc = createCharacter({ name, id: createId(), now: new Date() })
-await repository.save(doc)
-return new CharacterSheetBO(doc)
+await repository.save(doc)          // written before any edit, so the row exists immediately
+const sheet = new CharacterSheetBO(doc)
+this.#entries.push(new CharacterEntryBO(summarize(doc), this))
+this.#attachAutosave(sheet)
+return sheet
 ```
+
+Both trailing steps are load-bearing and neither is optional:
+
+- **The entry is pushed, not awaited from a reload.** Without it the list is stale until the next
+  `load()`, and the character the player just created is missing from it — acceptance criterion 1.
+- **Autosave is attached here, not only in `open()`.** `create` hands back a live sheet, so without
+  it every edit to a newly created character is silently lost until the player navigates away and
+  back.
+
+`add(file)` does exactly the same three things after `repository.save`, and is the reason they are
+written as a shared private step rather than inlined twice.
 
 The constructor stays public rather than hiding behind a `static blank()`, because `open()`, tests
 and Storybook fixtures all already hold a document. A `blank()` would only wrap `createCharacter`,
@@ -515,8 +530,8 @@ fail, restore.
   the store since `load()`. Either it should mirror `LoadResult`'s `{ ok }` discriminant, or the
   missing-row case should be impossible by construction because the entry came from the list.
   Settle when the list screen is built; both readings are defensible and the UI will say which.
-- **Where `Autosave` is attached.** `CharacterLibraryBO.open()` is the obvious owner, and
-  `sheet.dispose()` the obvious detach. What remains open is the raw-JSON editor: it holds an
+- **Where `Autosave` is attached.** `CharacterLibraryBO` owns it — `open`, `create` and `add` each
+  attach, `sheet.dispose()` detaches. What remains open is the raw-JSON editor: it holds an
   invalid draft for as long as the player is typing, and disposing on entry means an unrelated
   navigation away loses nothing but also saves nothing. Settle with the raw-JSON screen.
 - **`equipment.weapons` and `equipment.other` share the document-wide id space** but there is no
