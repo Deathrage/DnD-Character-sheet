@@ -1,6 +1,7 @@
 import { observable, toJS } from 'mobx';
 import type { CharacterDocument } from '../data/schema/index.js';
 import { ClassesBO } from './classes.js';
+import { CountersBO } from './counters.js';
 import { EquipmentBO } from './equipment.js';
 import { type FeatsAndTraitsBO, makeFeatsAndTraits } from './featsAndTraits.js';
 import { nonNegativeInt, trimmedName } from './guards.js';
@@ -9,6 +10,7 @@ import { HitPointsBO } from './hitPoints.js';
 import { InventoryBO } from './inventory.js';
 import { JournalAndNotesBO } from './journalAndNotes.js';
 import './mobxConfig.js';
+import { makeSpellList, type SpellListBO } from './spellList.js';
 import type { CharacterData } from './types.js';
 
 export class CharacterSheetBO {
@@ -30,6 +32,8 @@ export class CharacterSheetBO {
   readonly inventory: InventoryBO;
   readonly equipment: EquipmentBO;
   readonly featsAndTraits: FeatsAndTraitsBO;
+  readonly spellList: SpellListBO;
+  readonly counters: CountersBO;
 
   constructor(doc: CharacterDocument) {
     this.#doc = observable(doc);
@@ -40,6 +44,8 @@ export class CharacterSheetBO {
     this.inventory = new InventoryBO(this.#doc.inventory.coins, this.#doc.inventory.items);
     this.equipment = new EquipmentBO(this.#doc.equipment.weapons, this.#doc.equipment.other);
     this.featsAndTraits = makeFeatsAndTraits(this.#doc.featsAndTraits);
+    this.spellList = makeSpellList(this.#doc.spellList);
+    this.counters = new CountersBO(this.#doc.counters);
   }
 
   get id(): string {
