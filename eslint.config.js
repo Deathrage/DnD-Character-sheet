@@ -64,6 +64,15 @@ export default tseslint.config(
   // an array of strings) and ESLint 10 rejects them outright. Checked against the installed
   // plugin, not recalled.
   reactHooks.configs.flat['recommended-latest'],
+  // Build-time scripts run in Node, not in the browser or under Vitest, so they are the one
+  // place these globals exist. Declared rather than pulled from the `globals` package, which
+  // would be a dependency for twelve identifiers.
+  {
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: { Buffer: 'readonly', console: 'readonly', process: 'readonly' },
+    },
+  },
   boundary('shared', ['data', 'business', 'ui']),
   boundary('data', ['business', 'ui'], {
     ignores: ['src/data/schema/**/*.ts'],

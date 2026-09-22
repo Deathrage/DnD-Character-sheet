@@ -7,6 +7,19 @@
          not a layout bug. -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#6d6ff0" />
+    <!--
+      Relative, like everything else here, because vite.config.ts sets `base: ''` so the build
+      works from any directory. The manifest exists to make the app installable: installing is the
+      route by which Chrome will actually grant persistent storage, and the persistence gate's own
+      refused screen tells the player to do it. Without this that advice was a dead end.
+
+      No service worker and no offline cache — those are a separate concern, and the app already
+      works offline in the only sense that matters, which is that its data is local.
+    -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icon-192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
     <title>Character Sheet</title>
   </head>
   <body>
