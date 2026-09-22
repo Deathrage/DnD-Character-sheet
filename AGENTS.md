@@ -18,8 +18,8 @@ and the authority on intent. Section numbers referenced below (§3.4, §11) poin
 
 ## Current state
 
-The **data-access layer is complete**. Nothing else exists — no business layer, no UI, no build,
-no app you can run.
+The **data-access layer is complete**, and so is the **business object tree** built on top of it.
+No UI, no build, no app you can run yet.
 
 - 226 tests across 13 files, `eslint .` and `tsc --noEmit` clean.
 - On branch `feature/character-sheet-foundation`, open as PR #1 against `main`. Not merged.
@@ -39,10 +39,28 @@ no app you can run.
   through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
   the call instead of surfacing as an unhandled rejection. `save()` now throws a `StorageError`
   (`src/data/repository/storageFailure.ts`) instead of a `CharacterLoadError`.
+- The **business object tree** (`src/business/`, 195 tests across 14 files) is done: `CharacterSheetBO`
+  composes ten subtree business objects — classes, hit points, hit dice, journal & notes, inventory,
+  equipment, feats & traits, spell list, counters, and abilities & skills — over one MobX-observable
+  document. That document lives behind a true `#doc` private field, not TypeScript's `private`:
+  `private` is erased at compile time, so a cast or plain JavaScript would still reach it, and
+  runtime enforcement is the point. There is no accessor anywhere in the tree that hands the
+  document back out — `src/business/characterSheet.roundTrip.test.ts` walks every property
+  reachable from a `CharacterSheetBO`, including prototype getters, and asserts none of them exposes
+  it. `src/business/index.ts` is the only file `src/ui/` may import from this directory; it exports
+  the `*BO` classes and their `New*` input types the UI needs to name, and deliberately never the
+  `*Data` aliases in `types.ts` — those are the stored shapes, and exporting one would put the
+  document's structure back into UI signatures. That same test file also fills every branch of the
+  tree and asserts the result still satisfies `CURRENT_SCHEMA`: the property that will let autosave
+  validate a document and refuse to save it loudly on failure, rather than ever writing one the
+  schema would reject.
+- What this plan does not cover, and is not built yet: `CharacterLibraryBO`, `CharacterEntryBO`,
+  `CharacterFile`, `StorageBO`, and `Autosave` (spec §5-6). They need `mobx-utils`' `deepObserve`,
+  which is a second, separate plan.
 
-What is built: the versioned schema, the migration loop and its error taxonomy, export/import, and
-the IndexedDB repository. What is not: `src/business/`, `src/ui/`, React, MobX, the router,
-Storybook, the PWA manifest, `vite build`. Those are the next two plans.
+What is built: the versioned schema, the migration loop and its error taxonomy, export/import, the
+IndexedDB repository, and the business object tree. What is not: the character library, autosave
+and storage objects (spec §5-6), and the UI.
 
 ## Commands
 
@@ -180,6 +198,22 @@ rejects a bare `baseUrl`. Guessing produced wrong code three times during the bu
 
 ```
 src/shared/            slug()
+src/business/          index.ts is the public face; CharacterSheetBO is the observable root
+  characterSheet.ts    id, name, armorClass, the derived `level`, toDocument() (a toJS copy)
+  classes.ts           ClassesBO / ClassBO
+  hitPoints.ts         HitPointsBO
+  hitDices.ts          HitDicesBO / HitDieBO, keyed by die size — no id, the size is the identity
+  journalAndNotes.ts   JournalAndNotesBO / JournalDayBO — append or delete-the-newest-day only
+  inventory.ts         InventoryBO / CoinsBO / InventoryItemBO
+  equipment.ts         EquipmentBO / EquipmentItemBO, plus derived (never stored) attuned/equipped
+  categorized.ts       CategorizedBO / CategoryBO / CategorizedItemBO, shared by the three below
+  featsAndTraits.ts    FeatBO, over categorized.ts
+  spellList.ts         SpellBO, over categorized.ts
+  counters.ts          CounterBO / SpellSlotBO, over categorized.ts plus the nine fixed slots
+  abilitiesAndSkills.ts AbilityBO / SkillBO, fixed key sets built once in the constructor
+  errors.ts            RuleViolation, RuleCode — every rule this layer enforces
+  types.ts, nodeBO.ts, namedItem.ts, observableList.ts, mobxConfig.ts, guards.ts, createId.ts
+                       internal only; never re-exported from index.ts
 src/data/schema/       index.ts is the public face; README.md governs versioning
   v1/                  primitives, document, blank (factory), index — self-contained
 src/data/migration/    versionOf, parseCharacter, the LoadError taxonomy
