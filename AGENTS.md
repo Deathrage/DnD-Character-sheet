@@ -39,7 +39,7 @@ No UI, no build, no app you can run yet.
   through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
   the call instead of surfacing as an unhandled rejection. `save()` now throws a `StorageError`
   (`src/data/repository/storageFailure.ts`) instead of a `CharacterLoadError`.
-- The **business object tree** (`src/business/`, 196 tests across 14 files) is done: `CharacterSheetBO`
+- The **business object tree** (`src/business/`, 227 tests across 14 files) is done: `CharacterSheetBO`
   composes ten subtree business objects — classes, hit points, hit dice, journal & notes, inventory,
   equipment, feats & traits, spell list, counters, and abilities & skills — over one MobX-observable
   document. That document lives behind a true `#doc` private field, not TypeScript's `private`:
@@ -63,6 +63,20 @@ No UI, no build, no app you can run yet.
   tree and asserts the result still satisfies `CURRENT_SCHEMA`: the property that will let autosave
   validate a document and refuse to save it loudly on failure, rather than ever writing one the
   schema would reject.
+- Three rules the whole-branch review added, worth knowing before you write a setter here:
+  - **A business object may not act on a cached sibling array.** `CategoryBO.remove()` rehomes its
+    items into `uncategorized`, so an item business object a caller still holds points at an array
+    that is no longer part of the document. `CategorizedItemBO` therefore resolves the node's live
+    bucket (searching `uncategorized` and every `categories[].items`) before a move or a removal:
+    acting on the stale array put the same node in the document twice and made it unsaveable.
+    `GONE` when the node is in no bucket, `UNKNOWN_CATEGORY` when the destination category is gone.
+  - **Every write the schema length-limits is capped at the setter.** `trimmedName(value, max)` and
+    `longText(value)` in `guards.ts` throw `TOO_LONG`; the three limits are duplicated there with a
+    comment, for the same reason `SPELL_SLOT_LEVELS` is duplicated in `counters.ts` — `src/business/`
+    may not import a schema version directory. 80 for a short name, 40 for a category name, 20 000
+    for freeform text.
+  - **A rule code must be true of every value it rejects.** `add(0)` threw `NOT_AN_INTEGER` about an
+    integer; the die-size guard is now one key-shaped check with its own `INVALID_DIE_SIZE`.
 - What this plan does not cover, and is not built yet: `CharacterLibraryBO`, `CharacterEntryBO`,
   `CharacterFile`, `StorageBO`, and `Autosave` (spec §5-6). They need `mobx-utils`' `deepObserve`,
   which is a second, separate plan.
