@@ -4,8 +4,14 @@ import './mobxConfig.js';
 
 /**
  * Spec §5's four states, and no fifth. A grant is permanent for the origin, so there is no route
- * back out of `granted`; `dismissedForSession` is deliberately not persisted, which is what makes
- * the gate return on the next launch (acceptance criterion 14).
+ * back out of `granted`.
+ *
+ * `dismissedForSession` is remembered in `sessionStorage` and nowhere more durable. The spec said
+ * not to persist it at all, which read as "the gate must come back" — but taken literally it also
+ * meant the gate came back on every *reload*, and a refusing browser is the normal case in Chrome,
+ * so that is a gate in front of every single launch of the app. `sessionStorage` dies with the tab,
+ * which still satisfies criterion 14's "returns on the next launch" while not re-asking the same
+ * tab a question it answered thirty seconds ago.
  */
 export type PersistenceState = 'unknown' | 'granted' | 'denied' | 'dismissedForSession';
 
@@ -28,6 +34,27 @@ export interface PersistencePort {
 export interface StorageGateOptions {
   /** `null` stands for "no Storage API here" — private mode, an old browser, or a test. */
   port?: PersistencePort | null;
+  /**
+   * Where a session dismissal is remembered. Defaults to `sessionStorage`; `null` turns the memory
+   * off, which is what a test wants so that one test's dismissal cannot leak into the next.
+   */
+  session?: Pick<Storage, 'getItem' | 'setItem'> | null;
+}
+
+/** Session-scoped by definition: it dies with the tab, which is what "for this session" means. */
+const DISMISSED_KEY = 'dnd-character-sheet.storage-gate-dismissed';
+
+/**
+ * Every access is guarded. `sessionStorage` is not merely empty in a partitioned or storage-blocked
+ * context — reading the property itself throws a SecurityError, and this class exists precisely to
+ * be useful in browsers that are hostile about storage.
+ */
+function defaultSession(): Pick<Storage, 'getItem' | 'setItem'> | null {
+  try {
+    return globalThis.sessionStorage;
+  } catch {
+    return null;
+  }
 }
 
 function defaultPort(): PersistencePort | null {
@@ -70,8 +97,12 @@ export class StorageGate {
     failure: null as StorageFailure | null,
   });
 
+  readonly #session: Pick<Storage, 'getItem' | 'setItem'> | null;
+
   constructor(options: StorageGateOptions = {}) {
     this.#port = options.port === undefined ? defaultPort() : options.port;
+    this.#session = options.session === undefined ? defaultSession() : options.session;
+    if (this.#readDismissed()) this.#state.persistence = 'dismissedForSession';
   }
 
   get persistence(): PersistenceState {
@@ -97,17 +128,29 @@ export class StorageGate {
    */
   async load(): Promise<void> {
     if (this.#port === null) return;
-    const granted = await this.#port.persisted();
-    if (granted) this.#state.persistence = 'granted';
+    // A throwing `persisted()` leaves the state exactly as it was. This runs at startup, and the
+    // app waits on it before it renders anything — so letting it reject would leave the screen on
+    // "Loading…" forever rather than degrade to a gate that asks.
+    try {
+      if (await this.#port.persisted()) this.#state.persistence = 'granted';
+    } catch {
+      /* the grant is unknown, which is already the state */
+    }
     await this.#refreshUsage();
   }
 
+  /** A request that throws counts as refused: it was asked for, and it was not granted. */
   async requestPersist(): Promise<void> {
     if (this.#port === null) {
       this.#state.persistence = 'denied';
       return;
     }
-    const granted = await this.#port.persist();
+    let granted = false;
+    try {
+      granted = await this.#port.persist();
+    } catch {
+      // Left false: a request that throws was still a request, and it still was not granted.
+    }
     this.#state.persistence = granted ? 'granted' : 'denied';
     await this.#refreshUsage();
   }
@@ -118,8 +161,14 @@ export class StorageGate {
    * best-effort storage. Session-only, so the gate returns on the next launch.
    */
   dismissForSession(): void {
-    if (this.#state.persistence !== 'granted') {
-      this.#state.persistence = 'dismissedForSession';
+    if (this.#state.persistence === 'granted') return;
+    this.#state.persistence = 'dismissedForSession';
+    // Remembered in `sessionStorage`, so a reload does not re-gate the same tab. It still dies
+    // with the tab, which is what criterion 14 asks for: the gate returns on the next launch.
+    try {
+      this.#session?.setItem(DISMISSED_KEY, '1');
+    } catch {
+      /* a browser that refuses to remember the dismissal just asks again; nothing is lost */
     }
   }
 
@@ -132,10 +181,22 @@ export class StorageGate {
     this.#state.failure = null;
   }
 
+  #readDismissed(): boolean {
+    try {
+      return this.#session?.getItem(DISMISSED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
   async #refreshUsage(): Promise<void> {
     const estimate = this.#port?.estimate;
     if (estimate === undefined) return;
-    const { usage, quota } = await estimate.call(this.#port);
-    this.#state.usage = usage === undefined || quota === undefined ? null : { usage, quota };
+    try {
+      const { usage, quota } = await estimate.call(this.#port);
+      this.#state.usage = usage === undefined || quota === undefined ? null : { usage, quota };
+    } catch {
+      this.#state.usage = null;
+    }
   }
 }

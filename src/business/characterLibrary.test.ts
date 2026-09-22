@@ -48,6 +48,23 @@ describe('CharacterLibraryBO', () => {
     expect(library.entries[0]?.problem).toBeNull();
   });
 
+  it('reports a store that cannot be listed, instead of rejecting', async () => {
+    const storageGate = new StorageGate({ port: null });
+    const broken: CharacterRepository = {
+      ...repository,
+      list: () => Promise.reject(new Error('IndexedDB is blocked')),
+    };
+    const library = libraryOver(broken, storageGate);
+
+    // The app awaits this before its first render, so a rejection left the screen on "Loading…"
+    // permanently with no message — reachable for real in a browser that blocks IndexedDB.
+    await expect(library.load()).resolves.toBeUndefined();
+
+    expect(library.entries).toEqual([]);
+    // Not swallowed: it lands on the banner, which is where a player can act on it.
+    expect(storageGate.failure).toEqual({ code: 'UNKNOWN', cause: expect.any(Error) as unknown });
+  });
+
   it('summarises a row without opening the document', async () => {
     const doc = docFor(ID_A, 'Sable');
     doc.classes.push(

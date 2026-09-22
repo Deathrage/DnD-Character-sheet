@@ -34,9 +34,17 @@ export function App({ library }: { library: CharacterLibraryBO }) {
 
   useEffect(() => {
     let cancelled = false;
-    void Promise.all([library.load(), library.storageGate.load()]).then(() => {
+    void (async () => {
+      try {
+        await Promise.all([library.load(), library.storageGate.load()]);
+      } catch {
+        // Both of those report their own failures through the storage gate, so there is nothing
+        // to show from here. What matters is that `setReady` still runs: a rejection that got
+        // this far used to leave the screen on "Loading…" permanently, with no message — the
+        // worst way to fail, and reachable for real in a browser that blocks IndexedDB.
+      }
       if (!cancelled) setReady(true);
-    });
+    })();
     return () => {
       cancelled = true;
     };

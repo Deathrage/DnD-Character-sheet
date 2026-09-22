@@ -1,6 +1,6 @@
 import { observable } from 'mobx';
 import { createIndexedDbRepository } from '../data/repository/indexedDbRepository.js';
-import { StorageError } from '../data/repository/storageFailure.js';
+import { StorageError, toStorageFailure } from '../data/repository/storageFailure.js';
 import { summarize } from '../data/repository/summarize.js';
 import type { CharacterRepository, CharacterSummary } from '../data/repository/types.js';
 import { createCharacter, type CharacterDocument } from '../data/schema/index.js';
@@ -50,9 +50,25 @@ export class CharacterLibraryBO {
     return [...this.#entries];
   }
 
+  /**
+   * Reports a whole-store failure rather than throwing it.
+   *
+   * This is not the codebase's "never swallow a failure" rule being broken — the failure is
+   * surfaced, on the storage banner, which is where a player can act on it. What it must not do is
+   * reject: the app awaits this before its first render, so a rejection left the screen on
+   * "Loading…" for ever, which is exactly the silent failure the rule exists to prevent. An
+   * individual damaged *document* is untouched by this and still comes back as its own `ok: false`
+   * row (criterion 15).
+   */
   async load(): Promise<void> {
-    const rows = await this.#repository.list();
-    this.#entries.replace(rows.map((row) => new CharacterEntryBO(row, this)));
+    try {
+      const rows = await this.#repository.list();
+      this.#entries.replace(rows.map((row) => new CharacterEntryBO(row, this)));
+    } catch (caught) {
+      this.storageGate.report(
+        caught instanceof StorageError ? caught.detail : toStorageFailure(caught),
+      );
+    }
   }
 
   /**
