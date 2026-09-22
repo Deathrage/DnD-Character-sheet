@@ -39,7 +39,7 @@ No UI, no build, no app you can run yet.
   through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
   the call instead of surfacing as an unhandled rejection. `save()` now throws a `StorageError`
   (`src/data/repository/storageFailure.ts`) instead of a `CharacterLoadError`.
-- The **business object tree** (`src/business/`, 195 tests across 14 files) is done: `CharacterSheetBO`
+- The **business object tree** (`src/business/`, 196 tests across 14 files) is done: `CharacterSheetBO`
   composes ten subtree business objects — classes, hit points, hit dice, journal & notes, inventory,
   equipment, feats & traits, spell list, counters, and abilities & skills — over one MobX-observable
   document. That document lives behind a true `#doc` private field, not TypeScript's `private`:
@@ -47,7 +47,16 @@ No UI, no build, no app you can run yet.
   runtime enforcement is the point. There is no accessor anywhere in the tree that hands the
   document back out — `src/business/characterSheet.roundTrip.test.ts` walks every property
   reachable from a `CharacterSheetBO`, including prototype getters, and asserts none of them exposes
-  it. `src/business/index.ts` is the only file `src/ui/` may import from this directory; it exports
+  it. The same applies one level down: a `CategoryBO` (feats & traits, spell list, and counters are
+  all `Categorized<T>`) does not expose its live storage array either. It used to, as a public
+  `rawItems` getter meant only for `CategorizedItemBO.moveTo` — but a public getter is public to
+  everyone, so any caller holding a category could push a raw, untrimmed, id-less item straight
+  into the document. `moveTo` now reaches a category's storage through a module-private `WeakMap`
+  declared in `categorized.ts` instead, so nothing outside that one file can reach it. If you add a
+  new wrapper that needs to hand a sibling class access to something array-shaped, reach for that
+  pattern rather than a public getter "for internal use" — a getter with no access modifier is not
+  internal to anyone, TypeScript or otherwise. `src/business/index.ts` is the only file `src/ui/`
+  may import from this directory; it exports
   the `*BO` classes and their `New*` input types the UI needs to name, and deliberately never the
   `*Data` aliases in `types.ts` — those are the stored shapes, and exporting one would put the
   document's structure back into UI signatures. That same test file also fills every branch of the
