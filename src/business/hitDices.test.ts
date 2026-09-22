@@ -29,8 +29,13 @@ describe('HitDicesBO', () => {
     );
   });
 
-  it.each([0, -6, 1.5])('rejects %j as a die size', (size) => {
-    expect(() => sheetFor().hitDices.add(size)).toThrow(Error);
+  // 1e21 is the one that does not look like a bad size: it is a positive integer, but it
+  // stringifies as "1e+21", and the stored key IS the size — so it would put a key in the
+  // document that the schema's dieSizeKey rejects, which stops autosave for the character.
+  it.each([0, -6, 1.5, 1e21])('rejects %j as a die size', (size) => {
+    expect(() => sheetFor().hitDices.add(size)).toThrow(
+      expect.objectContaining({ code: 'INVALID_DIE_SIZE' }) as Error,
+    );
   });
 
   // The key is the die size and numeric-like string keys iterate in ascending numeric order,

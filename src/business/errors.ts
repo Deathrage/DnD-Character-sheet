@@ -10,6 +10,7 @@ export type RuleCode =
   | 'NOT_AN_INTEGER'
   | 'NEGATIVE'
   | 'UNKNOWN_CATEGORY'
+  | 'INVALID_DIE_SIZE'
   | 'GONE';
 
 export class RuleViolation extends Error {

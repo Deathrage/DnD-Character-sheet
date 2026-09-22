@@ -22,12 +22,23 @@ export class HitDicesBO {
       .map((size) => new HitDieBO(this.#dice, size));
   }
 
+  /**
+   * A die's identity is its record key, and the key is `String(size)`, so the one honest test is
+   * whether that string is a key the schema's `dieSizeKey` accepts: digits, no leading zero. That
+   * single check covers every way a size goes wrong — 0 and -4 (no digits-only string), 2.5 (a
+   * dot), and 1e21, which stringifies as `"1e+21"` and would land a key in the document that no
+   * schema version accepts. `NOT_AN_INTEGER` was the previous answer and it lied: 0 and 1e21 are
+   * both integers, and `NEGATIVE` would lie about the same two. Hence a die-specific code,
+   * alongside the `DUPLICATE_DIE` just below it.
+   */
   add(size: number): HitDieBO {
-    if (nonNegativeInt(size) === 0) {
-      throw new RuleViolation('NOT_AN_INTEGER', 'a die size must be at least 1');
-    }
-
     const key = String(size);
+    if (!/^[1-9]\d*$/.test(key)) {
+      throw new RuleViolation(
+        'INVALID_DIE_SIZE',
+        `a die size must be a whole number of at least 1 that stores as plain digits, got ${key}`,
+      );
+    }
     if (key in this.#dice) {
       throw new RuleViolation('DUPLICATE_DIE', `a d${key} is already present`);
     }
