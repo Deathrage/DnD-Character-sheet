@@ -1,6 +1,7 @@
 import { observable, toJS } from 'mobx';
 import type { CharacterDocument } from '../data/schema/index.js';
 import { nonNegativeInt, trimmedName } from './guards.js';
+import './mobxConfig.js';
 import type { CharacterData } from './types.js';
 
 export class CharacterSheetBO {
