@@ -143,4 +143,19 @@ describe('ClassBO', () => {
 
     expect(sheet.toDocument().classes).toMatchObject([{ name: 'Rogue', level: 5 }]);
   });
+
+  // Regression test: a naive `add()` that pushes a plain literal into the observable array and
+  // then keeps wrapping that same literal returns a ClassBO whose writes land on a detached
+  // object MobX cloned away from. Every other test here reads back through `.items` or through
+  // `sheet.level`/`sheet.toDocument()`, which go straight to the live array and would pass even
+  // against that broken version — only a write through the object `add()` itself returned,
+  // checked via `toDocument()`, catches it.
+  it('writes made through the object add() returned reach the saved document', () => {
+    const sheet = sheetFor();
+    const rogue = sheet.classes.add({ name: 'Rogue', level: 1 });
+
+    rogue.setLevel(5);
+
+    expect(sheet.toDocument().classes[0]).toMatchObject({ level: 5 });
+  });
 });

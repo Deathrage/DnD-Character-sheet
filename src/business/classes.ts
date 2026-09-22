@@ -2,6 +2,7 @@ import { createId } from './createId.js';
 import { RuleViolation } from './errors.js';
 import { nonNegativeInt, trimmedName } from './guards.js';
 import { NodeBO } from './nodeBO.js';
+import { pushAndRead } from './observableList.js';
 import type { ClassData } from './types.js';
 
 export interface NewClass {
@@ -24,15 +25,11 @@ export class ClassesBO {
     const trimmed = trimmedName(name);
     rejectDuplicate(this.#classes, trimmed, null);
 
-    this.#classes.push({ id: createId(), name: trimmed, level: nonNegativeInt(level) });
-    // MobX's observable array deep-enhances a pushed plain object into a new observable clone
-    // rather than wiring the pushed object in place (verified against mobx@7.0.3), so the node
-    // this ClassBO must hold is whatever actually landed in the array, not the value just
-    // pushed. Reading it back keeps "hold references, never copies" true for the returned object.
-    const node = this.#classes.at(-1);
-    if (node === undefined) {
-      throw new Error('unreachable: the entry just pushed is missing from the array');
-    }
+    const node = pushAndRead(this.#classes, {
+      id: createId(),
+      name: trimmed,
+      level: nonNegativeInt(level),
+    });
     return new ClassBO(node, this.#classes);
   }
 }
