@@ -1,6 +1,6 @@
 import { CategorizedBO, CategorizedItemBO, type NewNamedItem } from './categorized.js';
 import { createId } from './createId.js';
-import { nonNegativeInt, trimmedName } from './guards.js';
+import { longText, nonNegativeInt, trimmedName } from './guards.js';
 import type { CounterData, CountersData, SpellSlotData } from './types.js';
 
 // Duplicated rather than imported: `schema/index.ts` deliberately does not export
@@ -72,7 +72,7 @@ export class CountersBO extends CategorizedBO<CounterData, CounterBO> {
       ({ name, description = '' }: NewNamedItem): CounterData => ({
         id: createId(),
         name: trimmedName(name),
-        description,
+        description: longText(description),
         current: 0,
         total: 0,
       }),

@@ -1,4 +1,4 @@
-import { trimmedName } from './guards.js';
+import { longText, trimmedName } from './guards.js';
 import { NodeBO } from './nodeBO.js';
 
 export interface NamedItemData {
@@ -31,6 +31,6 @@ export abstract class NamedItemBO<TData extends NamedItemData> extends NodeBO<TD
 
   /** Not trimmed: freeform prose, where leading whitespace may be deliberate. */
   setDescription(value: string): void {
-    this.node.description = value;
+    this.node.description = longText(value);
   }
 }

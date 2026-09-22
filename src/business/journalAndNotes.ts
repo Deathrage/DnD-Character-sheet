@@ -1,4 +1,5 @@
 import { RuleViolation } from './errors.js';
+import { longText } from './guards.js';
 import type { JournalAndNotesData } from './types.js';
 
 export class JournalAndNotesBO {
@@ -14,7 +15,7 @@ export class JournalAndNotesBO {
 
   /** Not trimmed: freeform prose, where leading whitespace may be deliberate. */
   setNotes(value: string): void {
-    this.#node.notes = value;
+    this.#node.notes = longText(value);
   }
 
   get days(): JournalDayBO[] {
@@ -26,7 +27,7 @@ export class JournalAndNotesBO {
    * anywhere else would renumber every day after it.
    */
   appendDay(text = ''): JournalDayBO {
-    this.#node.journal.push(text);
+    this.#node.journal.push(longText(text));
     return new JournalDayBO(this.#node.journal, this.#node.journal.length - 1);
   }
 
@@ -58,7 +59,7 @@ export class JournalDayBO {
 
   setText(value: string): void {
     this.#require();
-    this.#journal[this.#index] = value;
+    this.#journal[this.#index] = longText(value);
   }
 
   #require(): string {

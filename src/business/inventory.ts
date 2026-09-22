@@ -1,5 +1,5 @@
 import { createId } from './createId.js';
-import { nonNegativeInt, trimmedName } from './guards.js';
+import { longText, nonNegativeInt, trimmedName } from './guards.js';
 import { NamedItemBO } from './namedItem.js';
 import { pushAndRead } from './observableList.js';
 import type { CoinsData, InventoryItemData } from './types.js';
@@ -27,7 +27,7 @@ export class InventoryBO {
     const node = pushAndRead(this.#items, {
       id: createId(),
       name: trimmedName(name),
-      description,
+      description: longText(description),
       count: nonNegativeInt(count),
     });
     return new InventoryItemBO(node, this.#items);

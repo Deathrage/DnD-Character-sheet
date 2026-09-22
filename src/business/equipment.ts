@@ -1,5 +1,5 @@
 import { createId } from './createId.js';
-import { trimmedName } from './guards.js';
+import { longText, trimmedName } from './guards.js';
 import { NamedItemBO } from './namedItem.js';
 import { pushAndRead } from './observableList.js';
 import type { EquipmentItemData } from './types.js';
@@ -57,7 +57,7 @@ function addTo(
   const node = pushAndRead(list, {
     id: createId(),
     name: trimmedName(name),
-    description,
+    description: longText(description),
     attuned,
     equipped,
   });

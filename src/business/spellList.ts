@@ -1,6 +1,6 @@
 import { CategorizedBO, CategorizedItemBO, type NewNamedItem } from './categorized.js';
 import { createId } from './createId.js';
-import { trimmedName } from './guards.js';
+import { longText, trimmedName } from './guards.js';
 import type { SpellData, SpellListData } from './types.js';
 
 /** 'c' for cantrip, then 1 to 9. The wireframe's 0 is not authoritative (spec section 3.1). */
@@ -33,7 +33,7 @@ export const makeSpellList = (node: SpellListData): SpellListBO =>
     ({ name, description = '' }: NewNamedItem): SpellData => ({
       id: createId(),
       name: trimmedName(name),
-      description,
+      description: longText(description),
       level: 'c',
       prepared: false,
     }),

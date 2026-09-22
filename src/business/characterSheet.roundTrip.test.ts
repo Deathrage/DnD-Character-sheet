@@ -95,6 +95,55 @@ describe('the business object tree, end to end', () => {
   });
 });
 
+const LONG_NAME = 'x'.repeat(81);
+const LONG_CATEGORY_NAME = 'x'.repeat(41);
+const LONG_TEXT = 'x'.repeat(20_001);
+
+/**
+ * One over-long write per kind of field the layer offers, named by what a player would be doing.
+ * `?.` rather than `!` on the list lookups: `fill` put each item there, and if one were missing
+ * the call would silently do nothing and the test would fail for not throwing — which is the
+ * right failure, not a masked pass.
+ */
+const overLongWrites: [string, (sheet: CharacterSheetBO) => void][] = [
+  ['the character name', (sheet) => sheet.setName(LONG_NAME)],
+  ['a new class name', (sheet) => sheet.classes.add({ name: LONG_NAME })],
+  ['a class rename', (sheet) => sheet.classes.items[0]?.setName(LONG_NAME)],
+  ['a new inventory item name', (sheet) => sheet.inventory.add({ name: LONG_NAME })],
+  ['an inventory item rename', (sheet) => sheet.inventory.items[0]?.setName(LONG_NAME)],
+  ['a new weapon name', (sheet) => sheet.equipment.addWeapon({ name: LONG_NAME })],
+  ['a new feat name', (sheet) => sheet.featsAndTraits.add({ name: LONG_NAME })],
+  ['a new spell name', (sheet) => sheet.spellList.add({ name: LONG_NAME })],
+  ['a new counter name', (sheet) => sheet.counters.add({ name: LONG_NAME })],
+  ['a new category name', (sheet) => sheet.spellList.createCategory(LONG_CATEGORY_NAME)],
+  ['a category rename', (sheet) => sheet.spellList.categories[0]?.setName(LONG_CATEGORY_NAME)],
+  [
+    "a new item's description",
+    (sheet) => sheet.featsAndTraits.add({ name: 'Lucky', description: LONG_TEXT }),
+  ],
+  [
+    'a description edit',
+    (sheet) => sheet.featsAndTraits.uncategorized[0]?.setDescription(LONG_TEXT),
+  ],
+  ['the notes field', (sheet) => sheet.journalAndNotes.setNotes(LONG_TEXT)],
+  ['a new journal day', (sheet) => sheet.journalAndNotes.appendDay(LONG_TEXT)],
+  ['a journal day edit', (sheet) => sheet.journalAndNotes.days[0]?.setText(LONG_TEXT)],
+];
+
+// The same property as the first test in this file, from the other side: the schema caps a short
+// name at 80 characters, a category name at 40 and freeform text at 20 000, and a document one
+// character over is one autosave refuses — permanently, for that character. So every write that
+// would breach a cap has to be refused at the setter, where the player still has the text.
+describe('no write can exceed a length the schema caps', () => {
+  it.each(overLongWrites)('refuses an over-long write to %s', (_label, write) => {
+    const sheet = sheetFor();
+    fill(sheet);
+
+    expect(() => write(sheet)).toThrow(expect.objectContaining({ code: 'TOO_LONG' }) as Error);
+    expect(CURRENT_SCHEMA.safeParse(sheet.toDocument()).success).toBe(true);
+  });
+});
+
 /**
  * Every property reachable from a `CharacterSheetBO`: its own fields (`#doc` is a true private
  * field, so it is invisible here — that is exactly the invariant this walk is proving), every

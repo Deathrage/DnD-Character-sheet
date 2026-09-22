@@ -1,6 +1,6 @@
 import { createId } from './createId.js';
 import { RuleViolation } from './errors.js';
-import { rejectDuplicate, trimmedName } from './guards.js';
+import { MAX_CATEGORY_NAME, rejectDuplicate, trimmedName } from './guards.js';
 import { NamedItemBO, type NamedItemData } from './namedItem.js';
 import { pushAndRead } from './observableList.js';
 
@@ -141,7 +141,7 @@ export class CategorizedBO<TData extends NamedItemData, TItemBO> {
   }
 
   createCategory(name: string): CategoryBO<TData, TItemBO> {
-    const trimmed = trimmedName(name);
+    const trimmed = trimmedName(name, MAX_CATEGORY_NAME);
     rejectDuplicate(this.#node.categories, trimmed, null, 'category');
 
     // A fresh plain literal, so it must go through pushAndRead: MobX clones it on push, and the
@@ -191,7 +191,7 @@ export class CategoryBO<TData extends NamedItemData, TItemBO> {
 
   /** A plain field write. Array position is the display order, so a rename cannot move it. */
   setName(value: string): void {
-    const trimmed = trimmedName(value);
+    const trimmed = trimmedName(value, MAX_CATEGORY_NAME);
     this.#require();
     rejectDuplicate(this.#owner.categories, trimmed, this.#node, 'category');
     this.#node.name = trimmed;
