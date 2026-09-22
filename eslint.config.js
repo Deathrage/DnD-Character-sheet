@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 /**
@@ -16,7 +17,10 @@ import tseslint from 'typescript-eslint';
  * relying on it — see the Task 3 fix report.)
  */
 const boundary = (layer, forbidden, { ignores, extra = [] } = {}) => ({
-  files: [`src/${layer}/**/*.ts`],
+  // `.tsx` as well as `.ts`: `src/ui` is all components, so a `.ts`-only pattern would have
+  // left the one boundary that guards against reaching past `business` into `data` matching
+  // almost nothing in the layer it exists to police.
+  files: [`src/${layer}/**/*.{ts,tsx}`],
   ...(ignores ? { ignores } : {}),
   rules: {
     'no-restricted-imports': [
@@ -50,9 +54,16 @@ const SCHEMA_VERSION_PATTERN = {
 };
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'node_modules', '.superpowers', 'docs'] },
+  { ignores: ['dist', 'coverage', 'storybook-static', 'node_modules', '.superpowers', 'docs'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  // Spec §10. The rules-of-hooks check is the one that earns its place: a hook behind a
+  // condition fails at runtime, in a component, on a device, and not in `tsc`.
+  // `configs.flat['recommended-latest']`, not `configs['recommended-latest']`: in
+  // eslint-plugin-react-hooks 7 the top-level entries are still eslintrc-shaped (`plugins` as
+  // an array of strings) and ESLint 10 rejects them outright. Checked against the installed
+  // plugin, not recalled.
+  reactHooks.configs.flat['recommended-latest'],
   boundary('shared', ['data', 'business', 'ui']),
   boundary('data', ['business', 'ui'], {
     ignores: ['src/data/schema/**/*.ts'],
