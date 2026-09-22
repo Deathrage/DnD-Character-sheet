@@ -2,6 +2,7 @@ import { reaction } from 'mobx';
 import { StorageError, toStorageFailure } from '../data/repository/storageFailure.js';
 import type { StorageFailure } from '../data/repository/storageFailure.js';
 import type { CharacterRepository } from '../data/repository/types.js';
+import type { CharacterDocument } from '../data/schema/index.js';
 import type { CharacterSheetBO } from './characterSheet.js';
 
 /**
@@ -35,6 +36,12 @@ export interface AutosaveOptions {
    */
   onFailure?: (failure: StorageFailure) => void;
   /**
+   * What was just stored. `CharacterLibraryBO` re-summarises the character's list row from it —
+   * the row is a snapshot of the document, so without this it stays as it was when the character
+   * was created and the list disagrees with the sheet until the next reload.
+   */
+  onSaved?: (doc: CharacterDocument) => void;
+  /**
    * The event target carrying `pagehide` and `visibilitychange`. Defaults to `globalThis` when
    * it is an event target at all, and to nothing under plain Node, where neither event exists.
    */
@@ -53,6 +60,7 @@ export class Autosave {
   readonly #debounceMs: number;
   readonly #now: () => Date;
   readonly #onFailure: (failure: StorageFailure) => void;
+  readonly #onSaved: (doc: CharacterDocument) => void;
   readonly #target: Target | null;
 
   #stopReaction: (() => void) | null = null;
@@ -75,6 +83,7 @@ export class Autosave {
     this.#debounceMs = options.debounceMs ?? 500;
     this.#now = options.now ?? (() => new Date());
     this.#onFailure = options.onFailure ?? (() => {});
+    this.#onSaved = options.onSaved ?? (() => {});
     this.#target = options.target === undefined ? defaultTarget() : options.target;
   }
 
@@ -114,6 +123,7 @@ export class Autosave {
     const doc = { ...this.#sheet.toDocument(), updatedAt: this.#now().toISOString() };
     try {
       await this.#repository.save(doc);
+      this.#onSaved(doc);
     } catch (caught) {
       // Reported once and not retried. A refused document is invalid for a reason that will not
       // change by trying again, and a retry loop would bury the report under its own traffic.

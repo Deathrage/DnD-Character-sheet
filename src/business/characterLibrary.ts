@@ -94,6 +94,7 @@ export class CharacterLibraryBO {
     const autosave = new Autosave(sheet, this.#repository, {
       ...this.#autosaveOptions,
       onFailure: (failure) => this.storageGate.report(failure),
+      onSaved: (doc) => this.#refreshRow(doc),
     });
     autosave.start();
     this.#autosaves.add(autosave);
@@ -119,6 +120,21 @@ export class CharacterLibraryBO {
     await Promise.all([...this.#autosaves].map((autosave) => autosave.flush()));
   }
 
+  /**
+   * Re-summarises one row from the document that was just stored.
+   *
+   * A row is a snapshot — that is the whole point of `CharacterSummary`, which exists so that
+   * listing twenty characters does not parse twenty documents. But a snapshot taken when the
+   * character was created says "No class · Level 0" forever: edit a sheet, go back to the list,
+   * and the list contradicts the sheet until the next reload. Re-taking it on each save is the
+   * cheapest way to keep them agreeing, because the document is already in hand here.
+   */
+  #refreshRow(doc: CharacterDocument): void {
+    this.#entries
+      .find((entry) => entry.id === doc.id)
+      ?.refresh({ ok: true, summary: summarize(doc) });
+  }
+
   /** Internal, for `CharacterEntryBO`. Not on `index.ts`. */
   get repository(): CharacterRepository {
     return this.#repository;
@@ -140,43 +156,56 @@ type EntryRow =
  * flagged, and openable in the raw-JSON editor.
  */
 export class CharacterEntryBO {
-  readonly #row: EntryRow;
+  /**
+   * Observable, and wrapped in an object rather than replaced as a field, so that `refresh`
+   * updates the row **in place**. Replacing the entry in the library's array would work for the
+   * list, which re-maps every render anyway, but it would change identity under anything holding
+   * this entry — the raw-JSON screen keys an effect on it.
+   */
+  readonly #state: { row: EntryRow };
   readonly #library: CharacterLibraryBO;
 
   constructor(row: EntryRow, library: CharacterLibraryBO) {
-    this.#row = row;
+    this.#state = observable({ row }, {}, { deep: false });
     this.#library = library;
+  }
+
+  /** Internal, for `CharacterLibraryBO`. Not on `index.ts`. */
+  refresh(row: EntryRow): void {
+    this.#state.row = row;
   }
 
   get id(): string {
     // Read from the summary the repository built, not re-derived from the document — `list()`
     // keys each row by its store key, which is the id that must be used to fetch it back.
-    return this.#row.ok ? this.#row.summary.id : this.#row.id;
+    return this.#state.row.ok ? this.#state.row.summary.id : this.#state.row.id;
   }
 
   get name(): string {
-    return this.#row.ok ? this.#row.summary.name : 'Unreadable character';
+    return this.#state.row.ok ? this.#state.row.summary.name : 'Unreadable character';
   }
 
   get totalLevel(): number {
-    return this.#row.ok ? this.#row.summary.totalLevel : 0;
+    return this.#state.row.ok ? this.#state.row.summary.totalLevel : 0;
   }
 
   get classes(): { name: string; level: number }[] {
-    return this.#row.ok ? this.#row.summary.classes : [];
+    return this.#state.row.ok ? this.#state.row.summary.classes : [];
   }
 
   get hitPoints(): { current: number; total: number; temporary: number } {
-    return this.#row.ok ? this.#row.summary.hitPoints : { current: 0, total: 0, temporary: 0 };
+    return this.#state.row.ok
+      ? this.#state.row.summary.hitPoints
+      : { current: 0, total: 0, temporary: 0 };
   }
 
   get isDamaged(): boolean {
-    return !this.#row.ok;
+    return !this.#state.row.ok;
   }
 
   /** The error describing itself. There is no `describe` method anywhere (spec §5). */
   get problem(): string | null {
-    return this.#row.ok ? null : describeLoadError(this.#row.error);
+    return this.#state.row.ok ? null : describeLoadError(this.#state.row.error);
   }
 
   /**

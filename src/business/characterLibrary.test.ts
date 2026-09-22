@@ -211,6 +211,69 @@ describe('CharacterLibraryBO', () => {
     });
   });
 
+  /**
+   * A list row is a snapshot of the document, taken once. Found by the dev reseed button and then
+   * reproduced in the app itself: create a character, give it a class and some hit points, go back
+   * to the list — and the row still read "No class · Level 0" until the page was reloaded, because
+   * nothing ever re-took the snapshot.
+   */
+  describe('the list row follows the sheet', () => {
+    /**
+     * `await library.flush()` rather than a zero debounce and a settle. The debounce timer would
+     * fire first and leave the write in flight, so an assertion right after it would be racing the
+     * database — the version of these tests that did exactly that failed for that reason and not
+     * for the one they are about.
+     */
+    const unhurried = () =>
+      new CharacterLibraryBO({
+        repository,
+        storageGate: new StorageGate({ port: null }),
+        autosave: { debounceMs: 60_000, target: null },
+      });
+
+    it('re-summarises a row when the sheet it describes is saved', async () => {
+      const library = unhurried();
+      const sheet = await library.create('Sable');
+      expect(library.entries[0]?.totalLevel).toBe(0);
+
+      sheet.classes.add({ name: 'Rogue', level: 5 });
+      sheet.hitPoints.setTotal(45);
+      sheet.hitPoints.setCurrent(38);
+      await library.flush();
+
+      const entry = library.entries[0];
+      expect(entry?.totalLevel).toBe(5);
+      expect(entry?.classes).toEqual([{ name: 'Rogue', level: 5 }]);
+      expect(entry?.hitPoints).toEqual({ current: 38, total: 45, temporary: 0 });
+    });
+
+    it('refreshes in place, so a caller holding the entry sees the new values', async () => {
+      const library = unhurried();
+      const sheet = await library.create('Sable');
+      // Taken before the edit and deliberately kept: the raw-JSON screen keys an effect on entry
+      // identity, so a refresh must not swap the object out from under it.
+      const held = library.entries[0];
+
+      sheet.hitPoints.setTotal(45);
+      await library.flush();
+
+      expect(held).toBe(library.entries[0]);
+      expect(held?.hitPoints.total).toBe(45);
+    });
+
+    it('leaves other rows alone', async () => {
+      const library = unhurried();
+      const sable = await library.create('Sable');
+      await library.create('Thorne');
+
+      sable.hitPoints.setTotal(45);
+      await library.flush();
+
+      const thorne = library.entries.find((entry) => entry.name === 'Thorne');
+      expect(thorne?.hitPoints.total).toBe(0);
+    });
+  });
+
   describe('flush', () => {
     /**
      * A long debounce, so nothing can reach the store on its own during the test: what is being
