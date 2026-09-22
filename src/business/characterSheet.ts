@@ -2,6 +2,7 @@ import { observable, toJS } from 'mobx';
 import type { CharacterDocument } from '../data/schema/index.js';
 import { ClassesBO } from './classes.js';
 import { EquipmentBO } from './equipment.js';
+import { type FeatsAndTraitsBO, makeFeatsAndTraits } from './featsAndTraits.js';
 import { nonNegativeInt, trimmedName } from './guards.js';
 import { HitDicesBO } from './hitDices.js';
 import { HitPointsBO } from './hitPoints.js';
@@ -28,6 +29,7 @@ export class CharacterSheetBO {
   readonly journalAndNotes: JournalAndNotesBO;
   readonly inventory: InventoryBO;
   readonly equipment: EquipmentBO;
+  readonly featsAndTraits: FeatsAndTraitsBO;
 
   constructor(doc: CharacterDocument) {
     this.#doc = observable(doc);
@@ -37,6 +39,7 @@ export class CharacterSheetBO {
     this.journalAndNotes = new JournalAndNotesBO(this.#doc.journalAndNotes);
     this.inventory = new InventoryBO(this.#doc.inventory.coins, this.#doc.inventory.items);
     this.equipment = new EquipmentBO(this.#doc.equipment.weapons, this.#doc.equipment.other);
+    this.featsAndTraits = makeFeatsAndTraits(this.#doc.featsAndTraits);
   }
 
   get id(): string {
