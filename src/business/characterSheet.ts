@@ -1,5 +1,6 @@
 import { observable, toJS } from 'mobx';
 import type { CharacterDocument } from '../data/schema/index.js';
+import { AbilitiesAndSkillsBO } from './abilitiesAndSkills.js';
 import { ClassesBO } from './classes.js';
 import { CountersBO } from './counters.js';
 import { EquipmentBO } from './equipment.js';
@@ -34,6 +35,7 @@ export class CharacterSheetBO {
   readonly featsAndTraits: FeatsAndTraitsBO;
   readonly spellList: SpellListBO;
   readonly counters: CountersBO;
+  readonly abilitiesAndSkills: AbilitiesAndSkillsBO;
 
   constructor(doc: CharacterDocument) {
     this.#doc = observable(doc);
@@ -46,6 +48,7 @@ export class CharacterSheetBO {
     this.featsAndTraits = makeFeatsAndTraits(this.#doc.featsAndTraits);
     this.spellList = makeSpellList(this.#doc.spellList);
     this.counters = new CountersBO(this.#doc.counters);
+    this.abilitiesAndSkills = new AbilitiesAndSkillsBO(this.#doc.abilitiesAndSkills);
   }
 
   get id(): string {
