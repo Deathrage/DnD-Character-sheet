@@ -4,6 +4,7 @@ import { ClassesBO } from './classes.js';
 import { nonNegativeInt, trimmedName } from './guards.js';
 import { HitDicesBO } from './hitDices.js';
 import { HitPointsBO } from './hitPoints.js';
+import { JournalAndNotesBO } from './journalAndNotes.js';
 import './mobxConfig.js';
 import type { CharacterData } from './types.js';
 
@@ -22,12 +23,14 @@ export class CharacterSheetBO {
   readonly classes: ClassesBO;
   readonly hitPoints: HitPointsBO;
   readonly hitDices: HitDicesBO;
+  readonly journalAndNotes: JournalAndNotesBO;
 
   constructor(doc: CharacterDocument) {
     this.#doc = observable(doc);
     this.classes = new ClassesBO(this.#doc.classes);
     this.hitPoints = new HitPointsBO(this.#doc.hitPoints);
     this.hitDices = new HitDicesBO(this.#doc.hitDices);
+    this.journalAndNotes = new JournalAndNotesBO(this.#doc.journalAndNotes);
   }
 
   get id(): string {
