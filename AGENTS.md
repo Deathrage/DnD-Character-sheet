@@ -18,10 +18,17 @@ and the authority on intent. Section numbers referenced below (§3.4, §11) poin
 
 ## Current state
 
-The **data-access layer is complete**, and so is the **business object tree** built on top of it.
-No UI, no build, no app you can run yet.
+**The app runs.** `npm run dev` serves it; every layer is built and wired — schema, migration,
+repository, the business object tree, the library/files/storage/autosave layer, the presentational
+components, the binding between them, and the shell that composes them.
 
-- 226 tests across 13 files, `eslint .` and `tsc --noEmit` clean.
+Verified in a real browser, not only in jsdom: create a character, type an armor class, reload the
+page, reopen it, and the value is still there — the whole path from keystroke to IndexedDB and back.
+The persistence gate behaves as designed too: headless Chrome refuses `persist()`, the gate moves
+to its `refused` phase with the install/export advice, and the session-only dismissal brings it
+back on the next load (criterion 14).
+
+- 549 tests across 36 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
 - On branch `feature/character-sheet-foundation`, open as PR #1 against `main`. Not merged.
 - `main` is still at the initial commit.
 - Schema v1 was restructured in place on 2026-09-20 — see `src/data/schema/README.md` for why an
@@ -39,7 +46,7 @@ No UI, no build, no app you can run yet.
   through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
   the call instead of surfacing as an unhandled rejection. `save()` now throws a `StorageError`
   (`src/data/repository/storageFailure.ts`) instead of a `CharacterLoadError`.
-- The **business object tree** (`src/business/`, 227 tests across 14 files) is done: `CharacterSheetBO`
+- The **business object tree** (`src/business/`) is done: `CharacterSheetBO`
   composes ten subtree business objects — classes, hit points, hit dice, journal & notes, inventory,
   equipment, feats & traits, spell list, counters, and abilities & skills — over one MobX-observable
   document. That document lives behind a true `#doc` private field, not TypeScript's `private`:
@@ -77,13 +84,33 @@ No UI, no build, no app you can run yet.
     for freeform text.
   - **A rule code must be true of every value it rejects.** `add(0)` threw `NOT_AN_INTEGER` about an
     integer; the die-size guard is now one key-shaped check with its own `INVALID_DIE_SIZE`.
-- What this plan does not cover, and is not built yet: `CharacterLibraryBO`, `CharacterEntryBO`,
-  `CharacterFile`, `StorageBO`, and `Autosave` (spec §5-6). They need `mobx-utils`' `deepObserve`,
-  which is a second, separate plan.
+- **Spec §5-6 is now built too**: `CharacterLibraryBO`, `CharacterEntryBO`, `CharacterFile`,
+  `Autosave`, and the storage gate. Four decisions there differ from what the spec wrote, each for
+  a reason recorded in the file that makes it:
+  - **`mobx-utils` was not installed**, and `Autosave` observes with `reaction` over
+    `sheet.toDocument()` rather than `deepObserve`. Reading `toJS` of the document inside a
+    reaction tracks the whole tree, which is all autosave needs — it discards per-node change
+    events anyway. Measured against the installed mobx@7.0.3 before relying on it: 0.59 ms per
+    `toDocument()` on a deliberately oversized 124 KB character, and twenty edits in one debounce
+    window ran the expression twice, not twenty times.
+  - **The debounce is `Autosave`'s own `setTimeout`, not `reaction`'s `delay`.** `delay` schedules
+    the effect internally and gives the caller no way to ask for it early, so `flush()` on
+    `pagehide` had nothing to flush — and the last edit before the tab goes away is exactly the one
+    that must not be lost.
+  - **`StorageBO` is `StorageGate`.** The `BO` suffix marks a class that encapsulates a `*Data`,
+    which is why `NodeBO<TData>` cannot be constructed without a node. The gate encapsulates a
+    browser permission and a transient failure — neither stored, neither a slice of
+    `CharacterDocument` — so it is a bare noun like its two neighbours, `Autosave` and
+    `CharacterFile`. Bare `Storage` was rejected: it collides with the DOM's `Storage`.
+  - **`CharacterEntryBO.open()` returns an `{ ok }` union**, settling spec §10's open item the way
+    the list screen wanted, and `entry.repair(text)` — which the spec never specified — is how the
+    raw-JSON editor commits a fix. It writes under the entry's own id, so a repair cannot clone the
+    character or overwrite a different one.
 
 What is built: the versioned schema, the migration loop and its error taxonomy, export/import, the
-IndexedDB repository, and the business object tree. What is not: the character library, autosave
-and storage objects (spec §5-6), and the UI.
+IndexedDB repository, the whole business layer, the presentational components, and `src/ui/bind.ts`
+binding the two. What is not: the app shell — entry point, router, and the screens' composition
+into an application (spec §7-8).
 
 ## Commands
 
@@ -234,9 +261,28 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
   spellList.ts         SpellBO, over categorized.ts
   counters.ts          CounterBO / SpellSlotBO, over categorized.ts plus the nine fixed slots
   abilitiesAndSkills.ts AbilityBO / SkillBO, fixed key sets built once in the constructor
-  errors.ts            RuleViolation, RuleCode — every rule this layer enforces
+  errors.ts            RuleViolation, RuleCode — every rule this layer enforces, plus the
+                       re-exports `ui` needs but may not import from `data`: describeLoadError,
+                       LoadError, StorageFailure
+  characterLibrary.ts  CharacterLibraryBO / CharacterEntryBO — the list, create, import, open,
+                       repair, remove; attaches Autosave to every sheet it hands out
+  characterFile.ts     CharacterFile — a character as text; the document is held in a module
+                       WeakMap, never on the class, so `ui` cannot reach it
+  autosave.ts          Autosave — reaction, debounce, stamp updatedAt on the copy, save
+  storageGate.ts       StorageGate — the persistence gate and the last storage failure
   types.ts, nodeBO.ts, namedItem.ts, observableList.ts, mobxConfig.ts, guards.ts, createId.ts
                        internal only; never re-exported from index.ts
+src/ui/                components are presentational: data in, callbacks out, no MobX
+  types.ts             the *View and *Actions shapes every component speaks
+  reference.ts         D&D facts that are not facts about a character (skill→ability, order)
+  bind.ts              THE SEAM: business objects → *View, callbacks → setters, and the four
+                       hooks that keep it live. The only file in src/ui that imports mobx
+  App.tsx              the shell: route → screen, and the browser affordances no business object
+                       can own — file download, file picking, the open sheet's lifetime
+  route.ts             hash routing, hand-rolled; three routes, no dependency
+  components/, screens/   the wireframe's screens; fixtures.ts feeds the stories
+src/main.tsx           the composition root; the only place the real library is constructed
+index.html             the app document; vite.config.ts builds and tests it
 src/data/schema/       index.ts is the public face; README.md governs versioning
   v1/                  primitives, document, blank (factory), index — self-contained
 src/data/migration/    versionOf, parseCharacter, the LoadError taxonomy
@@ -256,21 +302,25 @@ run years from now against a real character file. The tests build a synthetic th
 
 ## What to do next
 
-Two plans remain, in order:
+Nothing is half-built. What is left is polish and things deliberately never in scope:
 
-1. **Business layer** — MobX facades over a plain observable document (so `toJS(doc)` _is_ the saved
-   file), the rule-carrying actions, debounced autosave with flush-on-hide, and the persistence
-   gate. Spec §6.
-2. **UI** — React, the router, `ResponsiveDialog` (bottom sheet on phone, centred modal on desktop),
-   the character list, vitals header, hub grid, Feats & Traits, and the raw-JSON editor. Spec §7-8.
+- **No PWA.** No manifest, no service worker, no offline cache, no icons — so "install to Home
+  Screen", which the refused-gate copy tells the player to do, does not actually work yet. This is
+  the largest real gap.
+- **No favicon**, which is a 404 on every load today.
+- **Undo and revision history** are out of scope by decision (spec §6), not forgotten. Both stay
+  cheap to add against a single-document model.
+- **`equipment.weapons` and `equipment.other` have no `moveTo` between them** (spec §10). Add it
+  as `NamedItemBO.moveTo` with a different target type if moving a weapon to "other" is ever
+  wanted.
+- The screens are the wireframe's. They have never been reviewed on a real phone, only in
+  Storybook's viewport toolbar.
 
-`docs/superpowers/plans/2026-07-25-data-layer-followups.md` lists everything found and consciously
-deferred, split into what to schedule into the business-layer plan and what to fix opportunistically.
-The two items that mattered most — iOS storage-failure handling, which spec §11 calls the sharpest
-risk in the design, and making the repository's migration registry injectable — are both done; see
-"Current state" above. What is left in that doc is scoped to the business layer: trimming names at
-the write boundary, re-exporting `describeLoadError` for `ui` (which may not import `data`
-directly), and reading a list row's id from its summary rather than re-deriving it from `doc.id`.
+`docs/superpowers/plans/2026-07-25-data-layer-followups.md` is now fully discharged. Its two
+sharpest items — iOS storage-failure handling (spec §11 calls it the biggest risk in the design)
+and the injectable migration registry — were done earlier; the last three, trimming names at the
+write boundary, re-exporting `describeLoadError` for `ui`, and reading a list row's id from its
+summary rather than re-deriving it from `doc.id`, are done now. Read it for context, not for work.
 
 ## How to work here
 
