@@ -44,6 +44,21 @@ export async function seedIfEmpty(library: CharacterLibraryBO): Promise<void> {
   );
 }
 
+/**
+ * Deletes every character, then seeds again. The dev button's whole implementation.
+ *
+ * `library.entries` hands back a copy, so removing while iterating it is safe — and each
+ * `remove()` is the ordinary business one, which deletes the document and drops the row, so this
+ * leaves the store in exactly the state a first run would.
+ */
+export async function reseed(library: CharacterLibraryBO): Promise<void> {
+  await library.load();
+  for (const entry of library.entries) {
+    await entry.remove();
+  }
+  await seedIfEmpty(library);
+}
+
 type Seeder = ((sheet: CharacterSheetBO) => void) & { characterName: string };
 
 const seeder = (characterName: string, fill: (sheet: CharacterSheetBO) => void): Seeder =>

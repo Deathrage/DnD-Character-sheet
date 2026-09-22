@@ -28,12 +28,19 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 551 tests across 36 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
+- 554 tests across 36 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
   It drives the ordinary business API, so it cannot drift into a private definition of what a
-  character is. To get the seed back, delete every character or clear the site's storage.
+  character is. To get the seed back, delete every character, clear the site's storage, or use the
+  **Reseed (dev)** button on the character list — also dev-only, also absent from `dist/`.
+- **A list row re-summarises itself on every save.** `CharacterSummary` is a snapshot, taken so
+  that listing twenty characters does not parse twenty documents — but a snapshot taken when the
+  character was created reads "No class · Level 0" forever. `Autosave` therefore reports what it
+  stored through `onSaved`, and `CharacterLibraryBO` re-summarises that one row. Without it,
+  editing a sheet and going back to the list showed stale values until the next page reload. The
+  row is refreshed **in place**, because the raw-JSON screen keys an effect on entry identity.
 - On branch `feature/character-sheet-foundation`, open as PR #1 against `main`. Not merged.
 - `main` is still at the initial commit.
 - Schema v1 was restructured in place on 2026-09-20 — see `src/data/schema/README.md` for why an

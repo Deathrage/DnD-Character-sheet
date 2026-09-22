@@ -107,6 +107,9 @@ export function App({ library }: { library: CharacterLibraryBO }) {
               {problem}
             </div>
           )}
+          {/* Only on the list, and only in dev: reseeding deletes every character, which would
+              pull the document out from under an open sheet. */}
+          {import.meta.env.DEV && <DevReseed library={library} />}
         </>
       )}
 
@@ -129,6 +132,53 @@ export function App({ library }: { library: CharacterLibraryBO }) {
         />
       )}
     </>
+  );
+}
+
+/**
+ * Deletes every character and seeds again, for when you have poked the sample data into a state
+ * you no longer want. The alternative is clearing the site's storage in devtools, which also
+ * takes the persistence grant with it.
+ *
+ * The whole component sits behind `import.meta.env.DEV`, which Vite replaces with a literal
+ * `false` in a production build — so this, and the `devSeed` module it reaches through a dynamic
+ * import, are both dropped from the bundle. Styled inline rather than from `styles.css` for the
+ * same reason: a dev-only rule in the shipped stylesheet would ship.
+ *
+ * It confirms first. One stray click would otherwise delete work that is not in the seed.
+ */
+function DevReseed({ library }: { library: CharacterLibraryBO }) {
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      style={{
+        position: 'fixed',
+        left: 16,
+        bottom: 16,
+        padding: '8px 12px',
+        border: '1px dashed currentColor',
+        borderRadius: 8,
+        background: 'transparent',
+        color: 'var(--muted, #888)',
+        font: 'inherit',
+        fontSize: 12,
+        cursor: busy ? 'progress' : 'pointer',
+      }}
+      onClick={() => {
+        if (!globalThis.confirm('Delete every character and seed the samples again?')) return;
+        setBusy(true);
+        void (async () => {
+          const { reseed } = await import('../devSeed.js');
+          await reseed(library);
+          setBusy(false);
+        })();
+      }}
+    >
+      {busy ? 'Reseeding…' : 'Reseed (dev)'}
+    </button>
   );
 }
 
