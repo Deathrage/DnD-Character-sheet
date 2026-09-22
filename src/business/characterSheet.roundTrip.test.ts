@@ -27,7 +27,9 @@ function fill(sheet: CharacterSheetBO): void {
   sheet.featsAndTraits.createCategory('Combat').add({ name: 'Sneak Attack' });
   sheet.featsAndTraits.add({ name: 'Darkvision' });
   sheet.spellList.createCategory('Evocation').add({ name: 'Fire Bolt' });
+  sheet.spellList.add({ name: 'Prestidigitation' });
   sheet.counters.createCategory('Class features').add({ name: 'Rage' });
+  sheet.counters.add({ name: 'Inspiration' });
   sheet.counters.spellSlots[0]?.setTotal(4);
   sheet.abilitiesAndSkills.setSpeed(30);
   sheet.abilitiesAndSkills.abilities.dexterity.setScore(18);

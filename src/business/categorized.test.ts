@@ -198,4 +198,60 @@ describe('CategorizedBO', () => {
     const { featsAndTraits } = sheet.toDocument();
     expect(featsAndTraits.categories[0]?.name).toBe('Battle');
   });
+
+  // A category used to expose its live storage array as `rawItems`, "so moveTo can splice into
+  // it" — but a public getter returning the live array lets any caller holding a category push a
+  // raw, untrimmed, un-deduplicated, id-less item straight into the document, bypassing every
+  // rule this layer enforces. moveTo now reaches storage through a module-private WeakMap instead
+  // (see categorized.ts), so no property on a CategoryBO should hand the live array back out.
+  it('exposes no property, own or inherited, that hands back its live items array', () => {
+    const sheet = sheetFor();
+    const combat = sheet.featsAndTraits.createCategory('Combat');
+    combat.add({ name: 'Rage' });
+
+    // Every array any getter or own field on `combat` returns — walking the prototype chain, not
+    // just Object.keys(), because a getter lives on the prototype and Object.keys() would miss it.
+    for (const array of arrayValuedProperties(combat)) {
+      // A raw push bypasses trimming, duplicate rejection and id minting on purpose: if this
+      // array is the live storage, the document below will show it.
+      array.push({ id: 'intruder', name: 'Sneaked in', description: '' });
+    }
+
+    expect(sheet.toDocument().featsAndTraits.categories[0]?.items.map((item) => item.name)).toEqual(
+      ['Rage'],
+    );
+  });
 });
+
+/** Every array a getter or own field on `obj`, or its prototype chain, hands back. */
+function arrayValuedProperties(obj: object): unknown[][] {
+  const arrays: unknown[][] = [];
+  let proto: object | null = obj;
+  let isOwn = true;
+  while (proto !== null && proto !== Object.prototype) {
+    for (const name of Object.getOwnPropertyNames(proto)) {
+      if (name === 'constructor') continue;
+
+      const descriptor = Object.getOwnPropertyDescriptor(proto, name);
+      if (!descriptor) continue;
+
+      let value: unknown;
+      if (typeof descriptor.get === 'function') {
+        try {
+          value = descriptor.get.call(obj);
+        } catch {
+          continue;
+        }
+      } else if (isOwn && 'value' in descriptor && typeof descriptor.value !== 'function') {
+        value = descriptor.value;
+      } else {
+        continue;
+      }
+
+      if (Array.isArray(value)) arrays.push(value);
+    }
+    proto = Object.getPrototypeOf(proto);
+    isOwn = false;
+  }
+  return arrays;
+}

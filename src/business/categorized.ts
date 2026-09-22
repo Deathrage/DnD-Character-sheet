@@ -21,6 +21,29 @@ export interface NewNamedItem {
 }
 
 /**
+ * `CategoryBO`'s live items array, keyed by the `CategoryBO` instance that owns it. Registered by
+ * `CategoryBO`'s own constructor below and read only by `rawItemsOf`, so that `moveTo` — a method
+ * on a *different* class — can splice into a category's storage without that storage ever being a
+ * public property. `CategoryBO` used to expose it as a `rawItems` getter "for `moveTo`", but a
+ * public getter returning the live array is a public door straight into the document: any caller
+ * holding a category could push a raw, untrimmed, un-deduplicated, id-less item straight into
+ * `toDocument()`'s source, bypassing every rule this layer exists to enforce. A `#` private field
+ * cannot fix this — `moveTo` lives in `CategorizedItemBO`, a different class, and hard-private
+ * fields are invisible outside the class body that declares them, even to another class in the
+ * same module. A module-scoped, never-exported `WeakMap` is: it is reachable from any code in this
+ * file, and from nowhere outside it.
+ */
+const rawItemsByCategory = new WeakMap<object, unknown[]>();
+
+function rawItemsOf<TData extends NamedItemData>(category: CategoryBO<TData, unknown>): TData[] {
+  const items = rawItemsByCategory.get(category);
+  if (items === undefined) {
+    throw new Error('unreachable: every CategoryBO registers its items array in its constructor');
+  }
+  return items as TData[];
+}
+
+/**
  * An item that lives inside a `Categorized` shape and can move between its buckets. `moveTo`
  * keeps `categories` and `uncategorized` mutually exclusive: it splices out of the current home
  * before pushing into the new one, so an item is never in two places and never in none.
@@ -34,12 +57,14 @@ export abstract class CategorizedItemBO<TData extends NamedItemData> extends Nam
   }
 
   /**
-   * Takes the structural target rather than `CategoryBO<TData, TItemBO>`, because this class
-   * knows its data type but not which business object wraps it — naming `CategoryBO` here would
-   * need a second type parameter that exists only to be passed straight back.
+   * Takes a `CategoryBO<TData, unknown>` rather than adding a second type parameter to `moveTo`
+   * itself purely to be passed straight back — this class knows its data type but has no reason
+   * to also care which business object wraps each item, so `unknown` stands in for it. The
+   * destination's live array is never touched directly; it is looked up through `rawItemsOf`,
+   * which only this module can call.
    */
-  moveTo(category: CategoryTarget<TData> | null): void {
-    const destination = category === null ? this.#owner.uncategorized : category.rawItems;
+  moveTo(category: CategoryBO<TData, unknown> | null): void {
+    const destination = category === null ? this.#owner.uncategorized : rawItemsOf(category);
     if (destination === this.siblings) return;
 
     super.remove();
@@ -47,11 +72,6 @@ export abstract class CategorizedItemBO<TData extends NamedItemData> extends Nam
     // Repoint, or a later remove() would search the bucket this item just left.
     this.siblings = destination;
   }
-}
-
-/** What `moveTo` needs of a destination: somewhere to splice the node into. */
-export interface CategoryTarget<TData> {
-  readonly rawItems: TData[];
 }
 
 type Make<TData extends NamedItemData, TItemBO> = (
@@ -124,6 +144,8 @@ export class CategoryBO<TData extends NamedItemData, TItemBO> {
     this.#owner = owner;
     this.#make = make;
     this.#fill = fill;
+    // Registered here, not exposed as a getter — see rawItemsByCategory's doc comment above.
+    rawItemsByCategory.set(this, node.items);
   }
 
   get id(): string {
@@ -144,11 +166,6 @@ export class CategoryBO<TData extends NamedItemData, TItemBO> {
 
   get items(): TItemBO[] {
     return this.#node.items.map((item) => this.#make(item, this.#node.items, this.#owner));
-  }
-
-  /** The raw array, so `moveTo` can splice into it. Not part of the UI-facing surface. */
-  get rawItems(): TData[] {
-    return this.#node.items;
   }
 
   add(init: NewNamedItem): TItemBO {

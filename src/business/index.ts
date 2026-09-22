@@ -7,9 +7,9 @@
  * this layer exists to prevent. `nodeBO.js`, `namedItem.js`, `observableList.js` and
  * `mobxConfig.js` stay internal for the same reason: they are implementation-sharing mechanisms
  * (a base class, a MobX-push helper, a side-effecting config import), not shapes or types a UI
- * consumer would ever need to name. `categorized.js`'s `CategoryTarget` is internal too — it
- * exists only so `moveTo` can accept a `CategoryBO` structurally; a UI caller passes a `CategoryBO`
- * it already has, never a `CategoryTarget` by name.
+ * consumer would ever need to name. `categorized.js`'s `moveTo` takes a `CategoryBO` directly —
+ * a UI caller passes a `CategoryBO` it already has — so there is no separate destination type to
+ * export either.
  */
 export { CharacterSheetBO } from './characterSheet.js';
 export { RuleViolation, type RuleCode } from './errors.js';
