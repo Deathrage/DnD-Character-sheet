@@ -15,7 +15,7 @@
  * a UI caller passes a `CategoryBO` it already has — so there is no separate destination type to
  * export either.
  */
-export { CharacterSheetBO } from './characterSheet.js';
+export { CharacterSheetBO, createCharacterSheet } from './characterSheet.js';
 export { RuleViolation, type RuleCode } from './errors.js';
 export { ClassesBO, ClassBO, type NewClass } from './classes.js';
 export { HitPointsBO } from './hitPoints.js';
@@ -34,3 +34,25 @@ export {
   type AbilityKey,
   type SkillKey,
 } from './abilitiesAndSkills.js';
+
+// Spec §5-6: the library, files and storage that sit around a sheet.
+//
+// `Autosave` is absent on purpose. It is attached by `CharacterLibraryBO` and detached by
+// `sheet.dispose()`, so no component ever names it — and its constructor takes a
+// `CharacterRepository`, which is a `src/data/` type that must not reach a UI signature.
+// `documentOf` is absent for the sharper version of the same reason: it exists to hand the
+// document out, which is the one thing `CharacterFile` is opaque to prevent.
+export { CharacterLibraryBO, CharacterEntryBO } from './characterLibrary.js';
+export { CharacterFile } from './characterFile.js';
+export {
+  StorageGate,
+  type PersistencePort,
+  type PersistenceState,
+  type StorageUsage,
+} from './storageGate.js';
+export {
+  describeLoadError,
+  describeStorageFailure,
+  type LoadError,
+  type StorageFailure,
+} from './errors.js';

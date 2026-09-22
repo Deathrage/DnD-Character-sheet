@@ -1,7 +1,8 @@
 import { observable, toJS } from 'mobx';
-import type { CharacterDocument } from '../data/schema/index.js';
+import { createCharacter, type CharacterDocument } from '../data/schema/index.js';
 import { AbilitiesAndSkillsBO } from './abilitiesAndSkills.js';
 import { ClassesBO } from './classes.js';
+import { createId } from './createId.js';
 import { CountersBO } from './counters.js';
 import { EquipmentBO } from './equipment.js';
 import { type FeatsAndTraitsBO, makeFeatsAndTraits } from './featsAndTraits.js';
@@ -25,6 +26,9 @@ export class CharacterSheetBO {
    * because a private field is visible to the class body that declares it.
    */
   readonly #doc: CharacterData;
+
+  /** Deliberately not observable: detaching autosave is not something the UI renders. */
+  readonly #disposers: (() => void)[] = [];
 
   readonly classes: ClassesBO;
   readonly hitPoints: HitPointsBO;
@@ -80,4 +84,36 @@ export class CharacterSheetBO {
   toDocument(): CharacterDocument {
     return toJS(this.#doc);
   }
+
+  /**
+   * Whoever attaches something to this sheet's lifetime — `Autosave`, today — registers how to
+   * detach it here, so `dispose()` stays one method the caller can reach for without knowing
+   * what is attached. The alternative, a `WeakMap` in `characterLibrary.ts` like the one
+   * `categorized.ts` uses, would hide autosave from a sheet the UI disposes by any other route.
+   */
+  onDispose(detach: () => void): void {
+    this.#disposers.push(detach);
+  }
+
+  /**
+   * Detaches everything attached to this sheet. Idempotent — `splice` empties the list as it
+   * reads it, so a second call runs nothing rather than stopping an autosave twice.
+   *
+   * Sync, per spec §4, which is why `Autosave.stop()` and not this method is responsible for
+   * not dropping an edit that has not been written yet.
+   */
+  dispose(): void {
+    for (const detach of this.#disposers.splice(0)) detach();
+  }
+}
+
+/**
+ * A blank sheet. `src/ui/` may not import `src/data/`, so without this the UI could never make
+ * a character at all — `createCharacter` and the `CharacterDocument` type both live behind the
+ * layer boundary. The id and clock that `createCharacter` insists on being handed are supplied
+ * here, from this layer's own `createId` and the caller's `now`, so the one place that mints
+ * document ids stays the one place.
+ */
+export function createCharacterSheet(name: string, now: Date = new Date()): CharacterSheetBO {
+  return new CharacterSheetBO(createCharacter({ name: trimmedName(name), id: createId(), now }));
 }
