@@ -1,6 +1,5 @@
 import { createId } from './createId.js';
-import { RuleViolation } from './errors.js';
-import { nonNegativeInt, trimmedName } from './guards.js';
+import { nonNegativeInt, rejectDuplicate, trimmedName } from './guards.js';
 import { NodeBO } from './nodeBO.js';
 import { pushAndRead } from './observableList.js';
 import type { ClassData } from './types.js';
@@ -23,7 +22,7 @@ export class ClassesBO {
 
   add({ name, level = 0 }: NewClass): ClassBO {
     const trimmed = trimmedName(name);
-    rejectDuplicate(this.#classes, trimmed, null);
+    rejectDuplicate(this.#classes, trimmed, null, 'class');
 
     const node = pushAndRead(this.#classes, {
       id: createId(),
@@ -45,7 +44,7 @@ export class ClassBO extends NodeBO<ClassData> {
 
   setName(value: string): void {
     const trimmed = trimmedName(value);
-    rejectDuplicate(this.siblings, trimmed, this.node);
+    rejectDuplicate(this.siblings, trimmed, this.node, 'class');
     this.node.name = trimmed;
   }
 
@@ -55,12 +54,5 @@ export class ClassBO extends NodeBO<ClassData> {
 
   setLevel(value: number): void {
     this.node.level = nonNegativeInt(value);
-  }
-}
-
-/** `except` is the node being renamed, so renaming a class to its own name is not a duplicate. */
-function rejectDuplicate(classes: readonly ClassData[], name: string, except: ClassData | null) {
-  if (classes.some((entry) => entry !== except && entry.name === name)) {
-    throw new RuleViolation('DUPLICATE_NAME', `a class named "${name}" already exists`);
   }
 }

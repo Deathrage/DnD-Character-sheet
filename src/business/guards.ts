@@ -31,3 +31,18 @@ export function nonNegativeInt(value: number): number {
   }
   return value;
 }
+
+/**
+ * `except` is the node being renamed, so renaming something to its own name is not a duplicate.
+ * `noun` names what is being added, so the message reads as the caller's own.
+ */
+export function rejectDuplicate<TData extends { name: string }>(
+  entries: readonly TData[],
+  name: string,
+  except: TData | null,
+  noun: string,
+): void {
+  if (entries.some((entry) => entry !== except && entry.name === name)) {
+    throw new RuleViolation('DUPLICATE_NAME', `a ${noun} named "${name}" already exists`);
+  }
+}

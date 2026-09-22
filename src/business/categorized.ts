@@ -1,6 +1,6 @@
 import { createId } from './createId.js';
 import { RuleViolation } from './errors.js';
-import { trimmedName } from './guards.js';
+import { rejectDuplicate, trimmedName } from './guards.js';
 import { NamedItemBO, type NamedItemData } from './namedItem.js';
 import { pushAndRead } from './observableList.js';
 
@@ -109,7 +109,7 @@ export class CategorizedBO<TData extends NamedItemData, TItemBO> {
 
   createCategory(name: string): CategoryBO<TData, TItemBO> {
     const trimmed = trimmedName(name);
-    rejectDuplicateCategory(this.#node.categories, trimmed, null);
+    rejectDuplicate(this.#node.categories, trimmed, null, 'category');
 
     // A fresh plain literal, so it must go through pushAndRead: MobX clones it on push, and the
     // CategoryBO below must wrap the stored clone, not the detached literal.
@@ -160,7 +160,7 @@ export class CategoryBO<TData extends NamedItemData, TItemBO> {
   setName(value: string): void {
     const trimmed = trimmedName(value);
     this.#require();
-    rejectDuplicateCategory(this.#owner.categories, trimmed, this.#node);
+    rejectDuplicate(this.#owner.categories, trimmed, this.#node, 'category');
     this.#node.name = trimmed;
   }
 
@@ -186,15 +186,5 @@ export class CategoryBO<TData extends NamedItemData, TItemBO> {
       throw new RuleViolation('GONE', `the category "${this.#node.name}" is no longer present`);
     }
     return index;
-  }
-}
-
-function rejectDuplicateCategory<TData>(
-  categories: readonly CategoryData<TData>[],
-  name: string,
-  except: CategoryData<TData> | null,
-) {
-  if (categories.some((entry) => entry !== except && entry.name === name)) {
-    throw new RuleViolation('DUPLICATE_NAME', `a category named "${name}" already exists`);
   }
 }
