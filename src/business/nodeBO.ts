@@ -14,16 +14,22 @@ import { RuleViolation } from './errors.js';
  */
 export abstract class NodeBO<TData extends object> {
   /**
-   * `protected`, not `#`. The runtime-privacy requirement applies to the document on
-   * `CharacterSheetBO` — that is what the UI must not reach. Subclasses legitimately need both
-   * their node and their sibling array: a duplicate-name check reads the siblings, and so does
-   * `remove()`.
+   * `protected`, not `#`, and not closed off by a module-scoped `WeakMap` either. Subclasses
+   * legitimately need both their node and their sibling array — a duplicate-name check reads the
+   * siblings, and so does `remove()` — and a base class cannot hand a subclass anything a cast
+   * cannot also reach: any `protected` accessor reading a WeakMap is callable through the very
+   * same `as any`. Closing this would mean giving up the base class.
+   *
+   * So `protected` here is an accepted limit, not an oversight, and the honest statement of it is
+   * narrow: reaching these fields takes a deliberate cast. That is a different bar from a public
+   * typed getter, which is what `CategoryBO.rawItems` was — reachable through the ordinary typed
+   * API, by a caller who never wrote a cast, and therefore worth the WeakMap that replaced it.
    */
   /**
    * `siblings` is NOT readonly: `CategorizedItemBO.moveTo` repoints it when an item changes
-   * bucket. Leaving it readonly would keep a moved item pointing at the array it came from, so
-   * a later `remove()` would search the wrong list and throw GONE for an item that is plainly
-   * still there.
+   * bucket, so the field keeps meaning what it says. It is no longer what a move or a removal
+   * acts on, though — a cached array can be orphaned by something else rehoming the node, so the
+   * categorized subclass resolves the node's live bucket instead of trusting this.
    */
   constructor(
     protected readonly node: TData,

@@ -64,13 +64,46 @@ export abstract class CategorizedItemBO<TData extends NamedItemData> extends Nam
    * which only this module can call.
    */
   moveTo(category: CategoryBO<TData, unknown> | null): void {
-    const destination = category === null ? this.#owner.uncategorized : rawItemsOf(category);
-    if (destination === this.siblings) return;
+    let destination: TData[];
+    if (category === null) {
+      destination = this.#owner.uncategorized;
+    } else {
+      destination = rawItemsOf(category);
+      if (!this.#owner.categories.some((entry) => entry.items === destination)) {
+        throw new RuleViolation('UNKNOWN_CATEGORY', 'that category is no longer in the document');
+      }
+    }
 
-    super.remove();
+    const home = this.#home();
+    if (home === destination) return;
+
+    home.splice(home.indexOf(this.node), 1);
     destination.push(this.node);
     // Repoint, or a later remove() would search the bucket this item just left.
     this.siblings = destination;
+  }
+
+  /** Same resolution as `moveTo`: splicing the cached `siblings` can splice an orphan. */
+  override remove(): void {
+    const home = this.#home();
+    home.splice(home.indexOf(this.node), 1);
+    this.siblings = home;
+  }
+
+  /**
+   * The bucket this item is in *now*, found by searching the owner rather than by trusting the
+   * cached `siblings`. `siblings` goes stale the moment something else rehomes the node behind
+   * this object's back — `CategoryBO.remove()` tips its items into `uncategorized`, so an item
+   * business object held across that call still points at the orphaned category's array. Acting
+   * on that array splices nothing and pushes a node the document already holds, putting the same
+   * node in twice: a duplicate id, a document the schema rejects, and autosave stopped for good.
+   */
+  #home(): TData[] {
+    if (this.#owner.uncategorized.includes(this.node)) return this.#owner.uncategorized;
+    for (const category of this.#owner.categories) {
+      if (category.items.includes(this.node)) return category.items;
+    }
+    throw new RuleViolation('GONE', 'this item is no longer in the document');
   }
 }
 
@@ -169,6 +202,9 @@ export class CategoryBO<TData extends NamedItemData, TItemBO> {
   }
 
   add(init: NewNamedItem): TItemBO {
+    // Like setName and remove: adding through a removed category would mint an id and hand back
+    // a working-looking business object whose item never reaches the document.
+    this.#require();
     const node = pushAndRead(this.#node.items, this.#fill(init));
     return this.#make(node, this.#node.items, this.#owner);
   }
