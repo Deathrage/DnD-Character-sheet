@@ -4,6 +4,7 @@ import { ClassesBO } from './classes.js';
 import { nonNegativeInt, trimmedName } from './guards.js';
 import { HitDicesBO } from './hitDices.js';
 import { HitPointsBO } from './hitPoints.js';
+import { InventoryBO } from './inventory.js';
 import { JournalAndNotesBO } from './journalAndNotes.js';
 import './mobxConfig.js';
 import type { CharacterData } from './types.js';
@@ -24,6 +25,7 @@ export class CharacterSheetBO {
   readonly hitPoints: HitPointsBO;
   readonly hitDices: HitDicesBO;
   readonly journalAndNotes: JournalAndNotesBO;
+  readonly inventory: InventoryBO;
 
   constructor(doc: CharacterDocument) {
     this.#doc = observable(doc);
@@ -31,6 +33,7 @@ export class CharacterSheetBO {
     this.hitPoints = new HitPointsBO(this.#doc.hitPoints);
     this.hitDices = new HitDicesBO(this.#doc.hitDices);
     this.journalAndNotes = new JournalAndNotesBO(this.#doc.journalAndNotes);
+    this.inventory = new InventoryBO(this.#doc.inventory.coins, this.#doc.inventory.items);
   }
 
   get id(): string {
