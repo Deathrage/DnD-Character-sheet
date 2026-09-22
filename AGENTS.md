@@ -28,7 +28,12 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 549 tests across 36 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
+- 551 tests across 36 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
+- `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
+  It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
+  production build, so the module is dead code and never ships — verified by grepping `dist/`.
+  It drives the ordinary business API, so it cannot drift into a private definition of what a
+  character is. To get the seed back, delete every character or clear the site's storage.
 - On branch `feature/character-sheet-foundation`, open as PR #1 against `main`. Not merged.
 - `main` is still at the initial commit.
 - Schema v1 was restructured in place on 2026-09-20 — see `src/data/schema/README.md` for why an
@@ -315,6 +320,10 @@ Nothing is half-built. What is left is polish and things deliberately never in s
   wanted.
 - The screens are the wireframe's. They have never been reviewed on a real phone, only in
   Storybook's viewport toolbar.
+- **The character list has no order.** `repository.list()` walks an IndexedDB cursor, which is
+  key order — and the key is a uuid, so the list is effectively shuffled. Sorting by `updatedAt`
+  descending ("most recently played first") is the obvious fix and belongs in `list()` or in
+  `CharacterLibraryBO.load()`; it is left undone because it is a product call, not a bug.
 
 `docs/superpowers/plans/2026-07-25-data-layer-followups.md` is now fully discharged. Its two
 sharpest items — iOS storage-failure handling (spec §11 calls it the biggest risk in the design)

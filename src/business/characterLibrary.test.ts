@@ -211,6 +211,49 @@ describe('CharacterLibraryBO', () => {
     });
   });
 
+  describe('flush', () => {
+    /**
+     * A long debounce, so nothing can reach the store on its own during the test: what is being
+     * asserted is that `flush()` wrote it, not that waiting long enough would have.
+     */
+    const unhurried = (storageGate = new StorageGate({ port: null })) =>
+      new CharacterLibraryBO({
+        repository,
+        storageGate,
+        autosave: { debounceMs: 60_000, target: null },
+      });
+
+    it('writes every open sheet before it resolves', async () => {
+      const library = unhurried();
+      const first = await library.create('Sable');
+      const second = await library.create('Thorne');
+      first.hitPoints.setTotal(45);
+      second.hitPoints.setTotal(71);
+
+      const beforeFlush = await repository.get(first.id);
+      expect(beforeFlush?.ok === true && beforeFlush.doc.hitPoints.total).toBe(0);
+
+      await library.flush();
+
+      const storedFirst = await repository.get(first.id);
+      const storedSecond = await repository.get(second.id);
+      expect(storedFirst?.ok === true && storedFirst.doc.hitPoints.total).toBe(45);
+      expect(storedSecond?.ok === true && storedSecond.doc.hitPoints.total).toBe(71);
+    });
+
+    it('ignores an edit made to a sheet that was already disposed', async () => {
+      const library = unhurried();
+      const sheet = await library.create('Sable');
+      sheet.dispose();
+
+      sheet.hitPoints.setTotal(45);
+      await library.flush();
+
+      const stored = await repository.get(sheet.id);
+      expect(stored?.ok === true && stored.doc.hitPoints.total).toBe(0);
+    });
+  });
+
   describe('entry.repair', () => {
     it('stores hand-edited text under the same id and heals the row', async () => {
       await putRaw(ID_A, { schemaVersion: 99, id: ID_A });

@@ -34,6 +34,8 @@ export class CharacterLibraryBO {
   readonly storageGate: StorageGate;
   readonly #autosaveOptions: Pick<AutosaveOptions, 'debounceMs' | 'now' | 'target'>;
   readonly #entries = observable.array<CharacterEntryBO>([], { deep: false });
+  /** Every autosave currently attached, so `flush()` can await all of them. */
+  readonly #autosaves = new Set<Autosave>();
 
   constructor(options: CharacterLibraryOptions = {}) {
     this.storageGate = options.storageGate ?? new StorageGate();
@@ -94,7 +96,27 @@ export class CharacterLibraryBO {
       onFailure: (failure) => this.storageGate.report(failure),
     });
     autosave.start();
-    sheet.onDispose(() => autosave.stop());
+    this.#autosaves.add(autosave);
+    sheet.onDispose(() => {
+      autosave.stop();
+      // A leak guard, not behaviour, and deliberately not covered by a test: `stop()` has already
+      // ended the reaction and flushed, so a later `flush()` over a stopped autosave is a no-op
+      // whether or not it is still in this set. What the delete prevents is the set growing by one
+      // for every character ever opened in a session.
+      this.#autosaves.delete(autosave);
+    });
+  }
+
+  /**
+   * Writes every open sheet's pending edits now, and resolves once they have landed.
+   *
+   * `Autosave` already flushes on `pagehide` and on `stop()`, but both of those are fire-and-
+   * forget — `dispose()` is synchronous by spec §4, so it cannot await a write. This is the
+   * awaitable version, for a caller that needs the store to be current before it does something
+   * else: the dev seed, and anything later that has to hand off to a reload or an export.
+   */
+  async flush(): Promise<void> {
+    await Promise.all([...this.#autosaves].map((autosave) => autosave.flush()));
   }
 
   /** Internal, for `CharacterEntryBO`. Not on `index.ts`. */
