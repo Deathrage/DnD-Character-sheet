@@ -28,7 +28,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 554 tests across 36 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
+- 562 tests across 36 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -316,10 +316,15 @@ run years from now against a real character file. The tests build a synthetic th
 
 Nothing is half-built. What is left is polish and things deliberately never in scope:
 
-- **No PWA.** No manifest, no service worker, no offline cache, no icons — so "install to Home
-  Screen", which the refused-gate copy tells the player to do, does not actually work yet. This is
-  the largest real gap.
-- **No favicon**, which is a 404 on every load today.
+- **No service worker and no offline cache**, by decision. The manifest and icons are in place, so
+  the app installs; what is missing is only offline _asset_ caching, and the data is local either
+  way.
+- **Chrome will usually refuse `persist()` anyway.** Verified against Chrome 153 on localhost: it
+  returns false with no prompt and no exception, because Chrome grants persistence only to origins
+  it considers important — installed, or with accrued site engagement. Granting notification
+  permission did not move it. So the refused phase is the normal first-run experience, the gate is
+  working when it shows it, and the session dismissal is the everyday path. Do not go looking for a
+  bug in `StorageGate` when this happens.
 - **Undo and revision history** are out of scope by decision (spec §6), not forgotten. Both stay
   cheap to add against a single-document model.
 - **`equipment.weapons` and `equipment.other` have no `moveTo` between them** (spec §10). Add it
