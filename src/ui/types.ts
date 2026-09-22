@@ -1,0 +1,325 @@
+/**
+ * The shapes the UI renders and the callbacks it fires.
+ *
+ * These are **not** imported from `src/business`, and not because of the layer rule — `ui` may
+ * import `business`. They are declared here because the components are presentational: data in,
+ * callbacks out. That is what lets a Storybook story be a literal, and what keeps a component
+ * from caring whether a value arrived from a `CharacterSheetBO`, a fixture, or a test.
+ *
+ * Every field below is spelled the way the corresponding business object spells it
+ * (`current`/`total`/`temporary`, `level`, `size`), so wiring is a one-line read per field
+ * rather than a translation layer. Where the business layer throws a `RuleViolation` the UI is
+ * expected to present — `DUPLICATE_NAME` and `EMPTY_NAME` — the callback returns a message
+ * instead of `void`; see `NameResult`.
+ */
+
+import type { AbilityKey, CoinKey, SkillKey, SpellLevel } from './reference.js';
+
+/**
+ * `null` on success, otherwise the message to show beside the field.
+ *
+ * The container wiring is `try { bo.setName(v); return null } catch (e) { return message(e) }`.
+ * Returning the message rather than throwing keeps the rejection local to the dialog that
+ * caused it: a duplicate class name is a thing the player typed, not an error condition.
+ */
+export type NameResult = string | null;
+
+// Reference data — fixed key sets and display order — lives in `reference.ts`; these are its
+// key unions, re-exported so a consumer needs one import rather than two.
+export type { AbilityKey, CoinKey, SkillKey, SpellLevel } from './reference.js';
+
+export interface HitPointsView {
+  current: number;
+  total: number;
+  temporary: number;
+}
+
+export interface ClassView {
+  id: string;
+  name: string;
+  level: number;
+}
+
+/** Keyed by die size in the document; the size *is* its identity, so there is no id. */
+export interface HitDieView {
+  size: number;
+  current: number;
+  total: number;
+}
+
+export interface CharacterView {
+  id: string;
+  name: string;
+  /** Derived on the business facade as the sum of class levels. Never stored. */
+  level: number;
+  classes: ClassView[];
+  hitPoints: HitPointsView;
+  hitDices: HitDieView[];
+  armorClass: number;
+}
+
+export interface VitalsActions {
+  setCurrentHitPoints(value: number): void;
+  setTotalHitPoints(value: number): void;
+  setTemporaryHitPoints(value: number): void;
+  setArmorClass(value: number): void;
+  addClass(name: string): NameResult;
+  renameClass(id: string, name: string): NameResult;
+  setClassLevel(id: string, level: number): void;
+  removeClass(id: string): void;
+  addHitDie(size: number): NameResult;
+  setHitDieCurrent(size: number, value: number): void;
+  setHitDieTotal(size: number, value: number): void;
+  removeHitDie(size: number): void;
+}
+
+/**
+ * A list row shows classes by name and level and nothing else. Deliberately not `ClassView`: the
+ * row is built from the repository's `CharacterSummary`, which drops the stored class ids because
+ * a summary exists precisely to avoid opening the document. Asking for an id here would have made
+ * the type unsatisfiable without inventing one.
+ */
+export type ClassSummaryView = Pick<ClassView, 'name' | 'level'>;
+
+/** One row of the character list. Mirrors the repository's `ListEntry` (spec §5). */
+export type CharacterRow =
+  | {
+      ok: true;
+      id: string;
+      name: string;
+      level: number;
+      classes: ClassSummaryView[];
+      hitPoints: HitPointsView;
+    }
+  /**
+   * A document that failed to load still appears, flagged (criterion 15). `message` is
+   * `describeLoadError(entry.error)` — the UI takes the sentence, not the taxonomy, because
+   * `LoadError` lives in `data` and `ui` may not import it.
+   */
+  | { ok: false; id: string; message: string };
+
+// ---------------------------------------------------------------------------
+// Categorized sections. Feats & Traits, Spell List and Counters share one shape
+// in the document, one business object (`CategorizedBO`) and one UI component
+// (`CategorizedSection`) — so they share these types too.
+// ---------------------------------------------------------------------------
+
+/** Every categorized item is a name, a description and an id. Each section adds its own fields. */
+export interface NamedItemView {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface CategoryView<T> {
+  id: string;
+  name: string;
+  items: T[];
+}
+
+export interface CategorizedView<T> {
+  categories: CategoryView<T>[];
+  uncategorized: T[];
+}
+
+/** The category rules, identical in all three sections. `CategorizedSection` owns these. */
+export interface CategoryActions {
+  createCategory(name: string): NameResult;
+  renameCategory(id: string, name: string): NameResult;
+  /** Moves the category's items to Uncategorized, then deletes it. */
+  removeCategory(id: string): void;
+}
+
+export type FeatView = NamedItemView;
+export type FeatsAndTraitsView = CategorizedView<FeatView>;
+
+export interface FeatsAndTraitsActions extends CategoryActions {
+  /** `categoryId` is `null` for Uncategorized, throughout. */
+  addFeat(categoryId: string | null, feat: { name: string; description: string }): void;
+  /** Rejectable: `NamedItemBO.setName` throws `EMPTY_NAME` on a blank. */
+  renameFeat(id: string, name: string): NameResult;
+  setFeatDescription(id: string, description: string): void;
+  moveFeat(id: string, categoryId: string | null): void;
+  removeFeat(id: string): void;
+}
+
+export interface SpellView extends NamedItemView {
+  level: SpellLevel;
+  prepared: boolean;
+}
+
+export type SpellListView = CategorizedView<SpellView>;
+
+export interface SpellListActions extends CategoryActions {
+  addSpell(
+    categoryId: string | null,
+    spell: { name: string; description: string; level: SpellLevel; prepared: boolean },
+  ): void;
+  renameSpell(id: string, name: string): NameResult;
+  setSpellDescription(id: string, description: string): void;
+  setSpellLevel(id: string, level: SpellLevel): void;
+  setSpellPrepared(id: string, prepared: boolean): void;
+  moveSpell(id: string, categoryId: string | null): void;
+  removeSpell(id: string): void;
+}
+
+export interface CounterView extends NamedItemView {
+  current: number;
+  total: number;
+}
+
+/** The nine spell-slot levels sit beside the categories in the document, not inside them. */
+export interface SpellSlotView {
+  level: number;
+  current: number;
+  total: number;
+}
+
+export interface CountersView extends CategorizedView<CounterView> {
+  spellSlots: SpellSlotView[];
+}
+
+export interface CountersActions extends CategoryActions {
+  addCounter(
+    categoryId: string | null,
+    counter: { name: string; description: string; total: number },
+  ): void;
+  renameCounter(id: string, name: string): NameResult;
+  setCounterDescription(id: string, description: string): void;
+  setCounterCurrent(id: string, value: number): void;
+  setCounterTotal(id: string, value: number): void;
+  moveCounter(id: string, categoryId: string | null): void;
+  removeCounter(id: string): void;
+  setSpellSlotCurrent(level: number, value: number): void;
+  setSpellSlotTotal(level: number, value: number): void;
+}
+
+// ---------------------------------------------------------------------------
+// The four sections with shapes of their own
+// ---------------------------------------------------------------------------
+
+export interface InventoryItemView extends NamedItemView {
+  count: number;
+}
+
+export interface InventoryView {
+  coins: Record<CoinKey, number>;
+  items: InventoryItemView[];
+}
+
+export interface InventoryActions {
+  setCoin(coin: CoinKey, value: number): void;
+  addItem(item: { name: string; description: string; count: number }): void;
+  renameItem(id: string, name: string): NameResult;
+  setItemDescription(id: string, description: string): void;
+  setItemCount(id: string, count: number): void;
+  removeItem(id: string): void;
+}
+
+export interface EquipmentItemView extends NamedItemView {
+  attuned: boolean;
+  equipped: boolean;
+}
+
+/** Which stored list an item lives in. There are two, and nothing moves between them. */
+export type EquipmentSlot = 'weapons' | 'other';
+
+export interface EquipmentView {
+  weapons: EquipmentItemView[];
+  other: EquipmentItemView[];
+  /**
+   * Derived on the facade by filtering both lists — never stored (spec §3.1). They are separate
+   * fields here rather than recomputed in the component so the component cannot disagree with
+   * the business object about what "attuned" means.
+   */
+  attuned: EquipmentItemView[];
+  equipped: EquipmentItemView[];
+}
+
+export interface EquipmentActions {
+  addEquipment(
+    slot: EquipmentSlot,
+    item: { name: string; description: string; attuned: boolean; equipped: boolean },
+  ): void;
+  renameEquipment(id: string, name: string): NameResult;
+  setEquipmentDescription(id: string, description: string): void;
+  setAttuned(id: string, attuned: boolean): void;
+  setEquipped(id: string, equipped: boolean): void;
+  removeEquipment(id: string): void;
+}
+
+export interface JournalAndNotesView {
+  /** Index *is* the day index, so this is the whole contract: position carries the meaning. */
+  days: string[];
+  notes: string;
+}
+
+export interface JournalAndNotesActions {
+  /** Appends at the end only. */
+  appendDay(): void;
+  setDayText(index: number, text: string): void;
+  /** The newest day only; no other index is deletable. */
+  deleteNewestDay(): void;
+  setNotes(notes: string): void;
+}
+
+export interface AbilityView {
+  score: number;
+  modifier: number;
+  savingThrowModifier: number;
+  savingThrowProficient: boolean;
+}
+
+export interface SkillView {
+  modifier: number;
+  proficient: boolean;
+  expertise: boolean;
+}
+
+export interface AbilitiesAndSkillsView {
+  proficiencyBonus: number;
+  passivePerception: number;
+  speed: number;
+  abilities: Record<AbilityKey, AbilityView>;
+  skills: Record<SkillKey, SkillView>;
+}
+
+export interface AbilitiesAndSkillsActions {
+  setProficiencyBonus(value: number): void;
+  setPassivePerception(value: number): void;
+  setSpeed(value: number): void;
+  setAbilityScore(key: AbilityKey, value: number): void;
+  setAbilityModifier(key: AbilityKey, value: number): void;
+  setSavingThrowModifier(key: AbilityKey, value: number): void;
+  setSavingThrowProficient(key: AbilityKey, value: boolean): void;
+  setSkillModifier(key: SkillKey, value: number): void;
+  setSkillProficient(key: SkillKey, value: boolean): void;
+  setSkillExpertise(key: SkillKey, value: boolean): void;
+}
+
+export type SectionKey =
+  'journal' | 'inventory' | 'feats' | 'equipment' | 'spells' | 'counters' | 'abilities';
+
+export interface SectionTile {
+  key: SectionKey;
+  icon: string;
+  title: string;
+  subtitle: string;
+}
+
+/** The hub grid, in the wireframe's order and with its glyphs. All seven always render. */
+export const SECTIONS: readonly SectionTile[] = [
+  { key: 'journal', icon: '✎', title: 'Journal & Notes', subtitle: 'log & freeform' },
+  { key: 'inventory', icon: '◉', title: 'Inventory', subtitle: 'coins & items' },
+  { key: 'feats', icon: '✦', title: 'Feats & Traits', subtitle: 'by category' },
+  { key: 'equipment', icon: '⚔', title: 'Equipment', subtitle: 'weapons & gear' },
+  { key: 'spells', icon: '✧', title: 'Spell List', subtitle: 'prepared & levels' },
+  { key: 'counters', icon: '◴', title: 'Counters', subtitle: 'slots & resources' },
+  { key: 'abilities', icon: '⭃', title: 'Abilities & Skills', subtitle: 'scores & skills' },
+];
+
+/**
+ * Which tiles are live. All seven now are; the prop remains because HubGrid should not have
+ * to be edited to stand a section down again, and a story shows the inert state.
+ */
+export const WIRED_SECTIONS: readonly SectionKey[] = SECTIONS.map((section) => section.key);

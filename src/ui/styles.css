@@ -1,0 +1,1191 @@
+/*
+ * The visual language of docs/start/Wireframe.html, lifted token-for-token. The wireframe is a
+ * project input and the authority on how this app looks (spec §7: plain CSS and custom
+ * properties, no component framework), so class names and values match it rather than being
+ * reinvented. What is NOT lifted is the `.phone` frame and the `.overlay`/`.dialog` pair: the
+ * frame was a prototype prop, and the dialog is now a native <dialog> with two presentations
+ * (spec §7, `ResponsiveDialog`).
+ */
+
+:root {
+  --stage: #e9e9ec;
+  --ink: #2b2b30;
+  --ink-2: #8a8a92;
+  --line: #d3d3d9;
+  --fill: #e6e6ea;
+  --fill-2: #f1f1f4;
+  --accent: #6d6ff0;
+  --accent-soft: #ecedfe;
+  --paper: #ffffff;
+  --danger: #b3261e;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--stage);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* The app fills its host: a phone viewport, a desktop window, or a Storybook frame. */
+.app {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--paper);
+  overflow: hidden;
+}
+
+/* ---------- character list ---------- */
+.lhead {
+  flex: 0 0 auto;
+  padding: 12px 18px 8px;
+}
+.lhead h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+.lhead .sub {
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-top: 2px;
+}
+.llist {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 6px 14px 90px;
+  margin: 0;
+  list-style: none;
+}
+.ccard {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 13px 15px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  background: var(--paper);
+}
+.ccard:active {
+  background: var(--fill-2);
+}
+.ccard .cn {
+  font-size: 17px;
+  font-weight: 700;
+}
+.ccard .cc {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-top: 3px;
+}
+.ccard .chp {
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.ccard.damaged {
+  border-color: var(--danger);
+}
+.ccard.damaged .cn {
+  color: var(--danger);
+}
+.fab {
+  position: absolute;
+  right: 18px;
+  bottom: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  box-shadow: 0 6px 18px rgba(109, 111, 240, 0.45);
+  cursor: pointer;
+  z-index: 10;
+}
+.fab:active {
+  opacity: 0.9;
+}
+
+/* ---------- hub vitals ---------- */
+.vitals {
+  flex: 0 0 auto;
+  padding: 8px 16px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper);
+}
+.vtop {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.back,
+.close {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  flex: 0 0 auto;
+  padding: 0;
+}
+.vname {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lvpill {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 20px;
+  padding: 3px 9px;
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+.classbtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  padding: 8px 10px;
+  margin: 8px 0 2px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.classbtn:active {
+  background: var(--fill-2);
+}
+.classbtn .clsum {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+.classbtn .clsum.placeholder {
+  color: var(--ink-2);
+  font-weight: 400;
+}
+.chev {
+  color: var(--line);
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+.tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.tile {
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 7px 9px;
+  background: var(--paper);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+.tile.hp {
+  grid-column: 1 / 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.tile .tl {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-2);
+  font-weight: 700;
+}
+.hpwrap {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-top: 2px;
+}
+.hp .num {
+  width: 46px;
+  font-size: 16px;
+}
+.hp .slash {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.hp .tempbox {
+  margin-left: auto;
+  text-align: right;
+}
+.hp .tempbox .num {
+  width: 44px;
+}
+.tile .tval {
+  font-size: 16px;
+  font-weight: 800;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.hdtile {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+.tile.btn {
+  cursor: pointer;
+}
+.tile.btn:active {
+  background: var(--fill-2);
+}
+
+/* ---------- hub grid ---------- */
+.bottom {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+}
+.menu {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 14px 16px 22px;
+  margin: 0;
+  list-style: none;
+}
+.mtile {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 13px;
+  cursor: pointer;
+  background: var(--paper);
+}
+.mtile:active {
+  background: var(--fill-2);
+}
+/* Spec §8 criterion 12: the six unwired tiles render, look inert, and navigate nowhere. */
+.mtile[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.45;
+}
+.mtile[aria-disabled='true']:active {
+  background: var(--paper);
+}
+.mtile .ico {
+  font-size: 20px;
+}
+.mtile .mt {
+  font-size: 14px;
+  font-weight: 700;
+  margin-top: 8px;
+}
+.mtile .ms {
+  font-size: 11px;
+  color: var(--ink-2);
+  margin-top: 2px;
+}
+
+/* ---------- section view ---------- */
+.sv {
+  padding: 6px 16px 26px;
+}
+.svhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0 4px;
+  position: sticky;
+  top: 0;
+  background: var(--paper);
+  z-index: 5;
+}
+.svhead .t {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.sechead-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 18px 0 6px;
+  min-height: 26px;
+  gap: 10px;
+}
+.sechead-row:first-of-type {
+  margin-top: 8px;
+}
+.sechead {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-2);
+  font-weight: 700;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  min-width: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+}
+.sechead.static {
+  cursor: default;
+}
+.sechead .nmtxt {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.caret {
+  font-size: 10px;
+  color: var(--ink-2);
+  flex: 0 0 auto;
+}
+.ccount {
+  font-size: 11px;
+  color: var(--ink-2);
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+.sec-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.editcat {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+.addmini {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  flex: 0 0 auto;
+  padding: 0;
+}
+.txtbtn {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.empty {
+  font-size: 13px;
+  color: var(--ink-2);
+  font-style: italic;
+  opacity: 0.6;
+  padding: 4px 2px 6px;
+}
+.rec {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 2px;
+  border: none;
+  border-top: 1px solid var(--fill);
+  cursor: pointer;
+  width: 100%;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+.rec:first-of-type {
+  border-top: none;
+}
+.rec:active {
+  background: var(--fill-2);
+}
+.rec .info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.rec .nm {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rec .pv {
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.newcat {
+  margin-top: 20px;
+  width: 100%;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 11px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--paper);
+  cursor: pointer;
+}
+.newcat:active {
+  background: var(--accent-soft);
+}
+
+/* ---------- fields ---------- */
+.num {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--paper);
+  font: inherit;
+  color: var(--ink);
+  padding: 6px 4px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  width: 100%;
+}
+.num:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.inp {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  font: inherit;
+  color: var(--ink);
+  padding: 8px 10px;
+  width: 100%;
+}
+.inp:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.area {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  font: inherit;
+  color: var(--ink);
+  padding: 9px 10px;
+  width: 100%;
+  resize: vertical;
+  line-height: 1.45;
+}
+.area:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.area.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12.5px;
+}
+.curinp {
+  width: 36px;
+  text-align: right;
+  border: none;
+  border-bottom: 1.5px solid var(--line);
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent);
+  padding: 2px;
+  border-radius: 0;
+}
+.curinp:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+  box-shadow: none;
+}
+.clsrow,
+.hdrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--fill);
+}
+.clsrow:first-of-type,
+.hdrow:first-of-type {
+  border-top: none;
+}
+.clsrow .inp {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.clsrow .cllv {
+  width: 40px;
+}
+.hdrow .lab {
+  font-size: 10px;
+  color: var(--ink-2);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.hdrow .dtype {
+  width: 56px;
+  text-align: center;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.hdrow .curinp {
+  width: 38px;
+}
+.hdrow .curinp.total {
+  color: var(--ink-2);
+}
+.delx {
+  margin-left: auto;
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 15px;
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  padding: 2px 4px;
+}
+
+/* ---------- dialog: bottom sheet under 640px, centred modal at or above ---------- */
+.dialog {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  padding: 15px 16px 16px;
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.3);
+  font: inherit;
+}
+.dialog::backdrop {
+  background: rgba(25, 25, 30, 0.4);
+}
+
+/* Phone: anchored to the bottom edge so the sheet sits above the on-screen keyboard.
+   `dvh` tracks the visual viewport as the keyboard opens; `vh` does not. */
+@media (max-width: 639px) {
+  .dialog {
+    width: 100%;
+    max-width: none;
+    position: fixed;
+    inset: auto 0 0 0;
+    margin: 0;
+    max-height: 88dvh;
+    overflow-y: auto;
+    border-radius: 18px 18px 0 0;
+    border-bottom: none;
+    animation: sheet-up 180ms ease-out;
+  }
+}
+
+@media (min-width: 640px) {
+  .dialog {
+    width: 100%;
+    max-width: 360px;
+    max-height: 88dvh;
+    overflow-y: auto;
+    border-radius: 18px;
+    margin: auto;
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog {
+    animation: none;
+  }
+}
+
+.dhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 10px;
+}
+.dhead .t {
+  font-size: 17px;
+  font-weight: 700;
+}
+.dlabel {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+  font-weight: 700;
+  margin: 0 0 5px;
+  display: block;
+}
+.mt12 {
+  margin-top: 12px;
+}
+.dact {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.del {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--danger);
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.primary {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.primary:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.secondary {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.hint {
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-top: 10px;
+  line-height: 1.4;
+}
+.fieldError {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger);
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* ---------- raw JSON editor ---------- */
+.json {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 6px 16px 16px;
+  gap: 10px;
+}
+.json .area {
+  flex: 1 1 auto;
+  min-height: 160px;
+  resize: none;
+}
+.jsonbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.jsonbar .spacer {
+  flex: 1 1 auto;
+}
+
+.nameField {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.addrow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/*
+ * The clickable rows — a character card, a hub tile, the hit-dice tile, a feat row — are
+ * <button>s, whose content model is phrasing content only. So their stacked lines are <span>s,
+ * not <div>s, and it is this rule rather than the default display that stacks them. Without it
+ * they run together on one line and overflow the row.
+ */
+.ccard .cn,
+.ccard .cc,
+.ccard .chp,
+.mtile .ico,
+.mtile .mt,
+.mtile .ms,
+.tile .tl,
+.tile .tval,
+.rec .info,
+.rec .nm,
+.rec .pv {
+  display: block;
+}
+
+.bottom {
+  background: var(--paper);
+}
+
+/* ---------- numeric stepper ---------- */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.step {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.step:active {
+  background: var(--fill-2);
+}
+.step:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* ---------- rows with a control beside the name ---------- */
+/* The tappable part of a row. It is a sibling of any input in the row's trailing slot, never
+   its ancestor: a control nested in a <button> is invalid and swallows its own taps. */
+.recopen {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: block;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.recopen .nm {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recopen .pv {
+  display: block;
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rec.dim .recopen .nm {
+  color: var(--ink-2);
+}
+
+/* ---------- spell list ---------- */
+.prep {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--paper);
+  flex: 0 0 auto;
+  cursor: pointer;
+  padding: 0;
+}
+.prep.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.lvlbadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-2);
+  background: var(--fill);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 2px 0;
+  flex: 0 0 auto;
+  width: 26px;
+  text-align: center;
+}
+
+/* ---------- counters ---------- */
+.valcluster {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+.maxlbl {
+  font-size: 14px;
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.slotblock {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 2px 12px 6px;
+  background: var(--fill-2);
+}
+.slotrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 2px;
+  border-top: 1px solid var(--line);
+}
+.slotrow:first-child {
+  border-top: none;
+}
+.slotlvl {
+  font-size: 15px;
+  font-weight: 600;
+}
+.setup-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--fill);
+}
+.setup-row:first-of-type {
+  border-top: none;
+}
+.setup-row .lv {
+  font-size: 15px;
+  font-weight: 600;
+}
+.setup-row .inp {
+  width: 70px;
+  text-align: right;
+}
+
+/* ---------- inventory ---------- */
+.coins {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 7px;
+}
+.coin {
+  text-align: center;
+}
+.coin .cl {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--ink-2);
+  margin-bottom: 3px;
+}
+.num.qty {
+  width: 44px;
+  flex: 0 0 auto;
+}
+
+/* ---------- journal ---------- */
+.daygrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.daybtn {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 9px 13px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  color: inherit;
+  background: var(--paper);
+  cursor: pointer;
+}
+.daybtn:active {
+  background: var(--fill-2);
+}
+.daybtn.newest {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ---------- abilities & skills ---------- */
+.topstats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0 2px;
+}
+.statbox {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 9px 11px;
+  background: var(--fill-2);
+}
+.statbox .lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+.num.big {
+  font-size: 17px;
+  font-weight: 800;
+  text-align: left;
+}
+.abhead {
+  display: grid;
+  grid-template-columns: 44px 1fr 1fr 1.35fr;
+  gap: 8px;
+  padding: 0 2px 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+  font-weight: 700;
+}
+.abhead span {
+  text-align: center;
+}
+.abhead span:first-child {
+  text-align: left;
+}
+.abrow {
+  display: grid;
+  grid-template-columns: 44px 1fr 1fr 1.35fr;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 2px;
+  border-top: 1px solid var(--fill);
+}
+.abrow:first-of-type {
+  border-top: none;
+}
+.abrow .an {
+  font-size: 14px;
+  font-weight: 800;
+}
+.savecell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.mk {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex: 0 0 auto;
+  padding: 0;
+}
+.mk.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.skrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 2px;
+  border-top: 1px solid var(--fill);
+}
+.skrow .nm {
+  font-size: 14.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+.skrow .nm .lbl {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.skrow .ab {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--ink-2);
+  background: var(--fill);
+  border-radius: 5px;
+  padding: 2px 5px;
+  flex: 0 0 auto;
+}
+.num.sk {
+  width: 54px;
+  flex: 0 0 auto;
+  text-align: center;
+}
+
+/* ---------- checkbox row ---------- */
+.chkrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  cursor: pointer;
+}
+/* The real control, kept where it is focusable rather than hidden with `display: none`. */
+.chkinput {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.chkrow .box {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: 6px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  font-size: 12px;
+}
+.chkinput:checked + .box {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.chkinput:focus-visible + .box {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.chkrow .lab {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.row2 {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.row2 .col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.txtbtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* `CategorySelect` carries its own top margin for the stacked case; inside a two-column row
+   that margin drops one label below the other. The row supplies the spacing instead. */
+.row2 .col .dlabel.mt12 {
+  margin-top: 0;
+}
