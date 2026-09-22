@@ -1,5 +1,6 @@
 import { observable, toJS } from 'mobx';
 import type { CharacterDocument } from '../data/schema/index.js';
+import { ClassesBO } from './classes.js';
 import { nonNegativeInt, trimmedName } from './guards.js';
 import './mobxConfig.js';
 import type { CharacterData } from './types.js';
@@ -16,8 +17,11 @@ export class CharacterSheetBO {
    */
   readonly #doc: CharacterData;
 
+  readonly classes: ClassesBO;
+
   constructor(doc: CharacterDocument) {
     this.#doc = observable(doc);
+    this.classes = new ClassesBO(this.#doc.classes);
   }
 
   get id(): string {
