@@ -54,10 +54,18 @@ describe('spell slots', () => {
     expect(spellSlots['4']).toEqual({ current: 0, total: 0 });
   });
 
+  // The nine are fixed, so `spellSlots` must hand back a view built on demand rather than an
+  // array a caller could grow or shrink. Asserting the absence of an `addSpellSlot` method used
+  // to stand here, but no such method ever existed or could: that assertion could not fail.
   it('offers no way to add or remove a level, because the nine are fixed', () => {
-    const { spellSlots } = sheetFor().counters;
-    expect(spellSlots).toHaveLength(9);
-    expect(sheetFor().counters).not.toHaveProperty('addSpellSlot');
+    const sheet = sheetFor();
+    const slots = sheet.counters.spellSlots;
+    expect(slots.map((slot) => slot.level)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+    slots.pop();
+
+    expect(sheet.counters.spellSlots).toHaveLength(9);
+    expect(Object.keys(sheet.toDocument().counters.spellSlots)).toHaveLength(9);
   });
 
   it('rejects a negative value', () => {

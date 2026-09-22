@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createCharacter } from '../data/schema/index.js';
+import { CURRENT_SCHEMA, createCharacter } from '../data/schema/index.js';
 import { CharacterSheetBO } from './characterSheet.js';
 
 const sheetFor = () =>
@@ -220,6 +220,85 @@ describe('CategorizedBO', () => {
     expect(sheet.toDocument().featsAndTraits.categories[0]?.items.map((item) => item.name)).toEqual(
       ['Rage'],
     );
+  });
+});
+
+// Nothing stops a caller from holding an item business object while its category is removed —
+// the UI will do exactly that, since removing a category is not a bulk delete and the items it
+// held go to uncategorized. Every item object handed out before that call keeps pointing at the
+// array the removed category took with it, so acting on that array splices nothing and pushes a
+// node the document already holds: the same node twice, a duplicate id, and a document the schema
+// rejects — which stops autosave for that character for good.
+describe('an item held across its category being removed', () => {
+  const held = () => {
+    const sheet = sheetFor();
+    const { featsAndTraits } = sheet;
+    const combat = featsAndTraits.createCategory('Combat');
+    const rage = combat.add({ name: 'Rage' });
+    combat.remove();
+    return { sheet, featsAndTraits, combat, rage };
+  };
+
+  it('is rehomed into uncategorized by the removal', () => {
+    const { featsAndTraits } = held();
+    expect(featsAndTraits.uncategorized.map((item) => item.name)).toEqual(['Rage']);
+  });
+
+  it('moves out of where it now lives, landing in the destination exactly once', () => {
+    const { sheet, featsAndTraits, rage } = held();
+    const social = featsAndTraits.createCategory('Social');
+
+    rage.moveTo(social);
+
+    expect(social.items.map((item) => item.name)).toEqual(['Rage']);
+    expect(featsAndTraits.uncategorized).toEqual([]);
+    expect(CURRENT_SCHEMA.safeParse(sheet.toDocument()).success).toBe(true);
+  });
+
+  it('treats a move to the bucket it was rehomed into as the no-op it is', () => {
+    const { sheet, featsAndTraits, rage } = held();
+
+    rage.moveTo(null);
+
+    expect(featsAndTraits.uncategorized.map((item) => item.name)).toEqual(['Rage']);
+    expect(CURRENT_SCHEMA.safeParse(sheet.toDocument()).success).toBe(true);
+  });
+
+  it('is actually removed by remove(), not spliced out of the orphaned array', () => {
+    const { sheet, rage } = held();
+
+    rage.remove();
+
+    expect(sheet.toDocument().featsAndTraits.uncategorized).toEqual([]);
+  });
+
+  it('throws GONE once it really is gone', () => {
+    const { rage } = held();
+    rage.remove();
+
+    expect(() => rage.remove()).toThrow(expect.objectContaining({ code: 'GONE' }) as Error);
+    expect(() => rage.moveTo(null)).toThrow(expect.objectContaining({ code: 'GONE' }) as Error);
+  });
+
+  it('cannot be moved into the removed category, which is no longer a place', () => {
+    const { combat, rage } = held();
+
+    expect(() => rage.moveTo(combat)).toThrow(
+      expect.objectContaining({ code: 'UNKNOWN_CATEGORY' }) as Error,
+    );
+  });
+
+  // add() minted an id and returned a working-looking business object whose item never reached
+  // the document — the same existence check setName and remove already made.
+  it('refuses an add through the removed category', () => {
+    const { sheet, combat } = held();
+
+    expect(() => combat.add({ name: 'Reckless Attack' })).toThrow(
+      expect.objectContaining({ code: 'GONE' }) as Error,
+    );
+    expect(sheet.toDocument().featsAndTraits.uncategorized.map((item) => item.name)).toEqual([
+      'Rage',
+    ]);
   });
 });
 
