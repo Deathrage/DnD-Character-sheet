@@ -2,7 +2,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CharacterLibraryBO, StorageGate, type PersistencePort } from '../business/index.js';
-import { ID_A, putRaw, wipe } from '../test/fixtures.js';
+import { ID_A, docFor, putRaw, wipe } from '../test/fixtures.js';
 import { stubDialogElement } from '../test/stubDialog.js';
 import { App } from './App.js';
 
@@ -84,6 +84,39 @@ describe('App', () => {
     const area = await screen.findByLabelText('Character JSON');
     // Criterion 15: the raw stored text, not a repaired or defaulted version of it.
     expect((area as HTMLTextAreaElement).value).toContain('"schemaVersion": 99');
+  });
+
+  it('clones a character into a new row only once the player confirms', async () => {
+    await putRaw(ID_A, docFor(ID_A, 'Sable'));
+    const { library } = renderApp();
+
+    fireEvent.click(await screen.findByLabelText('Clone Sable'));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+
+    fireEvent.click(screen.getByLabelText('Clone Sable'));
+    fireEvent.click(screen.getByRole('button', { name: 'Clone' }));
+
+    await waitFor(() => expect(library.entries).toHaveLength(2));
+    // A clone is asynchronous, so a cancelled one would only show up after a pause: count again
+    // once everything has settled, not straight after the Cancel.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(library.entries.map((entry) => entry.name)).toEqual(['Sable', 'Sable (copy)']);
+  });
+
+  it('deletes a character only once the player confirms', async () => {
+    await putRaw(ID_A, docFor(ID_A, 'Sable'));
+    const { library } = renderApp();
+
+    fireEvent.click(await screen.findByLabelText('Delete Sable'));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    expect(library.entries).toHaveLength(1);
+
+    fireEvent.click(screen.getByLabelText('Delete Sable'));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+    expect(await screen.findByText('No characters yet. Tap + to make one.')).toBeDefined();
   });
 
   it('refuses a repair that is not valid JSON and keeps the text', async () => {

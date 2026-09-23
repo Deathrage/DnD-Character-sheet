@@ -14,8 +14,8 @@
       route by which Chrome will actually grant persistent storage, and the persistence gate's own
       refused screen tells the player to do it. Without this that advice was a dead end.
 
-      No service worker and no offline cache — those are a separate concern, and the app already
-      works offline in the only sense that matters, which is that its data is local.
+      Hand-written rather than generated: vite.config.ts sets `manifest: false` on vite-plugin-pwa,
+      which supplies only the service worker that lets the installed app start offline.
     -->
     <link rel="manifest" href="manifest.webmanifest" />
     <link rel="icon" href="icon-192.png" type="image/png" />

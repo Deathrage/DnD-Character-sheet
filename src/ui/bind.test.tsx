@@ -449,6 +449,15 @@ describe('toSheetActions', () => {
     expect(doc.featsAndTraits.categories).toHaveLength(1);
   });
 
+  it('renames the character, and reports a blank name instead of storing it', () => {
+    const sheet = newSheet();
+    const actions = toSheetActions(sheet);
+
+    expect(actions.vitals.renameCharacter('  Wren  ')).toBeNull();
+    expect(actions.vitals.renameCharacter('   ')).toMatch(/must not be empty/);
+    expect(sheet.toDocument().name).toBe('Wren');
+  });
+
   it('accepts a rename back to the item own name', () => {
     const sheet = newSheet();
     const actions = toSheetActions(sheet);
@@ -576,6 +585,8 @@ describe('toCharacterRows', () => {
           onOpenRawJson={() => {}}
           onCreate={() => {}}
           onImport={() => {}}
+          onClone={() => {}}
+          onDelete={() => {}}
         />
       );
     }

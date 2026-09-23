@@ -408,6 +408,7 @@ export const sheetData: SheetData = {
 
 /** No-op actions, so a story that is only about layout does not need a stub each. */
 export const noVitalsActions: VitalsActions = {
+  renameCharacter: () => null,
   setCurrentHitPoints: () => {},
   setTotalHitPoints: () => {},
   setTemporaryHitPoints: () => {},

@@ -22,6 +22,8 @@ const meta = {
           onOpenRawJson={() => {}}
           onCreate={() => {}}
           onImport={() => {}}
+          onClone={() => {}}
+          onDelete={() => {}}
         />
         <Story />
       </>

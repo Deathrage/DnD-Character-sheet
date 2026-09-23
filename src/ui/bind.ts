@@ -305,6 +305,7 @@ function vitalsActions(sheet: CharacterSheetBO): VitalsActions {
   };
 
   return {
+    renameCharacter: (name) => attempt(() => sheet.setName(name)),
     setCurrentHitPoints: (value) => sheet.hitPoints.setCurrent(value),
     setTotalHitPoints: (value) => sheet.hitPoints.setTotal(value),
     setTemporaryHitPoints: (value) => sheet.hitPoints.setTemporary(value),

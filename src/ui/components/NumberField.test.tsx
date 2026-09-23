@@ -35,6 +35,17 @@ describe('NumberField', () => {
     expect(input.value).toBe('38');
   });
 
+  it('never calls onChange below min, from typing or the stepper', () => {
+    const onChange = vi.fn();
+    render(<NumberField label="Level" value={1} min={1} stepper onChange={onChange} />);
+
+    fireEvent.change(screen.getByLabelText('Level'), { target: { value: '0' } });
+    expect(screen.getByLabelText<HTMLButtonElement>('Decrease Level').disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText('Level'), { target: { value: '2' } });
+
+    expect(onChange.mock.calls).toEqual([[2]]);
+  });
+
   it('refuses a negative unless the field is signed', () => {
     const onChange = vi.fn();
     render(<NumberField label="Score" value={10} onChange={onChange} />);

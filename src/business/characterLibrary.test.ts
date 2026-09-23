@@ -405,6 +405,46 @@ describe('CharacterLibraryBO', () => {
     });
   });
 
+  describe('entry.clone', () => {
+    it('stores a copy under a new id and lists it', async () => {
+      const original = docFor(ID_A, 'Sable');
+      original.armorClass = 17;
+      await repository.save(original);
+      const library = libraryOver(repository);
+      await library.load();
+
+      expect(await library.entries[0]?.clone()).toBeNull();
+
+      expect(library.entries.map((entry) => entry.name)).toEqual(['Sable', 'Sable (copy)']);
+      const copyId = library.entries[1]?.id ?? '';
+      expect(copyId).not.toBe(ID_A);
+      const stored = await repository.get(copyId);
+      expect(stored?.ok === true && stored.doc.armorClass).toBe(17);
+      // The original is untouched.
+      const source = await repository.get(ID_A);
+      expect(source?.ok === true && source.doc.name).toBe('Sable');
+    });
+
+    it('keeps the copy name within the length limit', async () => {
+      await repository.save(docFor(ID_A, 'x'.repeat(80)));
+      const library = libraryOver(repository);
+      await library.load();
+
+      expect(await library.entries[0]?.clone()).toBeNull();
+
+      expect(library.entries[1]?.name).toBe(`${'x'.repeat(73)} (copy)`);
+    });
+
+    it('refuses to clone a damaged document', async () => {
+      await putRaw(ID_A, { schemaVersion: 1, id: ID_A });
+      const library = libraryOver(repository);
+      await library.load();
+
+      expect(await library.entries[0]?.clone()).toMatch(/.+/);
+      expect(library.entries).toHaveLength(1);
+    });
+  });
+
   it('reports an autosave failure to storage rather than swallowing it', async () => {
     const storageGate = new StorageGate({ port: null });
     const failing: CharacterRepository = {

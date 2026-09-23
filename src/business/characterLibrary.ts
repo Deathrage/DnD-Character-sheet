@@ -94,9 +94,8 @@ export class CharacterLibraryBO {
    */
   async #adopt(doc: CharacterDocument): Promise<CharacterSheetBO> {
     // Written before any edit, so the row exists immediately.
-    await this.#repository.save(doc);
+    await this.store(doc);
     const sheet = new CharacterSheetBO(doc);
-    this.#entries.push(new CharacterEntryBO({ ok: true, summary: summarize(doc) }, this));
     this.attachAutosave(sheet);
     return sheet;
   }
@@ -154,6 +153,15 @@ export class CharacterLibraryBO {
   /** Internal, for `CharacterEntryBO`. Not on `index.ts`. */
   get repository(): CharacterRepository {
     return this.#repository;
+  }
+
+  /**
+   * Internal, for `#adopt` and `CharacterEntryBO.clone()`: saves a new document and lists it.
+   * A clone gets no sheet, because nobody is looking at it yet and a sheet would need disposing.
+   */
+  async store(doc: CharacterDocument): Promise<void> {
+    await this.#repository.save(doc);
+    this.#entries.push(new CharacterEntryBO({ ok: true, summary: summarize(doc) }, this));
   }
 
   /** Internal, for `CharacterEntryBO.remove()`. */
@@ -282,6 +290,29 @@ export class CharacterEntryBO {
       throw caught;
     }
     await this.#library.load();
+    return null;
+  }
+
+  /**
+   * Stores a copy of this character under a new id, named "… (copy)", or returns the sentence
+   * saying why it could not. A damaged document is not cloned: repair it first, or the copy is
+   * just a second damaged row.
+   *
+   * Collection item ids are kept — they only have to be unique within one document.
+   */
+  async clone(): Promise<string | null> {
+    const result = await this.#library.repository.get(this.id);
+    if (result === null) return 'This character is no longer in this browser.';
+    if (!result.ok) return describeLoadError(result.error);
+
+    // 73 + " (copy)" is the 80-character name limit.
+    const name = trimmedName(`${result.doc.name.slice(0, 73).trimEnd()} (copy)`);
+    await this.#library.store({
+      ...structuredClone(result.doc),
+      id: createId(),
+      name,
+      updatedAt: new Date().toISOString(),
+    });
     return null;
   }
 

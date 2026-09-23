@@ -12,6 +12,8 @@ interface Props {
    * and pure clutter on one you set once a level, like max HP or AC.
    */
   stepper?: boolean;
+  /** The lowest value an unsigned field accepts; typed text below it never reaches `onChange`. */
+  min?: number;
   className?: string;
 }
 
@@ -35,6 +37,7 @@ export function NumberField({
   signed = false,
   stepper = false,
   className = 'num',
+  min = 0,
 }: Props) {
   const [draft, setDraft] = useState<string | null>(null);
 
@@ -46,7 +49,7 @@ export function NumberField({
    */
   const step = (delta: number) => {
     setDraft(null);
-    onChange(signed ? value + delta : Math.max(0, value + delta));
+    onChange(signed ? value + delta : Math.max(min, value + delta));
   };
 
   const input = (
@@ -63,7 +66,7 @@ export function NumberField({
         const text = event.target.value;
         setDraft(text);
         const parsed = parse(text, signed);
-        if (parsed !== null) onChange(parsed);
+        if (parsed !== null && (signed || parsed >= min)) onChange(parsed);
       }}
       onBlur={() => setDraft(null)}
     />
@@ -79,7 +82,7 @@ export function NumberField({
         aria-label={`Decrease ${label}`}
         // At zero there is nowhere down to go for an unsigned field, and calling the setter
         // anyway would throw `NEGATIVE`. Disabling says so before the tap rather than after.
-        disabled={!signed && value <= 0}
+        disabled={!signed && value <= min}
         onClick={() => step(-1)}
       >
         {'−'}

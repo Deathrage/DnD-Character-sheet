@@ -1,5 +1,5 @@
 import { createId } from './createId.js';
-import { nonNegativeInt, rejectDuplicate, trimmedName } from './guards.js';
+import { positiveInt, rejectDuplicate, trimmedName } from './guards.js';
 import { NodeBO } from './nodeBO.js';
 import { pushAndRead } from './observableList.js';
 import type { ClassData } from './types.js';
@@ -20,14 +20,14 @@ export class ClassesBO {
     return this.#classes.map((node) => new ClassBO(node, this.#classes));
   }
 
-  add({ name, level = 0 }: NewClass): ClassBO {
+  add({ name, level = 1 }: NewClass): ClassBO {
     const trimmed = trimmedName(name);
     rejectDuplicate(this.#classes, trimmed, null, 'class');
 
     const node = pushAndRead(this.#classes, {
       id: createId(),
       name: trimmed,
-      level: nonNegativeInt(level),
+      level: positiveInt(level),
     });
     return new ClassBO(node, this.#classes);
   }
@@ -53,6 +53,6 @@ export class ClassBO extends NodeBO<ClassData> {
   }
 
   setLevel(value: number): void {
-    this.node.level = nonNegativeInt(value);
+    this.node.level = positiveInt(value);
   }
 }

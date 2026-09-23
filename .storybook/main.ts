@@ -8,6 +8,19 @@ import type { StorybookConfig } from '@storybook/react-vite';
 const config: StorybookConfig = {
   stories: ['../src/ui/**/*.stories.tsx'],
   framework: '@storybook/react-vite',
+  /**
+   * Storybook reuses `vite.config.ts`, and with it `vite-plugin-pwa` — which then tries to
+   * precache Storybook's own multi-megabyte bundles and fails the build. A service worker has no
+   * business in Storybook, so its plugins are dropped here.
+   */
+  viteFinal: (config) => ({
+    ...config,
+    plugins: (config.plugins ?? [])
+      .flat()
+      .filter(
+        (plugin) => !(plugin && 'name' in plugin && plugin.name.startsWith('vite-plugin-pwa')),
+      ),
+  }),
 };
 
 export default config;

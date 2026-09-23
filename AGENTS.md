@@ -28,7 +28,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 562 tests across 36 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
+- 565 tests across 37 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -41,8 +41,7 @@ back on the next load (criterion 14).
   stored through `onSaved`, and `CharacterLibraryBO` re-summarises that one row. Without it,
   editing a sheet and going back to the list showed stale values until the next page reload. The
   row is refreshed **in place**, because the raw-JSON screen keys an effect on entry identity.
-- On branch `feature/character-sheet-foundation`, open as PR #1 against `main`. Not merged.
-- `main` is still at the initial commit.
+- Developed on `feature/character-sheet-foundation`, merged into `main` as PR #1 on 2026-09-23.
 - Schema v1 was restructured in place on 2026-09-20 — see `src/data/schema/README.md` for why an
   in-place edit was still safe: nothing built against `v1/` had shipped or stored a real document
   yet, so its freeze had not begun. `classes` is now an array of `{ id, name, level }`, not a
@@ -121,8 +120,8 @@ back on the next load (criterion 14).
 
 What is built: the versioned schema, the migration loop and its error taxonomy, export/import, the
 IndexedDB repository, the whole business layer, the presentational components, and `src/ui/bind.ts`
-binding the two. What is not: the app shell — entry point, router, and the screens' composition
-into an application (spec §7-8).
+binding the two, and the app shell — `src/main.tsx`, `src/ui/route.ts` and `src/ui/App.tsx` —
+composing the screens into an application (spec §7-8), with all seven hub sections wired.
 
 ## Commands
 
@@ -277,7 +276,7 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
                        re-exports `ui` needs but may not import from `data`: describeLoadError,
                        LoadError, StorageFailure
   characterLibrary.ts  CharacterLibraryBO / CharacterEntryBO — the list, create, import, open,
-                       repair, remove; attaches Autosave to every sheet it hands out
+                       repair, clone, remove; attaches Autosave to every sheet it hands out
   characterFile.ts     CharacterFile — a character as text; the document is held in a module
                        WeakMap, never on the class, so `ui` cannot reach it
   autosave.ts          Autosave — reaction, debounce, stamp updatedAt on the copy, save
@@ -292,6 +291,8 @@ src/ui/                components are presentational: data in, callbacks out, no
   App.tsx              the shell: route → screen, and the browser affordances no business object
                        can own — file download, file picking, the open sheet's lifetime
   route.ts             hash routing, hand-rolled; three routes, no dependency
+  UpdatePrompt.tsx     "a new version is ready": saves pending edits, then lets the new service
+                       worker take over. Rendered from main.tsx so App never imports virtual:pwa-*
   components/, screens/   the wireframe's screens; fixtures.ts feeds the stories
 src/main.tsx           the composition root; the only place the real library is constructed
 index.html             the app document; vite.config.ts builds and tests it
@@ -316,9 +317,13 @@ run years from now against a real character file. The tests build a synthetic th
 
 Nothing is half-built. What is left is polish and things deliberately never in scope:
 
-- **No service worker and no offline cache**, by decision. The manifest and icons are in place, so
-  the app installs; what is missing is only offline _asset_ caching, and the data is local either
-  way.
+- **The service worker is `vite-plugin-pwa`, with `registerType: 'prompt'`.** The installed app
+  starts offline; verified in Chromium by cutting the network and reloading. The manifest stays
+  hand-written in `public/` (`manifest: false`). A new version waits until the player clicks
+  Reload in `UpdatePrompt`, which awaits `library.flush()` first — verified by editing a field
+  and clicking Reload inside the debounce window: the edit survived. `.storybook/main.ts` strips
+  the plugin, because under Storybook it tries to precache Storybook's own bundles and fails.
+  Updates are only checked for on launch or reload; there is no periodic check.
 - **Chrome will usually refuse `persist()` anyway.** Verified against Chrome 153 on localhost: it
   returns false with no prompt and no exception, because Chrome grants persistence only to origins
   it considers important — installed, or with accrued site engagement. Granting notification

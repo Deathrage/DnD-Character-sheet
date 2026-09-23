@@ -9,6 +9,7 @@ export type RuleCode =
   | 'DUPLICATE_DIE'
   | 'NOT_AN_INTEGER'
   | 'NEGATIVE'
+  | 'BELOW_ONE'
   | 'TOO_LONG'
   | 'UNKNOWN_CATEGORY'
   | 'INVALID_DIE_SIZE'

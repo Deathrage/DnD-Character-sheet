@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CharacterLibraryBO } from './business/index.js';
 import { App } from './ui/App.js';
+import { UpdatePrompt } from './ui/UpdatePrompt.js';
 import './ui/styles.css';
 
 /**
@@ -31,5 +32,6 @@ if (import.meta.env.DEV) {
 createRoot(root).render(
   <StrictMode>
     <App library={library} />
+    <UpdatePrompt beforeReload={() => library.flush()} />
   </StrictMode>,
 );

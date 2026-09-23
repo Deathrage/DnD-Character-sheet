@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
+import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
 
 /**
@@ -11,7 +12,17 @@ export default defineConfig({
   // `base: ''` so the build works from any directory, including opened from disk — this is a
   // local-first app that should not need a server rooted at /.
   base: '',
-  plugins: [react()],
+  plugins: [
+    react(),
+    // The service worker that lets the installed app start offline. `manifest: false` keeps the
+    // hand-written `public/manifest.webmanifest`, which `index.html` links itself. `prompt`, not
+    // `autoUpdate`, for the reason in `src/ui/UpdatePrompt.tsx`.
+    VitePWA({
+      registerType: 'prompt',
+      manifest: false,
+      workbox: { globPatterns: ['**/*.{js,css,html,png,webmanifest}'] },
+    }),
+  ],
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src/', import.meta.url)) },
   },

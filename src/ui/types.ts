@@ -59,6 +59,7 @@ export interface CharacterView {
 }
 
 export interface VitalsActions {
+  renameCharacter(name: string): NameResult;
   setCurrentHitPoints(value: number): void;
   setTotalHitPoints(value: number): void;
   setTemporaryHitPoints(value: number): void;

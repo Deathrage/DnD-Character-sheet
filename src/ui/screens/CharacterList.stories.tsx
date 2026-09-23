@@ -10,6 +10,8 @@ const meta = {
     onOpenRawJson: () => {},
     onCreate: () => {},
     onImport: () => {},
+    onClone: () => {},
+    onDelete: () => {},
   },
 } satisfies Meta<typeof CharacterList>;
 

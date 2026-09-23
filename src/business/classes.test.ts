@@ -31,8 +31,8 @@ describe('ClassesBO', () => {
     expect(rogue.id).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it('defaults an omitted level to zero, the blank-document value', () => {
-    expect(sheetFor().classes.add({ name: 'Rogue' }).level).toBe(0);
+  it('defaults an omitted level to one', () => {
+    expect(sheetFor().classes.add({ name: 'Rogue' }).level).toBe(1);
   });
 
   it('trims the name on add', () => {
@@ -67,10 +67,19 @@ describe('ClassesBO', () => {
     );
   });
 
-  it('rejects a negative level', () => {
-    expect(() => sheetFor().classes.add({ name: 'Rogue', level: -1 })).toThrow(
-      expect.objectContaining({ code: 'NEGATIVE' }) as Error,
+  it.each([0, -1])('rejects a level of %i', (level) => {
+    expect(() => sheetFor().classes.add({ name: 'Rogue', level })).toThrow(
+      expect.objectContaining({ code: 'BELOW_ONE' }) as Error,
     );
+  });
+
+  it('refuses to set a level below one', () => {
+    const rogue = sheetFor().classes.add({ name: 'Rogue' });
+
+    expect(() => rogue.setLevel(0)).toThrow(
+      expect.objectContaining({ code: 'BELOW_ONE' }) as Error,
+    );
+    expect(rogue.level).toBe(1);
   });
 });
 

@@ -25,7 +25,12 @@ export function VitalsHeader({ character, actions, onBack }: Props) {
         <button type="button" className="back" onClick={onBack} aria-label="Back to characters">
           {'‹'}
         </button>
-        <span className="vname">{character.name}</span>
+        <NameField
+          label="Character name"
+          className="vname"
+          value={character.name}
+          onCommit={actions.renameCharacter}
+        />
         {/* Derived on the facade, never stored — see spec §1's deliberate exception. */}
         <span className="lvpill">Lvl {character.level}</span>
       </div>
@@ -134,6 +139,7 @@ function ClassesDialog({ open, onClose, character, actions }: DialogProps) {
           <NumberField
             label={`Level of ${entry.name}`}
             className="curinp cllv"
+            min={1}
             value={entry.level}
             onChange={(level) => actions.setClassLevel(entry.id, level)}
           />

@@ -63,6 +63,14 @@ export function nonNegativeInt(value: number): number {
   return value;
 }
 
+/** A class level: a class you have no levels in is a class you do not have. */
+export function positiveInt(value: number): number {
+  if (integer(value) < 1) {
+    throw new RuleViolation('BELOW_ONE', `expected an integer of at least 1, got ${value}`);
+  }
+  return value;
+}
+
 /**
  * `except` is the node being renamed, so renaming something to its own name is not a duplicate.
  * `noun` names what is being added, so the message reads as the caller's own.

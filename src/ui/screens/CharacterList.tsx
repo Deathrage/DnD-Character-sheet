@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import type { CharacterRow, ClassSummaryView, HitPointsView } from '../types.js';
 
 interface Props {
@@ -7,9 +9,25 @@ interface Props {
   onOpenRawJson(id: string): void;
   onCreate(): void;
   onImport(): void;
+  /** Both are called only once the player has confirmed; a delete has no undo (spec §6). */
+  onClone(id: string): void;
+  onDelete(id: string): void;
 }
 
-export function CharacterList({ rows, onOpen, onOpenRawJson, onCreate, onImport }: Props) {
+export function CharacterList({
+  rows,
+  onOpen,
+  onOpenRawJson,
+  onCreate,
+  onImport,
+  onClone,
+  onDelete,
+}: Props) {
+  const [confirming, setConfirming] = useState<{
+    action: 'clone' | 'delete';
+    row: CharacterRow;
+  } | null>(null);
+
   return (
     <div className="app">
       <div className="lhead">
@@ -46,6 +64,34 @@ export function CharacterList({ rows, onOpen, onOpenRawJson, onCreate, onImport 
                 <span className="chp">Open raw JSON {'›'}</span>
               </button>
             )}
+            {/* Siblings of the card, laid over its right edge: a button may not contain a button. */}
+            <div className="cactions">
+              {row.ok && (
+                <button
+                  type="button"
+                  className="cicon"
+                  aria-label={`Clone ${row.name}`}
+                  title="Clone"
+                  onClick={() => setConfirming({ action: 'clone', row })}
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="8" y="8" width="12" height="12" rx="2" />
+                    <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+                  </svg>
+                </button>
+              )}
+              <button
+                type="button"
+                className="cicon cdel"
+                aria-label={`Delete ${row.ok ? row.name : 'damaged character'}`}
+                title="Delete"
+                onClick={() => setConfirming({ action: 'delete', row })}
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
+                </svg>
+              </button>
+            </div>
           </li>
         ))}
       </ul>
@@ -53,7 +99,71 @@ export function CharacterList({ rows, onOpen, onOpenRawJson, onCreate, onImport 
       <button type="button" className="fab" onClick={onCreate} aria-label="New character">
         +
       </button>
+
+      {confirming !== null && (
+        <ConfirmDialog
+          action={confirming.action}
+          name={confirming.row.ok ? confirming.row.name : 'This damaged character'}
+          onCancel={() => setConfirming(null)}
+          onConfirm={() => {
+            if (confirming.action === 'clone') onClone(confirming.row.id);
+            else onDelete(confirming.row.id);
+            setConfirming(null);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+const CONFIRM = {
+  clone: {
+    title: 'Clone character',
+    button: 'Clone',
+    className: 'primary',
+    body: (name: string) => `${name} will be copied into a new character named "${name} (copy)".`,
+  },
+  delete: {
+    title: 'Delete character',
+    button: 'Delete',
+    className: 'del',
+    body: (name: string) =>
+      `${name} will be removed from this browser. This cannot be undone — export it first if you might want it back.`,
+  },
+} as const;
+
+function ConfirmDialog({
+  action,
+  name,
+  onCancel,
+  onConfirm,
+}: {
+  action: keyof typeof CONFIRM;
+  name: string;
+  onCancel(): void;
+  onConfirm(): void;
+}) {
+  const copy = CONFIRM[action];
+  return (
+    <ResponsiveDialog
+      title={copy.title}
+      open
+      onClose={onCancel}
+      footer={
+        <>
+          <button type="button" className="secondary" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="button" className={copy.className} onClick={onConfirm}>
+            {copy.button}
+          </button>
+        </>
+      }
+    >
+      <p className="hint" style={{ marginTop: 0 }}>
+        {copy.body(name)}
+      </p>
+    </ResponsiveDialog>
   );
 }
 

@@ -2,9 +2,10 @@
  * The visual language of docs/start/Wireframe.html, lifted token-for-token. The wireframe is a
  * project input and the authority on how this app looks (spec §7: plain CSS and custom
  * properties, no component framework), so class names and values match it rather than being
- * reinvented. What is NOT lifted is the `.phone` frame and the `.overlay`/`.dialog` pair: the
- * frame was a prototype prop, and the dialog is now a native <dialog> with two presentations
- * (spec §7, `ResponsiveDialog`).
+ * reinvented. What is NOT lifted is the `.overlay`/`.dialog` pair: the dialog is now a native
+ * <dialog> with two presentations (spec §7, `ResponsiveDialog`). The `.phone` frame is lifted,
+ * but as `.app` on a wide viewport rather than as a wrapper: the screens were only ever laid out
+ * for a phone, and stretched across a desktop window they read as a sparse form.
  */
 
 :root {
@@ -42,6 +43,28 @@ body {
   height: 100dvh;
   background: var(--paper);
   overflow: hidden;
+}
+
+/* Wider than a phone: the wireframe's phone frame, centred on the stage. Same breakpoint as the
+   dialog, so the sheet-vs-modal switch and the frame agree on what "a phone" is. The height is
+   capped rather than the wireframe's fixed 780px so the frame still fits a short laptop screen. */
+@media (min-width: 640px) {
+  body {
+    display: flex;
+    align-items: center;
+    min-height: 100dvh;
+  }
+  #root {
+    width: 100%;
+  }
+  .app {
+    max-width: 390px;
+    margin: 0 auto;
+    height: min(844px, calc(100dvh - 48px));
+    border: 1px solid var(--line);
+    border-radius: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  }
 }
 
 /* ---------- character list ---------- */
@@ -100,6 +123,56 @@ body {
 .ccard.damaged {
   border-color: var(--danger);
 }
+/* The row actions sit over the card's right edge, stacked so the class line keeps its width. */
+.llist > li {
+  position: relative;
+}
+.llist > li > .ccard {
+  padding-right: 56px;
+}
+.cactions {
+  position: absolute;
+  top: 0;
+  right: 6px;
+  bottom: 10px; /* the card's own bottom margin */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+.cicon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.cicon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cicon:hover,
+.cicon:active {
+  background: var(--fill-2);
+  color: var(--ink);
+}
+.cicon.cdel:hover,
+.cicon.cdel:active {
+  color: var(--danger);
+}
+.cicon:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 .ccard.damaged .cn {
   color: var(--danger);
 }
@@ -152,6 +225,13 @@ body {
   padding: 0;
 }
 .vname {
+  /* An input styled as the heading it replaced: the name is edited in place. */
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 0;
   font-size: 19px;
   font-weight: 800;
   letter-spacing: -0.01em;
@@ -751,6 +831,22 @@ body {
   color: var(--danger);
   margin-top: 6px;
   line-height: 1.4;
+}
+
+/* ---------- update prompt ---------- */
+.updatePrompt {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.18);
+  font-size: 14px;
+  z-index: 20;
 }
 
 /* ---------- raw JSON editor ---------- */

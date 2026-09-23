@@ -109,6 +109,13 @@ export function App({ library }: { library: CharacterLibraryBO }) {
             onOpenRawJson={(id) => navigate({ name: 'raw', id })}
             onCreate={createCharacter}
             onImport={() => filePicker.current?.click()}
+            onClone={(id) => {
+              const entry = library.entries.find((candidate) => candidate.id === id);
+              void entry?.clone().then(setProblem);
+            }}
+            onDelete={(id) => {
+              void library.entries.find((candidate) => candidate.id === id)?.remove();
+            }}
           />
           {problem !== null && (
             <div className="fieldError" role="alert">
