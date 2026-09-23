@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { pasteLists } from '../components/pasteLists.js';
 import { CheckRow } from '../components/CheckRow.js';
+import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import { ItemRow } from '../components/ItemRow.js';
 import { NameField } from '../components/NameField.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
@@ -39,10 +41,10 @@ export function Equipment({ data, actions, onClose }: Props) {
     <div className="bottom">
       <div className="sv">
         <div className="svhead">
-          <span className="t">Equipment</span>
-          <button type="button" className="close" onClick={onClose} aria-label="Back to sections">
-            {'×'}
+          <button type="button" className="back" onClick={onClose} aria-label="Back to sections">
+            {'‹'}
           </button>
+          <span className="t">Equipment</span>
         </div>
 
         {/* Attuned and Equipped are derived views over both lists, so they carry no add button:
@@ -157,6 +159,7 @@ function NewEquipmentDialog({
         Description
       </label>
       <textarea
+        onPaste={pasteLists}
         id="new-equipment-description"
         className="area"
         rows={4}
@@ -184,16 +187,15 @@ function EditEquipmentDialog({
       open
       onClose={onClose}
       footer={
-        <button
-          type="button"
-          className="del"
-          onClick={() => {
+        <ConfirmDelete
+          what={item.name}
+          onConfirm={() => {
             actions.removeEquipment(item.id);
             onClose();
           }}
         >
           Delete
-        </button>
+        </ConfirmDelete>
       }
     >
       <span className="dlabel">Name</span>
@@ -206,6 +208,7 @@ function EditEquipmentDialog({
         Description
       </label>
       <textarea
+        onPaste={pasteLists}
         id="equipment-description"
         className="area"
         rows={4}

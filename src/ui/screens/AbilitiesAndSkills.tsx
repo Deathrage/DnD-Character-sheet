@@ -23,10 +23,10 @@ export function AbilitiesAndSkills({ data, actions, onClose }: Props) {
     <div className="bottom">
       <div className="sv">
         <div className="svhead">
-          <span className="t">Abilities &amp; Skills</span>
-          <button type="button" className="close" onClick={onClose} aria-label="Back to sections">
-            {'×'}
+          <button type="button" className="back" onClick={onClose} aria-label="Back to sections">
+            {'‹'}
           </button>
+          <span className="t">Abilities &amp; Skills</span>
         </div>
 
         <div className="topstats">

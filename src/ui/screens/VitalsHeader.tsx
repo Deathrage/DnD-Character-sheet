@@ -3,6 +3,7 @@ import { AddByName } from '../components/AddByName.js';
 import { NameField } from '../components/NameField.js';
 import { NumberField } from '../components/NumberField.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
+import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import type { CharacterView, VitalsActions } from '../types.js';
 
 interface Props {
@@ -143,14 +144,14 @@ function ClassesDialog({ open, onClose, character, actions }: DialogProps) {
             value={entry.level}
             onChange={(level) => actions.setClassLevel(entry.id, level)}
           />
-          <button
-            type="button"
+          <ConfirmDelete
             className="delx"
             aria-label={`Remove ${entry.name}`}
-            onClick={() => actions.removeClass(entry.id)}
+            what={`The ${entry.name} class`}
+            onConfirm={() => actions.removeClass(entry.id)}
           >
             {'✕'}
-          </button>
+          </ConfirmDelete>
         </div>
       ))}
       <AddByName
@@ -193,14 +194,14 @@ function HitDiceDialog({ open, onClose, character, actions }: DialogProps) {
             value={die.total}
             onChange={(value) => actions.setHitDieTotal(die.size, value)}
           />
-          <button
-            type="button"
+          <ConfirmDelete
             className="delx"
             aria-label={`Remove d${die.size}`}
-            onClick={() => actions.removeHitDie(die.size)}
+            what={`The d${die.size} hit die`}
+            onConfirm={() => actions.removeHitDie(die.size)}
           >
             {'✕'}
-          </button>
+          </ConfirmDelete>
         </div>
       ))}
       <AddByName

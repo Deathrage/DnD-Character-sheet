@@ -79,10 +79,41 @@ async function guard<T>(operation: () => Promise<T>): Promise<T> {
   }
 }
 
+const isOlderThan = (stored: unknown, current: number): boolean =>
+  (stored as { schemaVersion: number }).schemaVersion < current;
+
 export function createIndexedDbRepository(options: RepositoryOptions = {}): CharacterRepository {
   const registry = options.registry ?? defaultRegistry;
   const onFailure = options.onFailure ?? (() => {});
   const openDb = options.openDb ?? makeDefaultOpenDb(onFailure);
+
+  /**
+   * Stores documents that loaded only by migrating, so each migrates once instead of on every
+   * load. Only an optimisation, so it never fails the read that triggered it: a failure goes to
+   * `onFailure`. A row is replaced only if it still holds exactly what was read, re-checked in
+   * the same transaction, so an autosave that landed in between is never overwritten by an
+   * older document.
+   */
+  async function writeBack(rows: Array<{ id: string; stored: unknown; doc: unknown }>) {
+    if (rows.length === 0) return;
+    try {
+      await guard(async () => {
+        const db = await openDb();
+        try {
+          const tx = db.transaction(CHARACTER_STORE, 'readwrite');
+          for (const { id, stored, doc } of rows) {
+            const now: unknown = await tx.store.get(id);
+            if (JSON.stringify(now) === JSON.stringify(stored)) await tx.store.put(doc, id);
+          }
+          await tx.done;
+        } finally {
+          db.close();
+        }
+      });
+    } catch (caught) {
+      onFailure((caught as StorageError).detail);
+    }
+  }
 
   return {
     async list(): Promise<ListEntry[]> {
@@ -117,12 +148,16 @@ export function createIndexedDbRepository(options: RepositoryOptions = {}): Char
         }
       });
 
-      return rows.map(([id, value]) => {
+      const migrated: Array<{ id: string; stored: unknown; doc: unknown }> = [];
+      const entries = rows.map(([id, value]): ListEntry => {
         const parsed = parseCharacter(value, registry);
-        return parsed.ok
-          ? { ok: true, summary: { ...summarize(parsed.doc), id } }
-          : { ok: false, id, error: parsed.error };
+        if (!parsed.ok) return { ok: false, id, error: parsed.error };
+        if (isOlderThan(value, registry.current))
+          migrated.push({ id, stored: value, doc: parsed.doc });
+        return { ok: true, summary: { ...summarize(parsed.doc), id } };
       });
+      await writeBack(migrated);
+      return entries;
     },
 
     async get(id: string): Promise<LoadResult | null> {
@@ -136,7 +171,12 @@ export function createIndexedDbRepository(options: RepositoryOptions = {}): Char
           db.close();
         }
       });
-      return stored === undefined ? null : parseCharacter(stored, registry);
+      if (stored === undefined) return null;
+      const parsed = parseCharacter(stored, registry);
+      if (parsed.ok && isOlderThan(stored, registry.current)) {
+        await writeBack([{ id, stored, doc: parsed.doc }]);
+      }
+      return parsed;
     },
 
     getRaw(id: string): Promise<unknown> {

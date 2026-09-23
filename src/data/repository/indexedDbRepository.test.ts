@@ -344,4 +344,80 @@ describe('createIndexedDbRepository', () => {
     expect(loaded?.ok).toBe(true);
     expect((loaded as { doc: { schemaVersion: number } }).doc.schemaVersion).toBe(2);
   });
+
+  describe('writes a migrated document back, so it migrates once rather than on every load', () => {
+    // The same synthetic two-version world as above.
+    const registry = {
+      current: 2,
+      schemas: { 1: SCHEMAS[1]!, 2: z.looseObject({ schemaVersion: z.literal(2) }) },
+      migrations: new Map([[1, (doc: unknown) => ({ ...(doc as object), schemaVersion: 2 })]]),
+    };
+    const v1Doc = docFor(ID_A, 'Sable');
+
+    it('from get()', async () => {
+      await putRaw(ID_A, v1Doc);
+      const repository = createIndexedDbRepository({ registry, openDb: createOpener() });
+
+      await repository.get(ID_A);
+
+      expect(await repository.getRaw(ID_A)).toEqual({ ...v1Doc, schemaVersion: 2 });
+    });
+
+    it('from list(), under the store key', async () => {
+      await putRaw(ID_B, v1Doc);
+      const repository = createIndexedDbRepository({ registry, openDb: createOpener() });
+
+      await repository.list();
+
+      expect(await repository.getRaw(ID_B)).toEqual({ ...v1Doc, schemaVersion: 2 });
+    });
+
+    it('never writes back a document that failed to load', async () => {
+      const damaged = { ...v1Doc, armorClass: 'nine' };
+      await putRaw(ID_A, damaged);
+      const repository = createIndexedDbRepository({ registry, openDb: createOpener() });
+
+      await repository.list();
+      await repository.get(ID_A);
+
+      expect(await repository.getRaw(ID_A)).toEqual(damaged);
+    });
+
+    it('does not overwrite a row that changed between the read and the write-back', async () => {
+      // An autosave landing in that window must win: the write-back is only an optimisation.
+      await putRaw(ID_A, v1Doc);
+      const newer = { ...v1Doc, schemaVersion: 2, name: 'Saved meanwhile' };
+      const open = createOpener();
+      let opens = 0;
+      const openDb: OpenDb = async () => {
+        if (++opens === 2) await putRaw(ID_A, newer);
+        return open();
+      };
+      const repository = createIndexedDbRepository({ registry, openDb });
+
+      const loaded = await repository.get(ID_A);
+
+      expect(loaded?.ok).toBe(true);
+      expect(await repository.getRaw(ID_A)).toEqual(newer);
+    });
+
+    it('reports a failed write-back to onFailure and still returns the loaded document', async () => {
+      await putRaw(ID_A, v1Doc);
+      const open = createOpener();
+      let opens = 0;
+      const openDb: OpenDb = () =>
+        ++opens === 2 ? Promise.reject(new DOMException('full', 'QuotaExceededError')) : open();
+      const failures: StorageFailure[] = [];
+      const repository = createIndexedDbRepository({
+        registry,
+        openDb,
+        onFailure: (failure) => failures.push(failure),
+      });
+
+      const loaded = await repository.get(ID_A);
+
+      expect(loaded?.ok).toBe(true);
+      expect(failures).toEqual([{ code: 'QUOTA_EXCEEDED' }]);
+    });
+  });
 });

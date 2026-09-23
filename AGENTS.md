@@ -41,6 +41,10 @@ back on the next load (criterion 14).
   stored through `onSaved`, and `CharacterLibraryBO` re-summarises that one row. Without it,
   editing a sheet and going back to the list showed stale values until the next page reload. The
   row is refreshed **in place**, because the raw-JSON screen keys an effect on entry identity.
+- **A document that loaded by migrating is written back** at the current version by `get()` and
+  `list()`, so it migrates once rather than on every launch. It is replaced only if the row
+  still holds exactly what was read (re-checked in the same transaction), so a concurrent
+  autosave wins; a failed write-back goes to `onFailure` and never fails the read.
 - Developed on `feature/character-sheet-foundation`, merged into `main` as PR #1 on 2026-09-23.
 - Schema v1 was restructured in place on 2026-09-20 — see `src/data/schema/README.md` for why an
   in-place edit was still safe: nothing built against `v1/` had shipped or stored a real document
@@ -315,7 +319,8 @@ run years from now against a real character file. The tests build a synthetic th
 
 ## What to do next
 
-Nothing is half-built. What is left is polish and things deliberately never in scope:
+Nothing is half-built. What is left is polish and things deliberately never in scope. Feature ideas
+live in `docs/BACKLOG.md` — add new ones there, not here:
 
 - **The service worker is `vite-plugin-pwa`, with `registerType: 'prompt'`.** The installed app
   starts offline; verified in Chromium by cutting the network and reloading. The manifest stays

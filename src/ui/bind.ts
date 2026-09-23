@@ -51,6 +51,7 @@ import type {
   NameResult,
   SkillKey,
   SkillView,
+  SpellLevel,
   SpellListActions,
   SpellListView,
   VitalsActions,
@@ -214,12 +215,20 @@ function equipmentView(sheet: CharacterSheetBO): EquipmentView {
   };
 }
 
+/** Cantrips first, then 1 to 9. A display order only: the stored order is never rewritten. */
+const byLevel = (a: { level: SpellLevel }, b: { level: SpellLevel }) =>
+  (a.level === 'c' ? 0 : a.level) - (b.level === 'c' ? 0 : b.level);
+
 function spellListView(sheet: CharacterSheetBO): SpellListView {
-  return categorizedView(sheet.spellList, (spell) => ({
+  const view = categorizedView(sheet.spellList, (spell) => ({
     ...namedItemView(spell),
     level: spell.level,
     prepared: spell.prepared,
   }));
+  // Array#sort is stable, so spells of one level keep the order the player added them in.
+  view.categories.forEach((category) => category.items.sort(byLevel));
+  view.uncategorized.sort(byLevel);
+  return view;
 }
 
 function countersView(sheet: CharacterSheetBO): CountersView {
@@ -442,7 +451,10 @@ function countersActions(sheet: CharacterSheetBO): CountersActions {
   return {
     ...categoryActions(bo),
     addCounter: (categoryId, init) => {
-      (categoryId === null ? bo : category(categoryId)).add(init).setTotal(init.total);
+      // A new counter starts full: nobody creates "Rage 3" meaning none left.
+      const added = (categoryId === null ? bo : category(categoryId)).add(init);
+      added.setTotal(init.total);
+      added.setCurrent(init.total);
     },
     renameCounter: (id, name) => attempt(() => counter(id).setName(name)),
     setCounterDescription: (id, description) => counter(id).setDescription(description),

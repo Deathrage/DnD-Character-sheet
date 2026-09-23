@@ -5,8 +5,8 @@ interface Props {
   open: boolean;
   onClose(): void;
   /**
-   * The persistence gate (spec §5): no close button, no scrim dismissal, no Escape. Everything
-   * else is dismissible three ways.
+   * The persistence gate (spec §5): no close button, no Escape. Everything else is dismissible
+   * both ways. No dialog closes on a backdrop click.
    */
   blocking?: boolean;
   children: ReactNode;
@@ -42,15 +42,14 @@ export function ResponsiveDialog({ title, open, onClose, blocking, children, foo
       ref={ref}
       className="dialog"
       aria-label={title}
-      // `cancel` covers Escape and the platform's own dismiss gesture.
+      // `cancel` covers Escape and the platform's own dismiss gesture. A click on the backdrop
+      // deliberately does not close: a stray tap outside a half-filled form would lose it.
       onCancel={(event) => {
+        // React propagates `cancel` up its own tree although the DOM event does not bubble, so
+        // Escape on a nested confirm dialog would otherwise close the dialog beneath it too.
+        if (event.target !== event.currentTarget) return;
         if (blocking) event.preventDefault();
         else onClose();
-      }}
-      // A click that lands on the <dialog> itself landed on the backdrop: the padding box is
-      // covered by the content. Checking the target is what separates the two.
-      onClick={(event) => {
-        if (!blocking && event.target === ref.current) onClose();
       }}
     >
       <div className="dhead">

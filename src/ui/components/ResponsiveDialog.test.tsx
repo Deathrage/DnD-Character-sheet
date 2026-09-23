@@ -4,10 +4,11 @@ import { stubDialogElement } from '../../test/stubDialog.js';
 import { ResponsiveDialog } from './ResponsiveDialog.js';
 
 /**
- * Criteria 13 and 14 turn on one distinction: every dialog is dismissible three ways, and the
- * persistence gate is dismissible none. That is the whole of what is worth asserting here — the
- * bottom-sheet-versus-modal split is pure CSS (see `styles.css`), which a jsdom test cannot see
- * and which the Storybook viewport toolbar shows honestly.
+ * Criteria 13 and 14 turn on one distinction: every dialog is dismissible by Escape and its close
+ * button (never by the scrim), and the persistence gate is dismissible none. That is the whole of
+ * what is worth asserting here — the bottom-sheet-versus-modal split is pure CSS (see
+ * `styles.css`), which a jsdom test cannot see and which the Storybook viewport toolbar shows
+ * honestly.
  */
 beforeAll(stubDialogElement);
 
@@ -15,7 +16,7 @@ describe('ResponsiveDialog', () => {
   const cancel = (element: Element) =>
     fireEvent(element, new Event('cancel', { bubbles: true, cancelable: true }));
 
-  it('opens as a modal and closes on Escape, the scrim and the close button', () => {
+  it('opens as a modal and closes on Escape and the close button', () => {
     const onClose = vi.fn();
     render(
       <ResponsiveDialog title="Classes" open onClose={onClose}>
@@ -26,13 +27,12 @@ describe('ResponsiveDialog', () => {
     expect((dialog as HTMLDialogElement).open).toBe(true);
 
     cancel(dialog);
-    fireEvent.click(dialog); // the scrim: a click whose target is the <dialog> itself
     fireEvent.click(screen.getByLabelText('Close'));
 
-    expect(onClose).toHaveBeenCalledTimes(3);
+    expect(onClose).toHaveBeenCalledTimes(2);
   });
 
-  it('does not close on a click inside the body', () => {
+  it('does not close on a click on the scrim or inside the body', () => {
     const onClose = vi.fn();
     render(
       <ResponsiveDialog title="Classes" open onClose={onClose}>
@@ -40,6 +40,7 @@ describe('ResponsiveDialog', () => {
       </ResponsiveDialog>,
     );
 
+    fireEvent.click(screen.getByRole('dialog', { hidden: true })); // the scrim
     fireEvent.click(screen.getByText('body'));
 
     expect(onClose).not.toHaveBeenCalled();

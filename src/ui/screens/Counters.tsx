@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { pasteLists } from '../components/pasteLists.js';
 import { CategorizedSection } from '../components/CategorizedSection.js';
+import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import { ItemRow } from '../components/ItemRow.js';
 import { NameField } from '../components/NameField.js';
 import { NumberField } from '../components/NumberField.js';
@@ -50,6 +52,7 @@ export function Counters({ data, actions, onClose }: Props) {
                   className="curinp"
                   value={counter.current}
                   onChange={(value) => actions.setCounterCurrent(counter.id, value)}
+                  stepper
                 />
                 <span className="maxlbl">/ {counter.total}</span>
               </span>
@@ -187,6 +190,7 @@ function NewCounterDialog({
         Note
       </label>
       <textarea
+        onPaste={pasteLists}
         id="new-counter-description"
         className="area"
         rows={3}
@@ -216,16 +220,15 @@ function EditCounterDialog({
       open
       onClose={onClose}
       footer={
-        <button
-          type="button"
-          className="del"
-          onClick={() => {
+        <ConfirmDelete
+          what={counter.name}
+          onConfirm={() => {
             actions.removeCounter(counter.id);
             onClose();
           }}
         >
           Delete
-        </button>
+        </ConfirmDelete>
       }
     >
       <span className="dlabel">Name</span>
@@ -263,6 +266,7 @@ function EditCounterDialog({
         Note
       </label>
       <textarea
+        onPaste={pasteLists}
         id="counter-description"
         className="area"
         rows={3}

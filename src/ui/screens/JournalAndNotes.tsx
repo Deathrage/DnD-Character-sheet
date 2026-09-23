@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { pasteLists } from '../components/pasteLists.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
+import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import type { JournalAndNotesActions, JournalAndNotesView } from '../types.js';
 
 interface Props {
@@ -23,10 +25,10 @@ export function JournalAndNotes({ data, actions, onClose }: Props) {
     <div className="bottom">
       <div className="sv">
         <div className="svhead">
-          <span className="t">Journal &amp; Notes</span>
-          <button type="button" className="close" onClick={onClose} aria-label="Back to sections">
-            {'×'}
+          <button type="button" className="back" onClick={onClose} aria-label="Back to sections">
+            {'‹'}
           </button>
+          <span className="t">Journal &amp; Notes</span>
         </div>
 
         <div className="sechead-row">
@@ -66,6 +68,7 @@ export function JournalAndNotes({ data, actions, onClose }: Props) {
           <span className="sechead static">Notes</span>
         </div>
         <textarea
+          onPaste={pasteLists}
           className="area"
           aria-label="Notes"
           rows={8}
@@ -82,20 +85,20 @@ export function JournalAndNotes({ data, actions, onClose }: Props) {
           onClose={() => setOpenDay(null)}
           footer={
             openDay === newest ? (
-              <button
-                type="button"
-                className="del"
-                onClick={() => {
+              <ConfirmDelete
+                what={`Day ${openDay + 1}`}
+                onConfirm={() => {
                   actions.deleteNewestDay();
                   setOpenDay(null);
                 }}
               >
                 Delete day
-              </button>
+              </ConfirmDelete>
             ) : undefined
           }
         >
           <textarea
+            onPaste={pasteLists}
             className="area"
             aria-label={`Day ${openDay + 1} entry`}
             rows={8}

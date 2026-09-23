@@ -2,6 +2,7 @@ import { Fragment, useState, type ReactNode } from 'react';
 import { AddByName } from './AddByName.js';
 import { NameField } from './NameField.js';
 import { ResponsiveDialog } from './ResponsiveDialog.js';
+import { ConfirmDelete } from './ConfirmDelete.js';
 import type { CategoryActions, CategorizedView, CategoryView } from '../types.js';
 
 interface Props<T> {
@@ -16,6 +17,8 @@ interface Props<T> {
   onAdd(categoryId: string | null): void;
   /** Rendered between the header and the first category — spell slots, for Counters. */
   children?: ReactNode;
+  /** A block's count badge. Defaults to the number of items. */
+  count?: (items: T[]) => string;
 }
 
 /**
@@ -34,11 +37,13 @@ export function CategorizedSection<T extends { id: string }>({
   renderRow,
   onAdd,
   children,
+  count = (items) => String(items.length),
 }: Props<T>) {
-  // Keyed by category id, plus the literal 'uncategorized'. Collapse is view state and is
-  // deliberately not persisted: which blocks you had folded is not part of the character.
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const toggle = (key: string) => setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
+  // Keyed by category id; categories start collapsed. Uncategorized is always open. Expansion is
+  // view state and is deliberately not persisted: which blocks you had open is not part of the
+  // character.
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const toggle = (key: string) => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
 
   const [dialog, setDialog] = useState<{ kind: 'edit'; id: string } | { kind: 'new' } | null>(null);
   const close = () => setDialog(null);
@@ -51,10 +56,10 @@ export function CategorizedSection<T extends { id: string }>({
     <div className="bottom">
       <div className="sv">
         <div className="svhead">
-          <span className="t">{title}</span>
-          <button type="button" className="close" onClick={onClose} aria-label="Back to sections">
-            {'×'}
+          <button type="button" className="back" onClick={onClose} aria-label="Back to sections">
+            {'‹'}
           </button>
+          <span className="t">{title}</span>
         </div>
 
         {children}
@@ -65,7 +70,8 @@ export function CategorizedSection<T extends { id: string }>({
             name={category.name}
             items={category.items}
             renderRow={renderRow}
-            collapsed={collapsed[category.id] === true}
+            count={count(category.items)}
+            collapsed={expanded[category.id] !== true}
             onToggle={() => toggle(category.id)}
             onAdd={() => onAdd(category.id)}
             onEditCategory={() => setDialog({ kind: 'edit', id: category.id })}
@@ -76,8 +82,8 @@ export function CategorizedSection<T extends { id: string }>({
           name="Uncategorized"
           items={data.uncategorized}
           renderRow={renderRow}
-          collapsed={collapsed.uncategorized === true}
-          onToggle={() => toggle('uncategorized')}
+          count={count(data.uncategorized)}
+          collapsed={false}
           onAdd={() => onAdd(null)}
         />
 
@@ -109,8 +115,10 @@ interface BlockProps<T> {
   name: string;
   items: T[];
   renderRow(item: T): ReactNode;
+  count: string;
   collapsed: boolean;
-  onToggle(): void;
+  /** Absent for Uncategorized, which is always open. */
+  onToggle?: () => void;
   onAdd(): void;
   /** Absent for Uncategorized, which is not a category and cannot be renamed or deleted. */
   onEditCategory?: () => void;
@@ -120,6 +128,7 @@ function Block<T extends { id: string }>({
   name,
   items,
   renderRow,
+  count,
   collapsed,
   onToggle,
   onAdd,
@@ -128,13 +137,20 @@ function Block<T extends { id: string }>({
   return (
     <>
       <div className="sechead-row">
-        <button type="button" className="sechead" onClick={onToggle} aria-expanded={!collapsed}>
-          <span className="caret" aria-hidden="true">
-            {collapsed ? '▸' : '▾'}
+        {onToggle ? (
+          <button type="button" className="sechead" onClick={onToggle} aria-expanded={!collapsed}>
+            <span className="caret" aria-hidden="true">
+              {collapsed ? '▸' : '▾'}
+            </span>
+            <span className="nmtxt">{name}</span>
+            <span className="ccount">{count}</span>
+          </button>
+        ) : (
+          <span className="sechead static">
+            <span className="nmtxt">{name}</span>
+            <span className="ccount">{count}</span>
           </span>
-          <span className="nmtxt">{name}</span>
-          {collapsed && <span className="ccount">{items.length}</span>}
-        </button>
+        )}
         <span className="sec-actions">
           {onEditCategory && (
             <button
@@ -183,16 +199,15 @@ function CategoryDialog<T>({
       open
       onClose={onClose}
       footer={
-        <button
-          type="button"
-          className="del"
-          onClick={() => {
+        <ConfirmDelete
+          what={`The category ${category.name}`}
+          onConfirm={() => {
             actions.removeCategory(category.id);
             onClose();
           }}
         >
           Delete category
-        </button>
+        </ConfirmDelete>
       }
     >
       <span className="dlabel">Category name</span>

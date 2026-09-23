@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { pasteLists } from '../components/pasteLists.js';
 import { CategorizedSection } from '../components/CategorizedSection.js';
 import { CheckRow } from '../components/CheckRow.js';
+import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import { ItemRow } from '../components/ItemRow.js';
 import { NameField } from '../components/NameField.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
@@ -35,6 +37,9 @@ export function SpellList({ data, actions, onClose }: Props) {
         actions={actions}
         onClose={onClose}
         onAdd={(categoryId) => setDialog({ kind: 'new', categoryId })}
+        count={(spells) =>
+          `${spells.filter((spell) => spell.prepared).length}/${spells.length} prepared`
+        }
         renderRow={(spell) => (
           <ItemRow
             name={spell.name}
@@ -158,6 +163,7 @@ function NewSpellDialog({
         Description
       </label>
       <textarea
+        onPaste={pasteLists}
         id="new-spell-description"
         className="area"
         rows={4}
@@ -196,16 +202,15 @@ function EditSpellDialog({
       open
       onClose={onClose}
       footer={
-        <button
-          type="button"
-          className="del"
-          onClick={() => {
+        <ConfirmDelete
+          what={spell.name}
+          onConfirm={() => {
             actions.removeSpell(spell.id);
             onClose();
           }}
         >
           Delete
-        </button>
+        </ConfirmDelete>
       }
     >
       <span className="dlabel">Name</span>
@@ -218,6 +223,7 @@ function EditSpellDialog({
         Description
       </label>
       <textarea
+        onPaste={pasteLists}
         id="spell-description"
         className="area"
         rows={4}

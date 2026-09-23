@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { pasteLists } from '../components/pasteLists.js';
+import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import { ItemRow } from '../components/ItemRow.js';
 import { NameField } from '../components/NameField.js';
 import { NumberField } from '../components/NumberField.js';
@@ -20,10 +22,10 @@ export function Inventory({ data, actions, onClose }: Props) {
     <div className="bottom">
       <div className="sv">
         <div className="svhead">
-          <span className="t">Inventory</span>
-          <button type="button" className="close" onClick={onClose} aria-label="Back to sections">
-            {'×'}
+          <button type="button" className="back" onClick={onClose} aria-label="Back to sections">
+            {'‹'}
           </button>
+          <span className="t">Inventory</span>
         </div>
 
         <div className="sechead-row">
@@ -134,6 +136,7 @@ function NewItemDialog({
         Description
       </label>
       <textarea
+        onPaste={pasteLists}
         id="new-item-description"
         className="area"
         rows={4}
@@ -159,16 +162,15 @@ function EditItemDialog({
       open
       onClose={onClose}
       footer={
-        <button
-          type="button"
-          className="del"
-          onClick={() => {
+        <ConfirmDelete
+          what={item.name}
+          onConfirm={() => {
             actions.removeItem(item.id);
             onClose();
           }}
         >
           Delete
-        </button>
+        </ConfirmDelete>
       }
     >
       <span className="dlabel">Name</span>
@@ -190,6 +192,7 @@ function EditItemDialog({
         Description
       </label>
       <textarea
+        onPaste={pasteLists}
         id="item-description"
         className="area"
         rows={4}

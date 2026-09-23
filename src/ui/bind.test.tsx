@@ -165,6 +165,31 @@ describe('toSheetData', () => {
     expect(Object.keys(data.abilitiesAndSkills.abilities)).toHaveLength(6);
     expect(Object.keys(data.abilitiesAndSkills.skills)).toHaveLength(18);
   });
+
+  it('orders spells by level within each bucket, cantrips first, leaving the document alone', () => {
+    const sheet = newSheet();
+    const combat = sheet.spellList.createCategory('Combat');
+    combat.add({ name: 'Fireball' }).setLevel(3);
+    combat.add({ name: 'Fire Bolt' }).setLevel('c');
+    combat.add({ name: 'Magic Missile' }).setLevel(1);
+    combat.add({ name: 'Ray of Frost' }).setLevel('c');
+    sheet.spellList.add({ name: 'Counterspell' }).setLevel(3);
+    sheet.spellList.add({ name: 'Light' }).setLevel('c');
+
+    const data = toSheetData(sheet).spellList;
+    // Ray of Frost after Fire Bolt: equal levels keep the order they were added in.
+    expect(data.categories[0]?.items.map((spell) => spell.name)).toEqual([
+      'Fire Bolt',
+      'Ray of Frost',
+      'Magic Missile',
+      'Fireball',
+    ]);
+    expect(data.uncategorized.map((spell) => spell.name)).toEqual(['Light', 'Counterspell']);
+    expect(sheet.toDocument().spellList.uncategorized.map((spell) => spell.name)).toEqual([
+      'Counterspell',
+      'Light',
+    ]);
+  });
 });
 
 describe('toSheetActions', () => {
@@ -230,7 +255,11 @@ describe('toSheetActions', () => {
     expect(doc.equipment.other[0]).toMatchObject({ name: 'Cloak', attuned: true });
     expect(doc.featsAndTraits.categories[0]?.items[0]).toMatchObject({ name: 'Sneak Attack' });
     expect(doc.spellList.uncategorized[0]).toMatchObject({ level: 3, prepared: true });
-    expect(doc.counters.uncategorized[0]).toMatchObject({ name: 'Inspiration', total: 1 });
+    expect(doc.counters.uncategorized[0]).toMatchObject({
+      name: 'Inspiration',
+      current: 1,
+      total: 1,
+    });
     expect(doc.counters.spellSlots['2']).toEqual({ current: 1, total: 2 });
     expect(doc.abilitiesAndSkills.speed).toBe(30);
     expect(doc.abilitiesAndSkills.abilities.dexterity).toMatchObject({

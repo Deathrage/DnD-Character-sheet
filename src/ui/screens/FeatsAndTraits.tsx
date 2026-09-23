@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { pasteLists } from '../components/pasteLists.js';
 import { CategorizedSection } from '../components/CategorizedSection.js';
+import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import { ItemRow } from '../components/ItemRow.js';
 import { NameField } from '../components/NameField.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
@@ -112,6 +114,7 @@ function NewFeatDialog({
         Description
       </label>
       <textarea
+        onPaste={pasteLists}
         id="new-feat-description"
         className="area"
         rows={4}
@@ -147,16 +150,15 @@ function EditFeatDialog({
       open
       onClose={onClose}
       footer={
-        <button
-          type="button"
-          className="del"
-          onClick={() => {
+        <ConfirmDelete
+          what={feat.name}
+          onConfirm={() => {
             actions.removeFeat(feat.id);
             onClose();
           }}
         >
           Delete
-        </button>
+        </ConfirmDelete>
       }
     >
       <span className="dlabel">Name</span>
@@ -169,6 +171,7 @@ function EditFeatDialog({
         Description
       </label>
       <textarea
+        onPaste={pasteLists}
         id="feat-description"
         className="area"
         rows={4}
