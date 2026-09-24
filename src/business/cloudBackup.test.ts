@@ -60,10 +60,13 @@ function fakeCloud(signedIn = true) {
     },
     listCharacters: async (): Promise<CloudCharacter[]> => {
       check();
-      return [...index].map(([characterId, versions]) => ({
-        characterId,
-        versions: [...versions.values()].sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt)),
-      }));
+      // An emptied index is hidden, as the real one hides it (spec §12).
+      return [...index]
+        .filter(([, versions]) => versions.size > 0)
+        .map(([characterId, versions]) => ({
+          characterId,
+          versions: [...versions.values()].sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt)),
+        }));
     },
     upload: async (characterId, version, payload) => {
       check();
@@ -480,9 +483,28 @@ describe('CloudBackup', () => {
 
     expect(await cloudBackup.deleteVersion(ID_A, uploadedAt)).toBeNull();
 
-    expect(cloud.index.has(ID_A)).toBe(false);
     expect(cloud.payloads.size).toBe(0);
     expect(cloudBackup.characters).toEqual([]);
+    // The emptied index stays behind, hidden from every later list.
+    expect(await cloudBackup.refresh()).toBeNull();
+    expect(cloudBackup.characters).toEqual([]);
+  });
+
+  it('deleting the last version this list knows of keeps one another device uploaded since', async () => {
+    const cloud = fakeCloud();
+    const { backup: here } = backup(cloud);
+    const { uploadedAt } = (await here.upload(ID_A)) as { uploadedAt: string };
+    const elsewhere = new CloudBackup(library, {
+      load: async () => cloud.repository,
+      session: memorySession(),
+      now: clock(Date.parse('2026-09-25T18:00:00.000Z')),
+    });
+    const other = (await elsewhere.upload(ID_A)) as { uploadedAt: string };
+
+    expect(await here.deleteVersion(ID_A, uploadedAt)).toBeNull();
+
+    expect([...(cloud.index.get(ID_A)?.keys() ?? [])]).toEqual([other.uploadedAt]);
+    expect(cloud.payloads.has(`${ID_A}/${other.uploadedAt}`)).toBe(true);
   });
 
   it('deleting one of several versions keeps the others', async () => {

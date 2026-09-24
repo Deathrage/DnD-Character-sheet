@@ -326,11 +326,9 @@ export class CloudBackup {
     return this.#run(async (repository) => {
       const character = this.#state.characters.find((c) => c.characterId === characterId);
       if (character === undefined) return;
-      // The last version takes the index with it: an empty index is a character with nothing to
-      // restore, and would cost a read on every list for ever.
-      if (character.versions.length === 1)
-        await repository.deleteCharacter(characterId, [uploadedAt]);
-      else await repository.deleteVersion(characterId, uploadedAt);
+      // Never the whole index, even for what this list thinks is the last version: another device
+      // may have uploaded one since. An emptied index is hidden by `listCharacters` (spec §12).
+      await repository.deleteVersion(characterId, uploadedAt);
       this.#state.characters = this.#state.characters
         .map((c) =>
           c.characterId === characterId

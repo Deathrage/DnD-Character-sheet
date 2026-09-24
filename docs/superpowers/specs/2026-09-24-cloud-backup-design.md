@@ -115,7 +115,9 @@ screen shows, including total usage (the sum of `bytes`).
 
 **Delete a version.** One `writeBatch`: delete `payloads/{uploadedAt}` and remove that key with
 `deleteField()`, addressed as `new FieldPath('versions', uploadedAt)` because the key contains
-dots. When it is the last version, the batch deletes the character document instead.
+dots. The same batch for the last version too: it leaves an index with an empty `versions` map,
+which the list hides (§12) and **Delete all versions** removes. Deleting the whole index from a
+list that thinks this is the last version would orphan a version another device uploaded since.
 
 **Delete a character.** Delete every payload named in its map, then the character document, in
 batches of at most 500. The index is deleted last: a batch that fails partway leaves the index
@@ -206,7 +208,7 @@ Colocated. Every test is proven to bite.
   - restore into an empty browser keeps the id
   - an existing id returns a conflict; Replace overwrites; Keep both copies
   - Replace is refused while the sheet is open
-  - deleting the last version removes the character
+  - deleting the last version hides the character, and keeps a version uploaded elsewhere since
   - a partially failed character delete can be retried
   - a newer-schema payload is reported, not stored
 - **Rules**: checked by hand against the Firestore emulator (another uid denied, own allowed).
@@ -238,6 +240,9 @@ Colocated. Every test is proven to bite.
   limit. Weekly uploads for ten years are 520. Upgrade path: move the entries into a subcollection.
 - **Each version stores its own portrait**, up to ~23 KB. Upgrade path: store each distinct
   portrait once, under a hash, with reference counting on delete.
+- **Delete all versions works from the list as last loaded.** A version uploaded from another
+  device since then is left stored but unlisted, until the next upload of that character re-lists
+  it. The player asked to delete everything, so this costs quota, not wanted data.
 
 ## 11. Out of scope
 
@@ -258,8 +263,9 @@ From the plan's "Deliberate deviations from the spec":
 2. **The rules check is done in the console's Rules Playground**, not the local emulator, which
    needs Java. It is the same check (own uid allowed, another uid denied) with no extra install.
 3. **An index document whose `versions` map is empty is hidden from the list.** This covers the
-   race where another device deletes a version at the same moment. `deleteVersion` on the last
-   version still deletes the whole character, as this spec says.
+   race where another device deletes a version at the same moment, and it is what the last
+   version's delete leaves behind: `deleteVersion` never deletes the index (§4), because a list
+   loaded before another device's upload would take that upload's entry with it.
 
 Decided during the build, not anticipated by the plan:
 

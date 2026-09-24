@@ -51,7 +51,7 @@ export interface CloudRepository {
   upload(characterId: string, version: CloudVersion, payload: Payload): Promise<void>;
   /** `null` when that version is no longer in the cloud. */
   getPayload(characterId: string, uploadedAt: string): Promise<Payload | null>;
-  /** One batch: the payload, and its key removed from the index. Not for the last version. */
+  /** One batch: the payload, and its key removed from the index. An emptied index stays. */
   deleteVersion(characterId: string, uploadedAt: string): Promise<void>;
   /** Every payload named, then the index last — so a failure partway can be retried. */
   deleteCharacter(characterId: string, uploadedAts: readonly string[]): Promise<void>;
