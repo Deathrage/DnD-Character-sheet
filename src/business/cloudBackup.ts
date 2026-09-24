@@ -278,23 +278,25 @@ export class CloudBackup {
       ?.versions.find((candidate) => candidate.uploadedAt === uploadedAt);
     if (version === undefined) return failed(describeCloudError(new CloudError('NOT_FOUND')));
 
-    const local = this.#library.entries.find((entry) => entry.id === characterId);
-    if (local !== undefined && choice === undefined) {
-      let stored;
-      try {
-        stored = await this.#library.repository.get(characterId);
-      } catch (caught) {
-        return failed(this.#describe(caught));
-      }
+    // Decided from storage, not from `entries`: a list that failed to load, or a character another
+    // tab stored since, would otherwise be overwritten with no dialog.
+    let stored;
+    try {
+      stored = await this.#library.repository.get(characterId);
+    } catch (caught) {
+      return failed(this.#describe(caught));
+    }
+    if (stored !== null && choice === undefined) {
+      const entry = this.#library.entries.find((candidate) => candidate.id === characterId);
       return {
         ok: false,
         kind: 'conflict',
-        name: local.name,
-        localUpdatedAt: stored?.ok ? stored.doc.updatedAt : null,
+        name: entry?.name ?? (stored.ok ? stored.doc.name : 'Unreadable character'),
+        localUpdatedAt: stored.ok ? stored.doc.updatedAt : null,
         cloudUpdatedAt: version.sheetUpdatedAt,
       };
     }
-    const keepId = local === undefined || choice === 'replace';
+    const keepId = stored === null || choice === 'replace';
     if (keepId && this.#library.isOpen(characterId)) {
       return failed("Close this character's sheet before replacing it.");
     }

@@ -389,6 +389,31 @@ describe('CloudBackup', () => {
     expect(library.entries[0]?.isDamaged).toBe(false);
   });
 
+  it('asks before overwriting a stored character that the list does not show', async () => {
+    // A load that failed, or another tab that stored it since: the list is empty, the store is not.
+    const unloaded = new CharacterLibraryBO({
+      repository,
+      storageGate: new StorageGate({ port: null }),
+      autosave: { debounceMs: 60_000, target: null },
+    });
+    const cloudBackup = new CloudBackup(unloaded, {
+      load: async () => fakeCloud().repository,
+      session: memorySession(),
+      now: clock(),
+    });
+    const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
+    await repository.save(docFor(ID_A, 'Edited in another tab'));
+    expect(unloaded.entries).toEqual([]);
+
+    expect(await cloudBackup.restore(ID_A, uploadedAt)).toMatchObject({
+      ok: false,
+      kind: 'conflict',
+      name: 'Edited in another tab',
+    });
+    const stored = await repository.get(ID_A);
+    expect(stored?.ok && stored.doc.name).toBe('Edited in another tab');
+  });
+
   it('answers a local read that fails during a restore, rather than rejecting', async () => {
     const { backup: cloudBackup, cloud } = backup();
     const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
