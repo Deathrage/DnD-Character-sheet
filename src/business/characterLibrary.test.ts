@@ -563,3 +563,70 @@ describe('CharacterLibraryBO portraits', () => {
     expect(library.entries[0]?.portrait).toBe(PORTRAIT);
   });
 });
+
+describe('CharacterLibraryBO restore', () => {
+  let repository: CharacterRepository;
+
+  beforeEach(async () => {
+    await wipe();
+    repository = createIndexedDbRepository({ openDb: createOpener() });
+  });
+  afterEach(wipe);
+
+  it('adds a character that is not here, under its own id', async () => {
+    const library = libraryOver(repository);
+    await library.load();
+
+    await library.restore(docFor(ID_A, 'Sable'), null);
+
+    expect(library.entries.map((entry) => [entry.id, entry.name])).toEqual([[ID_A, 'Sable']]);
+    expect((await repository.get(ID_A))?.ok).toBe(true);
+  });
+
+  it('replaces a damaged row in place, and it stops being damaged', async () => {
+    await putRaw(ID_A, { not: 'a character' });
+    const library = libraryOver(repository);
+    await library.load();
+    const entry = library.entries[0];
+    expect(entry?.isDamaged).toBe(true);
+
+    await library.restore(docFor(ID_A, 'Sable'), null);
+
+    // Same object: the raw-JSON screen keys an effect on entry identity.
+    expect(library.entries).toEqual([entry]);
+    expect(entry?.isDamaged).toBe(false);
+    expect(entry?.name).toBe('Sable');
+  });
+
+  it('stores the portrait with the document', async () => {
+    const portrait = `data:image/jpeg;base64,${btoa('jpeg')}`;
+    const library = libraryOver(repository);
+    await library.restore(docFor(ID_A, 'Sable'), portrait);
+    expect(await repository.getPortrait(ID_A)).toBe(portrait);
+    expect(library.entries[0]?.portrait).toBe(portrait);
+  });
+
+  it('knows which characters have an open sheet', async () => {
+    await repository.save(docFor(ID_A, 'Sable'));
+    const library = libraryOver(repository);
+    await library.load();
+    const opened = await library.entries[0]!.open();
+    if (!opened.ok) throw new Error(opened.message);
+
+    expect(library.isOpen(ID_A)).toBe(true);
+    expect(library.isOpen(ID_B)).toBe(false);
+    opened.sheet.dispose();
+    expect(library.isOpen(ID_A)).toBe(false);
+  });
+
+  it('refuses to replace a character whose sheet is open, which would autosave over it', async () => {
+    await repository.save(docFor(ID_A, 'Sable'));
+    const library = libraryOver(repository);
+    await library.load();
+    const opened = await library.entries[0]!.open();
+    if (!opened.ok) throw new Error(opened.message);
+
+    await expect(library.restore(docFor(ID_A, 'Restored'), null)).rejects.toThrow(/open/);
+    opened.sheet.dispose();
+  });
+});
