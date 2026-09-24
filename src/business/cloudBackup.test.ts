@@ -320,6 +320,25 @@ describe('CloudBackup', () => {
     expect(cloud.state.signIns).toBe(0);
   });
 
+  it('records why a resumed upload did not happen when the redirect came back signed out', async () => {
+    const cloud = fakeCloud(false); // no failure to report: nobody is signed in
+    const session = memorySession();
+    session.setItem('dnd-character-sheet.cloud-pending-upload', ID_A);
+    const cloudBackup = new CloudBackup(library, {
+      load: async () => cloud.repository,
+      session,
+      now: clock(),
+    });
+
+    await cloudBackup.resume();
+
+    expect(cloudBackup.lastUpload).toEqual({
+      characterId: ID_A,
+      result: { ok: false, message: 'Sign in with Google to use cloud backup.' },
+    });
+    expect(cloud.state.uploads).toBe(0);
+  });
+
   it('turns a quota failure into a sentence', async () => {
     const { backup: cloudBackup, cloud } = backup();
     await cloudBackup.refresh();

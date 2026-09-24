@@ -145,12 +145,14 @@ export class CloudBackup {
     if (pending === null) return;
     this.#write(PENDING_KEY, null);
     if ((await this.#signedInUser()) !== null) await this.upload(pending);
-    else if (this.#signInFailure !== null) {
-      // The redirect came back failed: tell the sheet why its upload did not happen.
-      this.#state.lastUpload = {
-        characterId: pending,
-        result: { ok: false, message: this.#takeSignInFailure() },
-      };
+    else {
+      // The redirect came back failed, or with nobody signed in: tell the sheet why its upload
+      // did not happen, rather than dropping it silently.
+      const message =
+        this.#signInFailure !== null
+          ? this.#takeSignInFailure()
+          : describeCloudError(new CloudError('SIGNED_OUT'));
+      this.#state.lastUpload = { characterId: pending, result: { ok: false, message } };
     }
   }
 
