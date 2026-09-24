@@ -15,7 +15,7 @@ One character is one JSON document. Local storage is the master copy. Remote sto
 - No rules automation of any kind. No derived modifiers, no saving throws computed from ability scores, no spell-slot tables by class and level.
 - No dice roller, no combat tracker, no character builder or level-up wizard.
 - No local revision history and no undo. Versioning exists only for remote upload and restore, later.
-- No multi-user editing, no sharing, no accounts.
+- No multi-user editing and no sharing. Accounts only for optional cloud backup (see `2026-09-24-cloud-backup-design.md`); the local app stays complete and free without one.
 
 ### Deliberate exception to "no computation"
 

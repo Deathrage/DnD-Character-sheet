@@ -36,6 +36,8 @@ export class CharacterLibraryBO {
   readonly #entries = observable.array<CharacterEntryBO>([], { deep: false });
   /** Every autosave currently attached, so `flush()` can await all of them. */
   readonly #autosaves = new Set<Autosave>();
+  /** Every sheet handed out and not yet disposed, so a restore can refuse to replace one. */
+  readonly #openSheets = new Set<CharacterSheetBO>();
 
   constructor(options: CharacterLibraryOptions = {}) {
     this.storageGate = options.storageGate ?? new StorageGate();
@@ -114,6 +116,7 @@ export class CharacterLibraryBO {
     });
     autosave.start();
     this.#autosaves.add(autosave);
+    this.#openSheets.add(sheet);
     sheet.onDispose(() => {
       autosave.stop();
       // A leak guard, not behaviour, and deliberately not covered by a test: `stop()` has already
@@ -121,6 +124,7 @@ export class CharacterLibraryBO {
       // whether or not it is still in this set. What the delete prevents is the set growing by one
       // for every character ever opened in a session.
       this.#autosaves.delete(autosave);
+      this.#openSheets.delete(sheet);
     });
   }
 
@@ -168,6 +172,29 @@ export class CharacterLibraryBO {
   async store(doc: CharacterDocument, portrait: string | null): Promise<void> {
     await this.#repository.save(doc, portrait);
     this.#entries.push(new CharacterEntryBO({ ok: true, summary: summarize(doc, portrait) }, this));
+  }
+
+  /** Internal, for `CloudBackup`: whether a sheet for this character is open right now. */
+  isOpen(id: string): boolean {
+    return [...this.#openSheets].some((sheet) => sheet.id === id);
+  }
+
+  /**
+   * Internal, for `CloudBackup`: stores a restored character under its own id. A row that is
+   * already there — healthy or damaged — is refreshed in place rather than replaced, for the
+   * same identity reason as `#refreshRow`; one that is not is added.
+   *
+   * Throws while that character's sheet is open: its autosave would write the old copy straight
+   * back over the restored one. `CloudBackup` checks first; this is the backstop.
+   */
+  async restore(doc: CharacterDocument, portrait: string | null): Promise<void> {
+    if (this.isOpen(doc.id)) {
+      throw new Error(`character ${doc.id} is open; close it before replacing it`);
+    }
+    const entry = this.#entries.find((candidate) => candidate.id === doc.id);
+    if (entry === undefined) return this.store(doc, portrait);
+    await this.#repository.save(doc, portrait);
+    entry.refresh({ ok: true, summary: summarize(doc, portrait) });
   }
 
   /** Internal, for `CharacterEntryBO.remove()`. */

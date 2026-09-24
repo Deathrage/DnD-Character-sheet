@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { CharacterLibraryBO } from './business/index.js';
+import { CharacterLibraryBO, CloudBackup } from './business/index.js';
 import { App } from './ui/App.js';
 import { UpdatePrompt } from './ui/UpdatePrompt.js';
 import './ui/styles.css';
@@ -16,6 +16,10 @@ if (root === null) {
 }
 
 const library = new CharacterLibraryBO();
+
+/** Loads nothing unless a sign-in redirect is returning with an upload to finish. */
+const cloud = new CloudBackup(library);
+void cloud.resume();
 
 /**
  * `import.meta.env.DEV` is replaced by Vite with a literal `false` in a production build, so this
@@ -33,6 +37,6 @@ createRoot(root).render(
   <StrictMode>
     {/* First, so the strip sits above the app and pushes it down (see `#root` in styles.css). */}
     <UpdatePrompt beforeReload={() => library.flush()} />
-    <App library={library} />
+    <App library={library} cloud={cloud} />
   </StrictMode>,
 );

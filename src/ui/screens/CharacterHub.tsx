@@ -67,6 +67,10 @@ interface Props {
   onOpenRawJson(): void;
   /** Which tiles are live. Defaults to all seven; a story stands sections down again. */
   wiredSections?: readonly SectionKey[];
+  /** Absent hides the button — the stories and any screen without a cloud. */
+  onUpload?(): void;
+  /** The last upload's line: "Uploaded 24 Sep, 18:03" or the reason it failed. */
+  uploadNotice?: string | null;
 }
 
 /**
@@ -86,6 +90,8 @@ export function CharacterHub({
   onExport,
   onOpenRawJson,
   wiredSections,
+  onUpload,
+  uploadNotice,
 }: Props) {
   const close = () => onSectionChange(null);
 
@@ -98,6 +104,8 @@ export function CharacterHub({
           onExport={onExport}
           onOpenRawJson={onOpenRawJson}
           {...(wiredSections ? { wired: wiredSections } : {})}
+          {...(onUpload ? { onUpload } : {})}
+          uploadNotice={uploadNotice ?? null}
         />
       ) : (
         <Section section={section} data={data} actions={actions} onClose={close} />

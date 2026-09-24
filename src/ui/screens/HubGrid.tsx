@@ -6,9 +6,20 @@ interface Props {
   onOpenRawJson(): void;
   /** Which tiles are live. The first slice wires one; the other six render inert. */
   wired?: readonly SectionKey[];
+  /** Absent hides the button — the stories and any screen without a cloud. */
+  onUpload?(): void;
+  /** The last upload's line: "Uploaded 24 Sep, 18:03" or the reason it failed. */
+  uploadNotice?: string | null;
 }
 
-export function HubGrid({ onOpen, onExport, onOpenRawJson, wired = WIRED_SECTIONS }: Props) {
+export function HubGrid({
+  onOpen,
+  onExport,
+  onOpenRawJson,
+  wired = WIRED_SECTIONS,
+  onUpload,
+  uploadNotice,
+}: Props) {
   return (
     <div className="bottom">
       <ul className="menu">
@@ -45,6 +56,12 @@ export function HubGrid({ onOpen, onExport, onOpenRawJson, wired = WIRED_SECTION
         <button type="button" className="newcat" onClick={onOpenRawJson}>
           Open raw JSON
         </button>
+        {onUpload !== undefined && (
+          <button type="button" className="newcat" onClick={onUpload}>
+            Upload to cloud
+          </button>
+        )}
+        {uploadNotice != null && <p className="hint">{uploadNotice}</p>}
       </div>
     </div>
   );

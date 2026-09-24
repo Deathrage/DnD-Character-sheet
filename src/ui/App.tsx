@@ -5,15 +5,25 @@ import {
   type CharacterEntryBO,
   type CharacterLibraryBO,
   type CharacterSheetBO,
+  type CloudBackup,
+  type RestoreChoice,
 } from '../business/index.js';
-import { useCharacterRows, useSheet, useStorageFailure, useStorageGate } from './bind.js';
+import {
+  useCharacterRows,
+  useCloud,
+  useSheet,
+  useStorageFailure,
+  useStorageGate,
+  useUploadNotice,
+} from './bind.js';
 import { useInstall } from './install.js';
 import { navigate, useRoute } from './route.js';
 import { CharacterHub } from './screens/CharacterHub.js';
 import { CharacterList } from './screens/CharacterList.js';
+import { CloudScreen, formatWhen } from './screens/CloudScreen.js';
 import { RawJsonEditor } from './screens/RawJsonEditor.js';
 import { StorageGateDialog } from './screens/StorageGateDialog.js';
-import type { SectionKey } from './types.js';
+import type { ConflictView, SectionKey } from './types.js';
 
 /**
  * The app shell: the one place that owns a `CharacterLibraryBO`, turns the route into a screen,
@@ -23,7 +33,7 @@ import type { SectionKey } from './types.js';
  * The library is a prop, not a module singleton, so a test builds its own and nothing leaks
  * between them.
  */
-export function App({ library }: { library: CharacterLibraryBO }) {
+export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: CloudBackup }) {
   const route = useRoute();
   const rows = useCharacterRows(library);
   const gate = useStorageGate(library.storageGate);
@@ -97,7 +107,9 @@ export function App({ library }: { library: CharacterLibraryBO }) {
         </div>
       )}
 
-      {route.name === 'raw' ? (
+      {route.name === 'cloud' ? (
+        <Cloud cloud={cloud} />
+      ) : route.name === 'raw' ? (
         <RawJson library={library} id={route.id} />
       ) : route.name === 'character' ? (
         /*
@@ -105,7 +117,13 @@ export function App({ library }: { library: CharacterLibraryBO }) {
          * the open sheet's lifetime a component's: it is opened on mount and disposed on unmount,
          * with no effect anywhere having to notice that the route moved and clear it.
          */
-        <Character key={route.id} library={library} id={route.id} section={route.section} />
+        <Character
+          key={route.id}
+          library={library}
+          cloud={cloud}
+          id={route.id}
+          section={route.section}
+        />
       ) : (
         <>
           <CharacterList
@@ -116,6 +134,7 @@ export function App({ library }: { library: CharacterLibraryBO }) {
             onOpenRawJson={(id) => navigate({ name: 'raw', id })}
             onCreate={createCharacter}
             onImport={() => filePicker.current?.click()}
+            onOpenCloud={() => navigate({ name: 'cloud' })}
             onClone={(id) => {
               const entry = library.entries.find((candidate) => candidate.id === id);
               void entry?.clone().then(setProblem);
@@ -219,10 +238,12 @@ type OpenState = { ok: true; sheet: CharacterSheetBO } | { ok: false; message: s
  */
 function Character({
   library,
+  cloud,
   id,
   section,
 }: {
   library: CharacterLibraryBO;
+  cloud: CloudBackup;
   id: string;
   section: SectionKey | null;
 }) {
@@ -263,16 +284,25 @@ function Character({
       </Notice>
     );
   }
-  return <Sheet sheet={state.sheet} section={section} />;
+  return <Sheet sheet={state.sheet} cloud={cloud} section={section} />;
 }
 
 /**
  * Split out because `useSheet` is a hook and therefore cannot be called only once a sheet happens
  * to have finished opening.
  */
-function Sheet({ sheet, section }: { sheet: CharacterSheetBO; section: SectionKey | null }) {
+function Sheet({
+  sheet,
+  cloud,
+  section,
+}: {
+  sheet: CharacterSheetBO;
+  cloud: CloudBackup;
+  section: SectionKey | null;
+}) {
   const { data, actions } = useSheet(sheet);
   const id = data.character.id;
+  const notice = useUploadNotice(cloud, id);
 
   return (
     <CharacterHub
@@ -283,6 +313,67 @@ function Sheet({ sheet, section }: { sheet: CharacterSheetBO; section: SectionKe
       onBack={() => navigate({ name: 'list' })}
       onExport={() => download(CharacterFile.of(sheet, new Date()))}
       onOpenRawJson={() => navigate({ name: 'raw', id })}
+      onUpload={() => void cloud.upload(id)}
+      uploadNotice={
+        notice === null
+          ? null
+          : notice.ok
+            ? `Uploaded ${formatWhen(notice.uploadedAt)}`
+            : notice.message
+      }
+    />
+  );
+}
+
+/**
+ * The cloud screen's shell: it refreshes on arrival, and owns the two pieces of transient state
+ * the business layer has no business holding — the last sentence, and the open Replace / Keep
+ * both question with the version it is about.
+ */
+function Cloud({ cloud }: { cloud: CloudBackup }) {
+  const view = useCloud(cloud);
+  const [message, setMessage] = useState<string | null>(null);
+  const [asking, setAsking] = useState<{
+    characterId: string;
+    uploadedAt: string;
+    conflict: ConflictView;
+  } | null>(null);
+
+  useEffect(() => {
+    void cloud.refresh().then(setMessage);
+  }, [cloud]);
+
+  const restore = async (characterId: string, uploadedAt: string, choice?: RestoreChoice) => {
+    const result = await cloud.restore(characterId, uploadedAt, choice);
+    if (result.ok) {
+      navigate({ name: 'list' });
+    } else if (result.kind === 'conflict') {
+      setAsking({ characterId, uploadedAt, conflict: result });
+    } else {
+      setMessage(result.message);
+    }
+  };
+
+  return (
+    <CloudScreen
+      view={view}
+      message={message}
+      conflict={asking?.conflict ?? null}
+      onBack={() => navigate({ name: 'list' })}
+      onSignIn={() => void cloud.signIn().then(setMessage)}
+      onSignOut={() => void cloud.signOut().then(setMessage)}
+      onRestore={(characterId, uploadedAt) => void restore(characterId, uploadedAt)}
+      onDeleteVersion={(characterId, uploadedAt) =>
+        void cloud.deleteVersion(characterId, uploadedAt).then(setMessage)
+      }
+      onDeleteCharacter={(characterId) => void cloud.deleteCharacter(characterId).then(setMessage)}
+      onResolveConflict={(choice) => {
+        const pending = asking;
+        setAsking(null);
+        if (choice !== null && pending !== null) {
+          void restore(pending.characterId, pending.uploadedAt, choice);
+        }
+      }}
     />
   );
 }

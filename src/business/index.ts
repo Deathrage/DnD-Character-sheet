@@ -56,3 +56,16 @@ export {
   type LoadError,
   type StorageFailure,
 } from './errors.js';
+
+// Optional cloud backup (docs/superpowers/specs/2026-09-24-cloud-backup-design.md). The
+// Firestore repository is absent for the same reason `Autosave` is: it is a `src/data/` type.
+export {
+  CloudBackup,
+  type CloudCharacter,
+  type CloudStatus,
+  type CloudUser,
+  type CloudVersion,
+  type RestoreChoice,
+  type RestoreResult,
+  type UploadResult,
+} from './cloudBackup.js';

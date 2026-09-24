@@ -53,6 +53,18 @@ const SCHEMA_VERSION_PATTERN = {
     'Import src/data/schema (its public barrel), not a version directory directly — version directories are internal (see src/data/schema/README.md).',
 };
 
+/**
+ * `firebase` is imported by `src/data/remote/` and nowhere else, so the SDK — and the network —
+ * cannot creep into the business layer or a component. Added to every other fileset's single
+ * `no-restricted-imports` call rather than as a separate entry: see the replace-not-merge trap
+ * documented on `boundary` above.
+ */
+const FIREBASE_PATTERN = {
+  group: ['firebase', 'firebase/*', '@firebase/*'],
+  message:
+    'Only src/data/remote may import firebase (see docs/superpowers/specs/2026-09-24-cloud-backup-design.md §2).',
+};
+
 export default tseslint.config(
   { ignores: ['dist', 'coverage', 'storybook-static', 'node_modules', '.superpowers', 'docs'] },
   js.configs.recommended,
@@ -70,20 +82,28 @@ export default tseslint.config(
   {
     files: ['scripts/**/*.mjs'],
     languageOptions: {
-      globals: { Buffer: 'readonly', console: 'readonly', process: 'readonly' },
+      globals: {
+        Buffer: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        process: 'readonly',
+        URL: 'readonly',
+      },
     },
   },
-  boundary('shared', ['data', 'business', 'ui']),
+  boundary('shared', ['data', 'business', 'ui'], { extra: [FIREBASE_PATTERN] }),
   boundary('data', ['business', 'ui'], {
-    ignores: ['src/data/schema/**/*.ts'],
-    extra: [SCHEMA_VERSION_PATTERN],
+    ignores: ['src/data/schema/**/*.ts', 'src/data/remote/**/*.ts'],
+    extra: [SCHEMA_VERSION_PATTERN, FIREBASE_PATTERN],
   }),
   // src/data/schema/ is the one place allowed to reach into a version directory, so it is
   // split out of the `data` boundary above instead of inheriting the schema-version pattern.
-  boundary('data/schema', ['business', 'ui']),
-  boundary('business', ['ui'], { extra: [SCHEMA_VERSION_PATTERN] }),
+  boundary('data/schema', ['business', 'ui'], { extra: [FIREBASE_PATTERN] }),
+  // src/data/remote/ is the one place allowed to import firebase — split out for the same reason.
+  boundary('data/remote', ['business', 'ui'], { extra: [SCHEMA_VERSION_PATTERN] }),
+  boundary('business', ['ui'], { extra: [SCHEMA_VERSION_PATTERN, FIREBASE_PATTERN] }),
   // `ui` may import `business` and `shared` only (spec §2) — reaching past the business layer
   // into `data` is a violation, so `data` must be listed here. An empty forbidden list would
   // leave this boundary restricting nothing at all.
-  boundary('ui', ['data'], { extra: [SCHEMA_VERSION_PATTERN] }),
+  boundary('ui', ['data'], { extra: [SCHEMA_VERSION_PATTERN, FIREBASE_PATTERN] }),
 );

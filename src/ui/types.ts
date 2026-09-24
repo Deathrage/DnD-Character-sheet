@@ -340,3 +340,41 @@ export type InstallView =
   | { kind: 'steps'; steps: string }
   | { kind: 'installed' }
   | { kind: 'unavailable' };
+
+// ---------------------------------------------------------------------------
+// Cloud backup
+// ---------------------------------------------------------------------------
+
+/** One upload of a character, as the cloud screen shows it. Times are ISO strings. */
+export interface CloudVersionView {
+  uploadedAt: string;
+  sheetUpdatedAt: string;
+  name: string;
+  level: number;
+  bytes: number;
+  /** Written by a newer app than this one: restoring it will be refused, so it says so. */
+  fromNewerApp: boolean;
+}
+
+export interface CloudCharacterView {
+  characterId: string;
+  /** The newest version's name and level. */
+  name: string;
+  level: number;
+  versions: CloudVersionView[];
+}
+
+export interface CloudView {
+  status: 'signedOut' | 'signingIn' | 'signedIn' | 'unavailable';
+  user: { name: string | null; email: string | null } | null;
+  characters: CloudCharacterView[];
+  totalBytes: number;
+  busy: boolean;
+}
+
+/** The Replace / Keep both question. `localUpdatedAt` is null when the local copy is damaged. */
+export interface ConflictView {
+  name: string;
+  localUpdatedAt: string | null;
+  cloudUpdatedAt: string;
+}
