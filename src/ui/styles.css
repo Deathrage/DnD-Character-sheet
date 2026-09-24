@@ -1379,6 +1379,35 @@ body {
   outline: 2px solid var(--ink);
   outline-offset: 6px;
 }
+/* ---------- cloud screen ---------- */
+/* `.sv` and `.llist` are reused from elsewhere (a section's content pad, the character list) per
+   the plan; both need a little more here than their original one use taught them. A version's
+   `<ul>` has no class of its own, so left unstyled it would show default list bullets. */
+.cloud .llist ul {
+  list-style: none;
+  margin: 4px 0 10px;
+  padding: 0;
+}
+/* One version, as a row: without this, `.sv`'s block padding leaves the label, Restore and
+   Delete to flow as plain inline content, wrapping into each other instead of lining up. */
+.cloud .sv {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 9px 2px;
+  border-top: 1px solid var(--fill);
+}
+.cloud .sv:first-child {
+  border-top: none;
+}
+.cloud .sv > span {
+  flex: 1 1 220px;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+
 /* Square here, not round: the dialog is where the whole crop is seen. */
 .portraitview {
   display: flex;

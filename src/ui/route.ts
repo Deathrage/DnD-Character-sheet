@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { SECTIONS, type SectionKey } from './types.js';
 
 /**
- * Spec §7's three screens as a hash route.
+ * Spec §7's four screens as a hash route.
  *
  * Hand-rolled rather than `react-router`, which is not installed and is not worth installing for
  * three routes and no data loading, no nested layouts and no code splitting. What spec §7 actually
@@ -20,7 +20,8 @@ import { SECTIONS, type SectionKey } from './types.js';
 export type Route =
   | { name: 'list' }
   | { name: 'character'; id: string; section: SectionKey | null }
-  | { name: 'raw'; id: string };
+  | { name: 'raw'; id: string }
+  | { name: 'cloud' };
 
 const SECTION_KEYS: readonly string[] = SECTIONS.map((section) => section.key);
 
@@ -36,6 +37,7 @@ export function parseRoute(hash: string): Route {
     .replace(/^#\/?/, '')
     .split('/')
     .filter((part) => part !== '');
+  if (parts[0] === 'cloud') return { name: 'cloud' };
   const id = parts[1];
   if (parts[0] !== 'c' || id === undefined) return { name: 'list' };
 
@@ -50,6 +52,7 @@ export function parseRoute(hash: string): Route {
 
 export function routeHash(route: Route): string {
   if (route.name === 'list') return '#/';
+  if (route.name === 'cloud') return '#/cloud';
   const id = encodeURIComponent(route.id);
   if (route.name === 'raw') return `#/c/${id}/raw`;
   return route.section === null ? `#/c/${id}` : `#/c/${id}/${route.section}`;

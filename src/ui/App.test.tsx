@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CharacterLibraryBO, StorageGate, type PersistencePort } from '../business/index.js';
+import {
+  CharacterLibraryBO,
+  CloudBackup,
+  StorageGate,
+  type PersistencePort,
+} from '../business/index.js';
 import { ID_A, docFor, putRaw, wipe } from '../test/fixtures.js';
 import { stubDialogElement } from '../test/stubDialog.js';
 import { App } from './App.js';
@@ -23,7 +28,11 @@ function renderApp(gatePort: PersistencePort = port()) {
     storageGate: new StorageGate({ port: gatePort }),
     autosave: { debounceMs: 0, target: null },
   });
-  return { library, ...render(<App library={library} />) };
+  const cloud = new CloudBackup(library, {
+    load: () => Promise.reject(new Error('no cloud in the shell tests')),
+    session: null,
+  });
+  return { library, ...render(<App library={library} cloud={cloud} />) };
 }
 
 beforeAll(stubDialogElement);

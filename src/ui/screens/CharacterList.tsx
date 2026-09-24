@@ -17,6 +17,8 @@ interface Props {
   install?: InstallView;
   /** Starts the browser's own prompt; only called when `install` is `prompt`. */
   onInstall?(): void;
+  /** Absent hides the button — the stories and any screen without a cloud. */
+  onOpenCloud?(): void;
 }
 
 export function CharacterList({
@@ -29,6 +31,7 @@ export function CharacterList({
   onImport,
   onClone,
   onDelete,
+  onOpenCloud,
 }: Props) {
   const [confirming, setConfirming] = useState<{
     action: 'clone' | 'delete';
@@ -49,6 +52,11 @@ export function CharacterList({
                 onClick={() => (install.kind === 'prompt' ? onInstall?.() : setShowingSteps(true))}
               >
                 Install
+              </button>
+            )}
+            {onOpenCloud !== undefined && (
+              <button type="button" className="txtbtn" onClick={onOpenCloud}>
+                Cloud
               </button>
             )}
             <button type="button" className="txtbtn" onClick={onImport}>

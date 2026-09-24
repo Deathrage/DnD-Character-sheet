@@ -50,3 +50,10 @@ describe('parseRoute', () => {
     expect(parseRoute(routeHash({ name: 'raw', id }))).toEqual({ name: 'raw', id });
   });
 });
+
+describe('the cloud route', () => {
+  it('reads and writes #/cloud', () => {
+    expect(parseRoute('#/cloud')).toEqual({ name: 'cloud' });
+    expect(routeHash({ name: 'cloud' })).toBe('#/cloud');
+  });
+});

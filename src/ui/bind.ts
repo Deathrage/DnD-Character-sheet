@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   type CharacterLibraryBO,
   type CharacterSheetBO,
+  type CloudBackup,
   type EquipmentItemBO,
   RuleViolation,
   type RuleCode,
@@ -36,6 +37,7 @@ import type {
   CategoryActions,
   CharacterRow,
   CharacterView,
+  CloudView,
   CoinKey,
   CountersActions,
   CountersView,
@@ -615,4 +617,56 @@ export function useStorageGate(gate: StorageGate): StorageGateView {
  */
 export function useStorageFailure(gate: StorageGate): StorageFailure | null {
   return useObserved(useCallback(() => gate.failure, [gate]));
+}
+
+// ---------------------------------------------------------------------------
+// Cloud backup
+// ---------------------------------------------------------------------------
+
+export function toCloudView(cloud: CloudBackup): CloudView {
+  return {
+    status: cloud.status,
+    user: cloud.user && { name: cloud.user.name, email: cloud.user.email },
+    characters: cloud.characters.flatMap(({ characterId, versions }) => {
+      const newest = versions[0];
+      if (newest === undefined) return [];
+      return [
+        {
+          characterId,
+          name: newest.name,
+          level: newest.totalLevel,
+          versions: versions.map((version) => ({
+            uploadedAt: version.uploadedAt,
+            sheetUpdatedAt: version.sheetUpdatedAt,
+            name: version.name,
+            level: version.totalLevel,
+            bytes: version.bytes,
+            fromNewerApp: version.schemaVersion > cloud.schemaVersion,
+          })),
+        },
+      ];
+    }),
+    totalBytes: cloud.totalBytes,
+    busy: cloud.busy,
+  };
+}
+
+export function useCloud(cloud: CloudBackup): CloudView {
+  return useObserved(useCallback(() => toCloudView(cloud), [cloud]));
+}
+
+/**
+ * The sheet's line under its Upload button: the outcome of the last upload *of this character*,
+ * including one resumed after a sign-in redirect. The time is formatted by the screen.
+ */
+export function useUploadNotice(
+  cloud: CloudBackup,
+  characterId: string,
+): { ok: true; uploadedAt: string } | { ok: false; message: string } | null {
+  return useObserved(
+    useCallback(() => {
+      const last = cloud.lastUpload;
+      return last !== null && last.characterId === characterId ? last.result : null;
+    }, [cloud, characterId]),
+  );
 }
