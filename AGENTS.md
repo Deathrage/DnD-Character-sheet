@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 638 tests across 44 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
+- 697 tests across 48 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -145,6 +145,34 @@ back on the next load (criterion 14).
     the list screen wanted, and `entry.repair(text)` — which the spec never specified — is how the
     raw-JSON editor commits a fix. It writes under the entry's own id, so a repair cannot clone the
     character or overwrite a different one.
+- **Cloud backup** (2026-09-24): Google sign-in, dated versions in Firestore — upload, list,
+  restore, delete. `docs/superpowers/specs/2026-09-24-cloud-backup-design.md` is the design; §12
+  there records what was decided during the build rather than up front.
+  - **`src/data/remote/` is the only importer of `firebase`** (lint-enforced). Everything above it
+    speaks `CloudRepository`, so `CloudBackup` and its tests never see the SDK.
+  - **The service worker's precache denylists `/^\/__\//`.** `/__/auth/handler` is Firebase
+    Hosting's reserved path for the redirect sign-in, and it must reach the network, never the
+    cached app shell.
+  - **Sign-in is a popup in dev, a redirect in production** (`import.meta.env.DEV`). A popup is
+    fine on localhost; the spec picked redirect for the deployed app because popups are unreliable
+    in an installed PWA and on iOS.
+  - **The Firebase chunk is dynamic** (`import()`, never on launch): `firestoreRepository-*.js` is
+    199.33 kB (59.50 kB gzip), split out of a main bundle of 441.22 kB (127.15 kB gzip) — from
+    `npm run build`; re-run it if these drift.
+  - **Left to the user, one-off** — none of this is done yet:
+    - In the Firebase console: create the Firestore database (production mode, location
+      permanent); Authentication → Sign-in method → enable Google; Authentication → Settings →
+      Authorized domains → confirm the `web.app` origin and `localhost`; Project settings → Your
+      apps → add a Web app if there is none; IAM → grant the GitHub deploy service account
+      **Firebase Rules Admin**.
+    - The first rules deploy, by hand:
+      `npx firebase-tools deploy --only firestore:rules --project dnd-character-sheet-64a24`.
+    - The Rules Playground check: a `get` of `/users/UID_A/characters/x` as `UID_A` is Allowed, the
+      same path as `UID_B` is Denied.
+    - The live round-trip on `dnd-character-sheet-64a24.web.app`: sign in, upload, restore,
+      delete, sign out.
+    - **Warning:** CI's rules-deploy step (`deploy.yml`) fails on the first push to `main` until
+      Firestore exists and the deploy account holds Firebase Rules Admin — both above.
 
 What is built: the versioned schema, the migration loop and its error taxonomy, export/import, the
 IndexedDB repository, the whole business layer, the presentational components, and `src/ui/bind.ts`
@@ -320,6 +348,7 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
                        WeakMap, never on the class, so `ui` cannot reach it
   autosave.ts          Autosave — reaction, debounce, stamp updatedAt on the copy, save
   storageGate.ts       StorageGate — the persistence gate and the last storage failure
+  cloudBackup.ts       CloudBackup — a sibling of StorageGate; Google sign-in and dated versions
   types.ts, nodeBO.ts, namedItem.ts, observableList.ts, mobxConfig.ts, guards.ts, createId.ts
                        internal only; never re-exported from index.ts
 src/ui/                components are presentational: data in, callbacks out, no MobX
@@ -341,6 +370,8 @@ src/data/migration/    versionOf, parseCharacter, the LoadError taxonomy
 src/data/serialization/ export and import (three-outcome ParseTextResult)
 src/data/repository/   the IndexedDB repository (characters + portraits stores), ListEntry, summarize,
                        portrait.ts — the portrait rule
+src/data/remote/       codec.ts, cloudError.ts, config.ts, firestoreRepository.ts — the only
+                       importer of `firebase` (lint-enforced)
 src/data/characterLifecycle.test.ts   end-to-end across all four modules
 src/test/              fake-indexeddb setup
 src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, wipe, createOpener, putRaw — shared so the

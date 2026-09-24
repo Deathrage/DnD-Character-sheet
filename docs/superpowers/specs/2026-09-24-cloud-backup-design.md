@@ -245,3 +245,26 @@ Colocated. Every test is proven to bite.
 - The subscription and any allow-list.
 - Sharing characters.
 - Deduplicating portraits.
+
+## 12. Deviations found while building
+
+From the plan's "Deliberate deviations from the spec":
+
+1. **The Firebase chunk is precached by the service worker.** `vite.config.ts` precaches
+   `**/*.js`, so the lazily imported Firebase chunk is downloaded in the background when the app
+   is installed. What this spec's promise still guarantees is that Firebase is never *executed* on
+   launch. Keeping the chunk out of the precache would need rolldown chunk naming for no
+   player-visible gain, since cloud features need the network anyway.
+2. **The rules check is done in the console's Rules Playground**, not the local emulator, which
+   needs Java. It is the same check (own uid allowed, another uid denied) with no extra install.
+3. **An index document whose `versions` map is empty is hidden from the list.** This covers the
+   race where another device deletes a version at the same moment. `deleteVersion` on the last
+   version still deletes the whole character, as this spec says.
+
+Decided during the build, not anticipated by the plan:
+
+4. **A failed redirect sign-in is surfaced.** `currentUser()` rejects once with it, and the player
+   sees its sentence — it is no longer swallowed.
+5. **`auth/redirect-cancelled-by-user` maps to `CANCELLED`.**
+6. **`refresh()` waits for a running `resume()`,** so a resumed upload is not refused as busy.
+7. **`restore`'s local read is guarded, so it never rejects.**
