@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { AddByName } from '../components/AddByName.js';
 import { NameField } from '../components/NameField.js';
 import { NumberField } from '../components/NumberField.js';
+import { Portrait } from '../components/Portrait.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import type { CharacterView, VitalsActions } from '../types.js';
@@ -18,34 +19,47 @@ interface Props {
  * that would crowd a header that has to stay visible above every section.
  */
 export function VitalsHeader({ character, actions, onBack }: Props) {
-  const [dialog, setDialog] = useState<'classes' | 'hitDice' | null>(null);
+  const [dialog, setDialog] = useState<'classes' | 'hitDice' | 'portrait' | null>(null);
 
   return (
     <div className="vitals">
-      <div className="vtop">
+      <div className="vident">
         <button type="button" className="back" onClick={onBack} aria-label="Back to characters">
           {'‹'}
         </button>
-        <NameField
-          label="Character name"
-          className="vname"
-          value={character.name}
-          onCommit={actions.renameCharacter}
-        />
-        {/* Derived on the facade, never stored — see spec §1's deliberate exception. */}
-        <span className="lvpill">Lvl {character.level}</span>
-      </div>
+        {/* The character's token: the face beside the name, and the door to a bigger view. */}
+        <button
+          type="button"
+          className="token"
+          aria-label={character.portrait === null ? 'Add portrait' : 'View portrait'}
+          onClick={() => setDialog('portrait')}
+        >
+          <Portrait src={character.portrait} name={character.name} />
+        </button>
+        <div className="vidmain">
+          <div className="vtop">
+            <NameField
+              label="Character name"
+              className="vname"
+              value={character.name}
+              onCommit={actions.renameCharacter}
+            />
+            {/* Derived on the facade, never stored — see spec §1's deliberate exception. */}
+            <span className="lvpill">Lvl {character.level}</span>
+          </div>
 
-      <button type="button" className="classbtn" onClick={() => setDialog('classes')}>
-        {character.classes.length === 0 ? (
-          <span className="clsum placeholder">Add class{'…'}</span>
-        ) : (
-          <span className="clsum">
-            {character.classes.map((entry) => `${entry.name} ${entry.level}`).join(' · ')}
-          </span>
-        )}
-        <span className="chev">{'›'}</span>
-      </button>
+          <button type="button" className="classbtn" onClick={() => setDialog('classes')}>
+            {character.classes.length === 0 ? (
+              <span className="clsum placeholder">Add class{'…'}</span>
+            ) : (
+              <span className="clsum">
+                {character.classes.map((entry) => `${entry.name} ${entry.level}`).join(' · ')}
+              </span>
+            )}
+            <span className="chev">{'›'}</span>
+          </button>
+        </div>
+      </div>
 
       <div className="tiles">
         <div className="tile hp">
@@ -107,7 +121,86 @@ export function VitalsHeader({ character, actions, onBack }: Props) {
         character={character}
         actions={actions}
       />
+      <PortraitDialog
+        open={dialog === 'portrait'}
+        onClose={() => setDialog(null)}
+        character={character}
+        actions={actions}
+      />
     </div>
+  );
+}
+
+function PortraitDialog({ open, onClose, character, actions }: DialogProps) {
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const picker = useRef<HTMLInputElement>(null);
+  const hasPortrait = character.portrait !== null;
+
+  return (
+    <ResponsiveDialog
+      title="Portrait"
+      open={open}
+      onClose={() => {
+        setError(null);
+        onClose();
+      }}
+      footer={
+        <>
+          {hasPortrait && (
+            <ConfirmDelete
+              className="secondary"
+              what="The portrait"
+              onConfirm={() => {
+                setError(null);
+                actions.removePortrait();
+              }}
+            >
+              Remove
+            </ConfirmDelete>
+          )}
+          <button
+            type="button"
+            className="primary"
+            disabled={busy}
+            onClick={() => picker.current?.click()}
+          >
+            {hasPortrait ? 'Change image' : 'Choose image'}
+          </button>
+        </>
+      }
+    >
+      <div className="portraitview">
+        <Portrait src={character.portrait} name={character.name} />
+      </div>
+      {!hasPortrait && (
+        <div className="hint">
+          Pick a picture of {character.name}. It is stored with the character.
+        </div>
+      )}
+      {error !== null && (
+        <div className="fieldError" role="alert">
+          {error}
+        </div>
+      )}
+      <input
+        ref={picker}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(event) => {
+          const picked = event.currentTarget.files?.[0];
+          // Cleared first, so picking the same file again still fires `change`.
+          event.currentTarget.value = '';
+          if (picked === undefined) return;
+          setBusy(true);
+          void actions.setPortrait(picked).then((message) => {
+            setError(message);
+            setBusy(false);
+          });
+        }}
+      />
+    </ResponsiveDialog>
   );
 }
 

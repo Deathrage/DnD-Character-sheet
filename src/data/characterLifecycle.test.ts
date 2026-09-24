@@ -58,6 +58,7 @@ describe('the character lifecycle, end to end across the data layer', () => {
           { name: 'Wizard', level: 2 },
         ],
         hitPoints: { current: 38, total: 45, temporary: 5 },
+        portrait: null,
       });
     }
 

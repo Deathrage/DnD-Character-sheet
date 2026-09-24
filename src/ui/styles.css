@@ -1316,3 +1316,79 @@ body {
 .row2 .col .dlabel.mt12 {
   margin-top: 0;
 }
+
+/* ---------- portrait ---------- */
+.portrait {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: 0 0 auto;
+}
+.portrait.empty {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 800;
+  font-size: 18px;
+}
+/* Floated so the card's stacked lines keep flowing beside it; flow-root contains the float. */
+.ccard {
+  display: flow-root;
+}
+.ccard .portrait {
+  float: left;
+  margin-right: 12px;
+}
+/* Hub header: the token spans the name row and the classes row beside it. */
+.vident {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.vident .back {
+  align-self: flex-start;
+}
+.vidmain {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.vidmain .classbtn {
+  margin: 6px 0 0;
+}
+/* A tabletop token: the portrait inside a paper gap and an accent ring. */
+.token {
+  border: 0;
+  padding: 0;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.token .portrait {
+  width: 56px;
+  height: 56px;
+  font-size: 22px;
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 4px var(--accent);
+}
+.token:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 6px;
+}
+/* Square here, not round: the dialog is where the whole crop is seen. */
+.portraitview {
+  display: flex;
+  justify-content: center;
+  margin: 4px 0 12px;
+}
+.portraitview .portrait {
+  width: min(100%, 288px);
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 18px;
+  font-size: 96px;
+}

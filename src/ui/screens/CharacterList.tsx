@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Portrait } from '../components/Portrait.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import type { CharacterRow, ClassSummaryView, HitPointsView, InstallView } from '../types.js';
 
@@ -64,6 +65,7 @@ export function CharacterList({
           <li key={row.id}>
             {row.ok ? (
               <button type="button" className="ccard" onClick={() => onOpen(row.id)}>
+                <Portrait src={row.portrait} name={row.name} />
                 <span className="cn">{row.name}</span>
                 <span className="cc">
                   {summariseClasses(row.classes)} {'·'} Level {row.level}

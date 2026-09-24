@@ -56,6 +56,8 @@ export interface CharacterView {
   hitPoints: HitPointsView;
   hitDices: HitDieView[];
   armorClass: number;
+  /** A data URL, or `null` when none has been picked. */
+  portrait: string | null;
 }
 
 export interface VitalsActions {
@@ -64,6 +66,9 @@ export interface VitalsActions {
   setTotalHitPoints(value: number): void;
   setTemporaryHitPoints(value: number): void;
   setArmorClass(value: number): void;
+  /** Compresses the picked image and stores it; the message when it could not be used. */
+  setPortrait(file: Blob): Promise<NameResult>;
+  removePortrait(): void;
   addClass(name: string): NameResult;
   renameClass(id: string, name: string): NameResult;
   setClassLevel(id: string, level: number): void;
@@ -91,6 +96,7 @@ export type CharacterRow =
       level: number;
       classes: ClassSummaryView[];
       hitPoints: HitPointsView;
+      portrait: string | null;
     }
   /**
    * A document that failed to load still appears, flagged (criterion 15). `message` is

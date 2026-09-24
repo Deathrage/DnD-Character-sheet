@@ -1,0 +1,884 @@
+{
+  "sheet": {
+    "schemaVersion": 1,
+    "id": "e4c315d2-310f-454b-82c5-ad649abaa300",
+    "name": "Zahir ibn Talaar",
+    "updatedAt": "2026-09-23T14:41:52.837Z",
+    "classes": [
+      {
+        "id": "e4fa15e2-6b59-4f27-b786-d94d0973cab3",
+        "name": "Paladin Glory",
+        "level": 3
+      },
+      {
+        "id": "20a172c7-8cda-4904-89b4-29ccac0ebd39",
+        "name": "Sorcerer Divine soul",
+        "level": 2
+      }
+    ],
+    "hitPoints": {
+      "current": 49,
+      "total": 49,
+      "temporary": 0
+    },
+    "hitDices": {
+      "6": {
+        "current": 2,
+        "total": 2
+      },
+      "10": {
+        "current": 3,
+        "total": 3
+      }
+    },
+    "armorClass": 17,
+    "journalAndNotes": {
+      "journal": [
+        "Přepadl naší loď zvláštní voják s lebkou na hlavě a rolničkami u bot. Měnil se v orla.\nVšichni jsou mrtví. Zachránili nás místní z vody.\nPrý ten kdo nás napadl je mocný kultista.\nPrý jsou další Ashaadimové v domě snění.\nMístní nám dali útočiště. Znají říši Zyrn aspoň lehce. Velitel stráže neví o žádné výpravě ze Zyrnu.Posílá nás Haliar Amresk modré křídlo do hostince u suchozemce.\n\nV hostinci nás hostinská upozornila ať jsme diskrétní ohledně informací. Potkali jsme další PC. Daryana z lovců Baracud nám říká o cirkusu Sangre. Prý je nejde jednoduše zabít protože spolupracují s jinou organizací Opporos.\n\nPrý je tu hobgoblin Lucas Beldren, má nám pomoci najít další gobliny. Prý se rád schovává. Daryana nám ho za odměnu pomůže najít.\n\nU doku jsme nasli ukřižovaného může, zdá se že cirkus.\n\nBezdomovec nám za 2 goldy řekl o tom že tri slechtici se scházejí v noci v parku, berou tam kluky z doku, a platí jim za to že je mohou být. Schovali do dutiny stromů.\n\nŽena v Domě snů říká že vi o Lucasovi Beldrenovi, dále že Julian Lostovski obchoduje s kořením.\n\nPřes den se mi zdálo o bráně do Morfelisu. V noci sem se do ní dostal a zdá se že jsem tu našel svůj realm. Potkal sem se zde někoho kdo vypadal jako Saar Ahl'Laim. Porazil sen zde toho kdo nás napadl na lodi. Znám jeho obličej.",
+        "Zachráněný elf Elarond nám dal magický pásek a kápi dýchání pod dovou.\n\nDaryana říká že v ruinách Tarandoku se nachází uctívači Saar Bara Dush, mohou zde být artefakty.\n\nDaryana slíbila schůzku s Lucasem Beldrenem tento večer. \n\nMistr trpaslík má nějaká vodítka o cirkusu.\n\nU obchodníka s kořením sloužícího Julianovi Lostovskemu sem si koupil sumac, chilli úrovně 10, sadu na tuareg a koníčků. Obchodník říká že sem směřující hobgoblini hledající klíč k manifoldu možnosti (prý je to ten artefakt). Prý v okoli Bradvi by mohla být část klíče. Obchodník neví jestli to je věc nebo heslo. Obchodník říká že Lucas Bernald je vyhnanec a prý není zlý. Prý Lucas hledá nějaké koření co zlepší divinacni schopnosti ale vykoupil jej alchymista z modrého výtažku. Prý se v Opporosu angažují hobgoblini.Dal mi kapesník jako vzpomínku na domov.\n\nAlchymista tvrdí že to koření je poutníkovi zlato. Snupnuti vede na správnou cestu. Alchymista mi dal část toho koření.\n\nProhledávali jsme loď v doku. Našli jsme tam divný magický stroj na zvláštní cervenou hmotu která byla schovaná za iluzi venku před lodí. Stroj jsme zničili. Dále na té lodi byli zbraně. Gerart zajistil že to modré šupiny odhalí.\n\nNa lodi jsme nasli neviditelnou knihu o strojích tvořících páry a využívající krve. Podle Elaronda ten stroj co jsme našli donutí ty prokleté krví besnit.\n\nLucas Beldren si myslí že klíč k manifoldu možnosti je fyzicky předmět. Lucas Beldren si myslí že hobgoblinovr ze Zyrnu jsou U Zlomeného vesla.\n\n\nV modrém výtažku (alchymista) jsme našli laboratoř. Ten starý alchymista byl jeden z cirkus sangre klaunů. Zabili jsme ho ale použil nějaký halucinogen. Měl sem tam vizi toho cirkusaka co prepadl naší loď, řekl mi o místě o lese kde nelétají vili, kde kořeny stromů piji slzy, kde děti přírody nasli pravdu a teček jim z pusy krev, tam získal svoje červená křídla.\n\nNašli jsme tu dopis že rytíř Vodní had bude další oběť.\n\nJdeme do domu snění. Sli jsme do podvědomí našeho druida. Umřel v nějaké jeskyni a oživil ho nějaký kostlivce. Prý je to největší Norkejn co kdy žil a podzemí ovládají draci co sem byli vykázání. Prý se druid ma spojit s tim kdo má stejný dar jako on z nasi skupiny a odhalit dušezář.",
+        "Dojeli jsme do Majsku. Potkalo jsme tu stařešinu Dogana Ozemgula. Od smrti vzácného stromu tu chřadne příroda, říkají mu vílí srdce. Poznal cirkusaka rudého orla a prý jeho syn věštil že prijdeme MY jako záchrana, resp trpaslík a temný elf. Rudý orel se jmenuje Veltrien.\n\nŠli jsme s jeho synem vyčistit určité jezero podle věštby jeho syna. Osvobodili jsme tady jakousi vílu. Dala nám korunu co umí revify. Je to nejak spojeno s dušezáří. \n\nNašli jsme v Majsku plakát cirkusu v Elsku. Vypadá to že to je ze stejné lodě jako ta kterou jsme viděli v Bradve.\n\nV temném lese jsme našli mrtvoly reprezentující nás. Nás druid se zdá nedůvěryhodný, lhář. Vypadá tu že mu nechávají vzkazy. Zradí nás?\n\nDorazili jsme do mrtvé vesnice. Vyřešili jsme Místní záhadu. Teď tu spíme. V noci nas tu viděl nějaký druid a slyšeli jsme divné zvuky.",
+        "Zdálo se mi o hrádku v lese, jsou tu ruiny soch apod. Před ním stoji gigantický jelen v brnění salajici zelenou magií.\n\nNašli jsme tu ruiny se symbolem saar bara dush. Brolan za iluzorní stěnou našel kouli umožnující komunikaci na dálku. Z toho co vypráví to vypadá jako by Saar BaraDush žil za nějakou bránou. Prý je tam manifold možností. SAAR BARADUSH ŽIJE! Skrze kouli komunikuje jen s Brolanem. Zbytek školy není až tak zajímavý ale našel sem tu starý meč a nějaká kouzla. Také jsme tu našli teleportacni kruh a tekutinu (cestovní zlato) pro jeho aktivaci. \n\nNašli jsme rituální kruh,, zabili jsme tu druidy a osvobodili druida, kterého chtěli obětovat.\n\nŠli jsme s ním do skrýše. V noci sem měl sen o posledním kruhu kde byl i jejich vůdce který je upozorňuje na nás. Všechny je zabil a objevilo se tam místní monstrum.",
+        "Porazili jsme bestii Faerendenu. V podzemí jsme našli zvláštní zrcadlo, jakýsi artefakt ke komunikaci.\n\nStarý strom nám začal rozdávat dary. Pak jsme potkali Baltazara učně Baltazara a dal mi rukavice.\n\nOdjeli jsme do Elsku. Potkali jsem tu Kariana Gilderweina, středního syna lorda Gilderweina. Varovali jsme tu Vodního hada. Vodní had si myslí že mezi modrými šupinami je zrádce. Zároveň se tu nějací pobudové vydávali za mnichy a odhalili je. Je tu nějaká ruina temného krále o kterou se zajímají.\n\nPrý je cirkus sangr jedna ze dvou utkáních vraždících organizací. \n\nPrý ma klíč k manifoldu možností 7 dílů. Prý jako 7 hříchů a lord grindewein má prý ten o hříchu lakomství.\n\nUkazuje mi Karian Grindelwein symbol co sem videl ve morfelisu na hlavě Viltriena, krvácení orla.\n\nPrý by další část klíče mohla mít železná paní.\n\nČást klíče z Kaskinu je \"krystal\" \n\nŠli jsme do cirkusu. Vodní has zůstal v mansionu. U principála cirkusu jsme vyhráli otázku, říká že je tu nová skupina akrobatů která neni spolehlivá a toulá se ve městě, též to vypadá že nekdo otravil zvířata v cirkuse.\n\nV back stage jsem našel krvaka co tvrdí ze ho noví aktobati šikanují, jsou to zvlástni hobgoblini, prý je vede Bortar, prý ma to tetování půl měsíce.\n\nVyhráli jsme mimika.\n\nVe stánku věštce Luciuse jsem dostal vizi svého bratra Išmaela, jména Ran'za, nějaké ženy a mesta Tejgor, Emeraldu džungle a někoho kdo mi říkal že jdu příliš brzy.\n\nV mezičase napadli domov lorda Fryndona. Dex možná umře. Nakonec jsme porazili cirkusaky ale hrobník utekl.\n\nDovedli jsme Karian Gilderweina aby odjel na lodi nebezpečí.\n\nNašli jsme teleportacni kruh, nejspíše míře to ruin Tarandoku. Půjdeme odpočívat a jedeme tam.\n\nJeště jsem byl v cirkuse při zátahu. Získal sem z toho klíče zvláštní truhlu a nasytil toho krvaka.\n\nZdálo se mi o Klorině. V jejím kostele jsou mniši děti noci otevírající krabice se zbraněmi a mají i nějaké oleje na zbraně. Balthazar učeň Balthazara je zabíjí. Je tu i nějaká hobgoblin s maskou co se bojí atd (ten z prvního boje s těma vizema). Balthazar jej zabil též. Ten hobgoblin měl u sebe malý zlatý klíč. Věci tohoto hobgoblina jsou tam zahrabany.",
+        "V ruinách jsme nasli mnoho mrtvol, prý je zabilo letajici oko. Zjistili jsme co to je a prý tu stále létá. Také jsme tu našli jakýsi magický krystal a teleportacni kruh. Hrobník tu byl a možná tu je.\n\nZabili jsme tu beholdera u toho krystalu, je to hrobník. Zabili jsme jej ale Dex umřel.\n\nNašli jsme tu hrobky s časovaným probuzením nějakých správců hradu. Architekt byl jeden ze 7 krále. Prý to tu vyrobil jako zdroj energie. Zabili jsme tu správce.\n\nNasli jsme humanoidniho automatona a vstoupili do jeho snů. Zdá se že býval artificer a student univerzity a poté student v Tarandoku.\n\nV morfelisu nás napadli nějací impové a mohou nás zranit?! Po smrti se rozpadaji na černou břečku. Je to ta korupce o které mluvil oracle? Nakonec jsme je porazili. Zdá se že nekdo udelal záškodnický útok na Tarandok. Také jsme tu potkali grand architekta a viděli jak přivezli toho zombie beholdera.\n\nZpátky ze snu jsme nakonec pustili toho automatona aby se k nám přidal. \n\nV další místnosti jsme našli jakési báně pro experimentování na tvorech. Gerarat se nejspíše pokusil na Gigi provést tento experiment, malém zemřela. Novy robotický společník tím prošel a asi ho to vylepšilo. Gerart působí nebezpečně, měl bych si na něj dávat pozor.\n\nNašli jsme ředitelnu, v ní nějaký loot včetně kladiva a teleportacni kruh.\n\nVe sklepě jsme našli vězení, Noticka a jednoho oporosáka. Oporosáka jsme naverbovalo jako špeha.\n\nZpátky do Bradvy!",
+        "Jsme zpět v Bradvě. Situace je tu jiná. Lid nesnáším stráže, ti se drží mimo lower city, které nyní ovládá oporos. Suchozemec vyhořel. Dariana zešílela a vraždí oporos. \n\nMyslíme si že víme kde je mladý Gilderwein.\n\nCestou jsme pomohli místnímu rybáři od oporosáků. Dále jsme vybili oporosí dům a nyní je z něj hospoda Stín suchozemce kteremu nyní vede Anton, mám zde podíl 100GP.\n\nPlanujeme vnik do divadla. Želví rytíř je zrádce, musíme obejít jeho stráže. Viděli jsme odjíždějící kočár s neviditelnou osobou částečně fiend, asi Viltrien.\n\nJdeme do toho opuštěného domu v přestrojení. Stráž Herbet Nirksen nás pustil dovnitř, slíbili jsme mu že ho Lostovski, obchodník s kořením, zaměstnana.\n\nPorazili jsme oporos a zachránili Gilderweina. Nyní jej schovávame u pána koření. Veltrien zde nebyl.",
+        "Dostal sem od pana kořeni novou morfelis kouli, působí corrupted, vedlo to k návštěvě od požíráčů snů. Vydává fialové světlo, je to to proroctví od pána morfelisu."
+      ],
+      "notes": "Dobré znamení: sokol\nŠpatné znamení: sup\n\nVztahy\nGerart/Baltazar: 5\nDex: 6 - dead\nBendží: 5\nTargar: 4\nGigi: 6\nBrolan: 2"
+    },
+    "inventory": {
+      "coins": {
+        "pp": 37,
+        "gp": 617,
+        "ep": 0,
+        "sp": 8,
+        "cp": 0
+      },
+      "items": [
+        {
+          "name": "Chladivá truhla z cirkusu",
+          "description": "",
+          "id": "75a82713-2e9c-4e0a-a625-d23d458cedf0",
+          "count": 1
+        },
+        {
+          "name": "Soška sovy co otočí hlavu ke casterovi",
+          "description": "Caster musí být do 30ft od sošky.",
+          "id": "014cee41-f4e6-47df-8c58-4d2d2896e61e",
+          "count": 1
+        },
+        {
+          "name": "Mapa k setu templářů Faerendenu",
+          "description": "",
+          "id": "b5bdf999-7f5f-44da-a48c-27a51648ad7c",
+          "count": 1
+        },
+        {
+          "name": "Poutníkovo zlato",
+          "description": "",
+          "id": "68a94272-f1da-4b04-a03e-f12ea631f049",
+          "count": 2
+        },
+        {
+          "name": "Cestovní zlato",
+          "description": "",
+          "id": "8daed850-e9e2-4ad7-a1b5-58211ffba025",
+          "count": 1
+        },
+        {
+          "name": "Kniha z Tarandoku",
+          "description": "Od mrtvoly u dveří. Popisuje Tarandok.",
+          "id": "a0dc00ad-c76b-46e4-9f90-c6bf6f43b528",
+          "count": 1
+        },
+        {
+          "name": "Zlatý prut",
+          "description": "Hodnota 100GP kus.",
+          "id": "f7d85324-dc91-4147-b001-c932fde2d2a1",
+          "count": 9
+        },
+        {
+          "name": "Casting focus z Tarandoku",
+          "description": "",
+          "id": "be4df795-4a06-4f1e-9ef5-236ad328c0a1",
+          "count": 1
+        },
+        {
+          "name": "Prázdný deník a psací potřeby",
+          "description": "",
+          "id": "889675ac-bd37-485a-bee9-b36a23e3f250",
+          "count": 1
+        },
+        {
+          "name": "Modrý krystal z Tarandoku",
+          "description": "",
+          "id": "16f62a2f-9889-4898-812d-f859d97fa8e6",
+          "count": 1
+        },
+        {
+          "name": "Scroll: Conjure food and water",
+          "description": "",
+          "id": "b31d0675-395c-4a81-b57b-1e22dd357d78",
+          "count": 1
+        },
+        {
+          "name": "Scroll: Sending",
+          "description": "",
+          "id": "766511bb-d346-4413-a63f-af3ea54a6c49",
+          "count": 1
+        },
+        {
+          "name": "Modrá magická perla",
+          "description": "",
+          "id": "33257877-1575-480d-aa7d-87041217b95c",
+          "count": 1
+        },
+        {
+          "name": "Klíč k mladému Gilderweinovi",
+          "description": "",
+          "id": "8b43457c-412d-444b-9bec-dd19aa6b3c14",
+          "count": 3
+        },
+        {
+          "name": "Křišťálová koule z Morfelisu",
+          "description": "Písek: Scrying\nVoda: Sending\nOheň: Fireball",
+          "id": "8a010b57-6eeb-48ad-b2f2-42569f4fd22f",
+          "count": 1
+        },
+        {
+          "name": "Křišťálová koule z Morfelisu (corrupted)",
+          "description": "",
+          "id": "6e9fe01c-40c3-4d00-9fef-d881150e758e",
+          "count": 1
+        },
+        {
+          "name": "Priest's Pack",
+          "description": "A Priest’s Pack contains the following items: Backpack, Blanket, Holy Water, Lamp, 7 days of Rations, Robe, and Tinderbox.",
+          "id": "75ca8d0d-eaf7-4781-abaf-fe1c11b2f808",
+          "count": 1
+        },
+        {
+          "name": "Dice set",
+          "description": "",
+          "id": "adbfb99f-676c-42a3-8099-8297f8fe68ee",
+          "count": 1
+        },
+        {
+          "name": "Bottle of sand (holy symbol)",
+          "description": "",
+          "id": "6c51f5e9-485c-4a0a-94d4-79039aa97c75",
+          "count": 1
+        },
+        {
+          "name": "Blood Eagle (Veltrien) feather",
+          "description": "",
+          "id": "6a5cc332-1978-4abc-ae65-5af837c0112b",
+          "count": 1
+        },
+        {
+          "name": "Rations",
+          "description": "",
+          "id": "27cf45cb-711e-4b52-ac73-d69a67f9f2ec",
+          "count": 3
+        },
+        {
+          "name": "Seznam lokací v Bradvě",
+          "description": "",
+          "id": "14fc4f18-a4fd-42c4-b95b-8b2182eb12a9",
+          "count": 1
+        },
+        {
+          "name": "Waterskin",
+          "description": "",
+          "id": "f8ae7dab-0a2e-46e5-a727-3cd61f10c9f5",
+          "count": 1
+        },
+        {
+          "name": "Red carpet of faith",
+          "description": "",
+          "id": "8732d299-a187-43cc-81c0-c07a6696caff",
+          "count": 1
+        },
+        {
+          "name": "Sada koření sumak a chilli úrovně 10",
+          "description": "",
+          "id": "6f866cb4-8975-4ffa-b92e-6f2c51ef1d72",
+          "count": 1
+        },
+        {
+          "name": "Sada na tuareg a konvice",
+          "description": "",
+          "id": "3a1480e5-6b2e-42ce-b168-05900a39e7cb",
+          "count": 1
+        },
+        {
+          "name": "Potion of Greater Healing",
+          "description": "You regain 4d4 + 4 Hit Points when you drink this potion.\n\nWhatever its potency, the potion’s red liquid glimmers when agitated.",
+          "id": "9ea68727-5b21-4d3d-adaf-41240095bf82",
+          "count": 1
+        }
+      ]
+    },
+    "featsAndTraits": {
+      "categories": [
+        {
+          "id": "a6f1b137-a417-4858-b066-8e44f8bb85dc",
+          "name": "Paladin",
+          "items": [
+            {
+              "name": "Lay on Hands",
+              "description": "Your blessed touch can heal wounds. You have a pool of healing power that replenishes when you finish a Long Rest. With that pool, you can restore a total number of Hit Points equal to five times your Paladin level.\n\nAs a Bonus Action, you can touch a creature (which could be yourself) and draw power from the pool of healing to restore a number of Hit Points to that creature, up to the maximum amount remaining in the pool.\n\nYou can also expend 5 Hit Points from the pool of healing power to remove the Poisoned condition from the creature; those points don't also restore Hit Points to the creature.",
+              "id": "97c47804-d39e-414f-a62a-6897c0feb18f"
+            },
+            {
+              "name": "Spellcasting",
+              "description": "You have learned to cast spells through prayer and meditation. See Chapter 7 for the rules on Spellcasting. The Information below details how you use those rules with Paladin spells, which appear in the Paladin spell list later in the class's description.\n\nSpell Slots. The Paladin Features table shows how many spell slots you have to cast your level 1+ spells. You regain all expended slots when you finish a Long Rest.\n\nPrepared Spells of Level 1+. You prepare the list of level 1+ spells that are available for you to cast with this feature. To start, choose two level 1 Paladin spells. Heroism and Searing Smite are recommended.\n\nThe number of spells on your list increases as you gain Paladin levels, as shown in the Prepared Spells column of the Paladin Features table. Whenever that number increases, choose additional spells from the Paladin spell list until the number of spells on your list matches the number on the table. The chosen spells must be of a level for which you have spell slots. For example, if you're a level 5 Paladin, your list of prepared spells can include six spells of levels 1 and 2 in any combination.\n\nIf another Paladin feature gives you spells that you always have prepared, those spells don’t count against the number of spells you can prepare with this feature, but those spells otherwise count as Paladin spells for you.\n\nChanging Your Prepared Spells. Whenever you finish a Long Rest, you can replace one spell on your list with another Paladin spell for which you have spell slots.\n\nSpellcasting Ability. Charisma is your spellcasting ability for your Paladin spells.\n\nSpellcasting Focus. You can use a Holy Symbol as a Spellcasting Focus for your Paladin spells.",
+              "id": "aa7c7472-c9b0-49d4-8992-30878fc94df7"
+            },
+            {
+              "name": "Weapon Mastery",
+              "description": "Your training with weapons allows you to use the mastery properties of two kinds of weapons of your choice with which you have proficiency, such as Longswords and Javelins.\n\nWhenever you finish a Long Rest, you can change the kinds of weapons you chose. For Example, you could switch to using the mastery properties of Halberds and Flails.",
+              "id": "1b5914e2-9441-44fb-956c-bf7f8af9ec4f"
+            },
+            {
+              "name": "Fighting Style",
+              "description": "You gain a Fighting Style feat of your choice (see chapter 5). Instead of choosing one of those feats, you can choose the option below.\n\nBlessed Warrior. You learn two Cleric cantrips of your choice (See the Cleric class's section for a list of Cleric spells). Guidance and Sacred Flame are recommended. The chosen cantrips count as Paladin spells for you, and Charisma is your spellcasting ability for them. Whenever you gain a Paladin level, you can replace one of these cantrips with another Cleric cantrip.",
+              "id": "e2de79bc-b796-4e30-a93f-971ba5a2fbb4"
+            },
+            {
+              "name": "Fighting Style: Defense",
+              "description": "While you're wearing Light, Medium, or Heavy armor, you gain a +1 bonus to Armor Class.",
+              "id": "8dec87ab-d648-491e-805d-11ac2096181d"
+            },
+            {
+              "name": "Paladin's Smite",
+              "description": "You always have the Divine Smite spell prepared.\n\nYou can cast it without expending a spell slot, but you must finish a Long Rest before you can cast it this way again.",
+              "id": "417ddeca-5428-46f7-9778-59301becc288"
+            },
+            {
+              "name": "Channel Divinity",
+              "description": "You can channel divine energy directly from the Outer Planes, using it to fuel magical effects. You start with one such effect: Divine Sense, which is described below. Other Paladin features give additional Channel Divinity effect options. Each time you use this class's Channel Divinity, you choose which effect from this class to create.\n\nYou can use this class's Channel Divinity twice. You regain one of its expended uses when you finish a Short Rest, and you regain all expended uses when you finish a Long Rest. You gain an additional use when you reach Paladin level 11.\n\nIf a Channel Divinity effect requires a saving throw, the DC equals the spell save DC from this class's Spellcasting Feature.\n\nDivine Sense. As a Bonus Action, you can open your awareness to detect Celestials, Fiends, and Undead. For the next 10 minutes or until you have the Incapacitated condition, you know the location of any creature of those types within 60 feet of yourself, and you know its creature type. Within the same radius, you also detect the presence of any place or object that has been consecrated or desecrated, as with the Hallow spell.",
+              "id": "c20ef2f8-83eb-4592-8746-4068cb23d68b"
+            },
+            {
+              "name": "Inspiring Smite",
+              "description": "Immediately after you cast Divine Smite, you can expend one use of your Channel Divinity and distribute Temporary Hit Points to creatures of your choice within 30 feet of yourself, which can include you. The total number of Temporary Hit Points equals 2d8 plus your Paladin level, divided among the chosen creatures however you like.",
+              "id": "42c6de96-edde-4f38-80d0-0a6f82db122e"
+            },
+            {
+              "name": "Peerless Athlete",
+              "description": "As a Bonus Action, you can expend one use of your Channel Divinity to augment your athleticism. For 1 hour, you have Advantage on Strength (Athletics) and Dexterity (Acrobatics) checks, and the distance of your Long and High Jumps increases by 10 feet (this extra distance costs movement as normal).",
+              "id": "f0bd80ea-3a57-438d-9c9c-eec3ca64469f"
+            }
+          ]
+        },
+        {
+          "id": "b61db5b3-8092-4a23-964f-7f78dd1295d7",
+          "name": "Sorcerer",
+          "items": [
+            {
+              "name": "Spellcasting",
+              "description": "Drawing from your innate magic, you can cast spells. See chapter 7 for the rules on spellcasting. The information below details how you use those rules with Sorcerer spells, which appear in the Sorcerer spell list later in the class’s description.\n\nCantrips. You know four Sorcerer cantrips of your choice. Light, Prestidigitation, Shocking Grasp, and Sorcerous Burst are recommended. Whenever you gain a Sorcerer level, you can replace one of your cantrips from this feature with another Sorcerer cantrip of your choice.\n\nWhen you reach Sorcerer levels 4 and 10, you learn another Sorcerer cantrip of your choice, as shown in the Cantrips column of the Sorcerer Features table.\n\nSpell Slots. The Sorcerer Features table shows how many spell slots you have to cast your level 1+ spells. You regain all expended slots when you finish a Long Rest.\n\nPrepared Spells of Level 1+. You prepare the list of level 1+ spells that are available for you to cast with this feature. To start, choose two level 1 Sorcerer spells. Burning Hands and Detect Magic are recommended.\n\nThe number of spells on your list increases as you gain Sorcerer levels, as shown in the Prepared Spells column of the Sorcerer Features table. Whenever that number increases, choose additional Sorcerer spells until the number of spells on your list matches the number in the Sorcerer Features table. The chosen spells must be of a level for which you have spell slots. For example, if you’re a level 3 Sorcerer, your list of prepared spells can include six Sorcerer spells of level 1 or 2 in any combination.\n\nIf another Sorcerer feature gives you spells that you always have prepared, those spells don’t count against the number of spells you can prepare with this feature, but those spells otherwise count as Sorcerer spells for you.\n\nChanging Your Prepared Spells. Whenever you gain a Sorcerer level, you can replace one spell on your list with another Sorcerer spell for which you have spell slots.\n\nSpellcasting Ability. Charisma is your spellcasting ability for your Sorcerer spells.\n\nSpellcasting Focus. You can use an Arcane Focus as a Spellcasting Focus for your Sorcerer spells.",
+              "id": "dcccd10b-f137-47d4-940d-dcd1d81baaad"
+            },
+            {
+              "name": "Innate Sorcery",
+              "description": "An event in your past left an indelible mark on you, infusing you with simmering magic. As a Bonus Action, you can unleash that magic for 1 minute, during which you gain the following benefits:\n• The spell save DC of your Sorcerer spells increases by 1.\n• You have Advantage on the attack rolls of Sorcerer spells you cast.\n\nYou can use this feature twice, and you regain all expended uses of it when you finish a Long Rest.",
+              "id": "02c6742c-aa02-4de5-940d-75a138a3d14f"
+            },
+            {
+              "name": "Font of Magic",
+              "description": "You can tap into the wellspring of magic within yourself. This wellspring is represented by Sorcery Points, which allow you to create a variety of magical effects.\n\nYou have 2 Sorcery Points, and you gain more as you reach higher levels, as shown in the Sorcery Points column of the Sorcerer Features table. You can’t have more Sorcery Points than the number shown in the table for your level. You regain all expended Sorcery Points when you finish a Long Rest.\n\nYou can use your Sorcery Points to fuel the options below, along with other features, such as Metamagic, that use those points.\n\nConverting Spell Slots to Sorcery Points. You can expend a spell slot to gain a number of Sorcery Points equal to the slot’s level (no action required).\n\nCreating Spell Slots. As a Bonus Action, you can transform unexpended Sorcery Points into one spell slot. The Creating Spell Slots table shows the cost of creating a spell slot of a given level, and it lists the minimum Sorcerer level you must be to create a slot. You can create a spell slot no higher than level 5.\n\nAny spell slot you create with this feature vanishes when you finish a Long Rest.",
+              "id": "eaebfa6a-7f2e-484c-8770-812f7f1950f6"
+            },
+            {
+              "name": "Metamagic",
+              "description": "Because your magic flows from within, you can alter your spells to suit your needs; you gain two Metamagic options of your choice from “Metamagic Options” later in this class’s description. You use the chosen options to temporarily modify spells you cast. To use an option, you must spend the number of Sorcery Points that it costs.\n\nYou can use only one Metamagic option on a spell when you cast it unless otherwise noted in one of those options.\n\nWhenever you gain a Sorcerer level, you can replace one of your Metamagic options with one you don’t know. You gain two more options at Sorcerer level 10 and two more at Sorcerer level 17.",
+              "id": "2f6d6ccb-d6f3-4ba1-8f90-0759e2f517f3"
+            },
+            {
+              "name": "Metamagic: Quickened Spell",
+              "description": "Cost: 2 Sorcery Points\n\nWhen you cast a spell that has a casting time of an action, you can spend 2 Sorcery Points to change the casting time to a Bonus Action for this casting. You can’t modify a spell in this way if you’ve already cast a level 1+ spell on the current turn, nor can you cast a level 1+ spell on this turn after modifying a spell in this way.",
+              "id": "f9aa397e-726d-4586-9288-210194c235e4"
+            },
+            {
+              "name": "Metamagic: Twinned Spell",
+              "description": "Cost: 1 Sorcery Point\n\nWhen you cast a spell, such as Charm Person, that can be cast with a higher-level spell slot to target an additional creature, you can spend 1 Sorcery Point to increase the spell’s effective level by 1.",
+              "id": "1680b627-3f3f-4ef6-a7e4-7defa10ba7f6"
+            }
+          ]
+        },
+        {
+          "id": "4779e9c9-2fe4-4270-98f0-196fb506735d",
+          "name": "Race & background",
+          "items": [
+            {
+              "name": "Resourceful",
+              "description": "You gain Heroic Inspiration whenever you finish a Long Rest.",
+              "id": "ca8a3346-44ce-464f-9169-57623f699303"
+            },
+            {
+              "name": "Skillful",
+              "description": "You gain proficiency in one skill of your choice.",
+              "id": "2aa5e003-835b-40d2-8afa-fa4212b072fd"
+            },
+            {
+              "name": "Versatile",
+              "description": "You gain an Origin feat of your choice. Skilled is recommended.",
+              "id": "3fc3c98d-b8ba-4ad7-a4f4-5d47c3bfadec"
+            },
+            {
+              "name": "Skilled",
+              "description": "You gain proficiency in any combination of three skills or tools of your choice.",
+              "id": "2a14fc60-0a7f-41b9-9a62-affd58c9e073"
+            },
+            {
+              "name": "Purple Dragon Rook",
+              "description": "You gain the following benefits.\n\nEntreat. You gain proficiency in one of the following skills: Insight, Performance, or Persuasion.\n\nRallying Cry. When you roll Initiative and don’t have the Incapacitated condition, you can choose a number of creatures equal to your Proficiency Bonus that you can see within 30 feet of yourself. Those creatures gain Heroic Inspiration.\n\nOnce you use this benefit, you can’t do so again until you finish a Long Rest.",
+              "id": "43edc87c-56bd-48f6-8d6b-f88681fb625c"
+            }
+          ]
+        },
+        {
+          "id": "2cf52338-de64-47a5-b245-6ac22eb3d1b5",
+          "name": "Curse of Dreams",
+          "items": [
+            {
+              "name": "The Gate to Morphelis",
+              "description": "• The Personal Door: You possess a vivid mental image of a unique door that exists only within your mind. This is your personal entrance to Morphelis. You decide its appearance. (Meta Info: Throughout your life, this door has always been locked. At the start of this campaign, the lock vanishes, granting you entry for the first time.)\n\n• The Choice of Sleep: Whenever you take a Long Rest, you can choose to either:\n  1. Enter Morphelis: Your consciousness departs your body and arrives at your Personal Door to enter the shared realm.\n  2. Natural Rest: You allow normal, fragmented dreams to visit you. Your consciousness stays within its own mind, and you do not enter Morphelis.",
+              "id": "13b21bfb-c1de-4414-894c-93bddf154c5c"
+            },
+            {
+              "name": "Echoes of Fate",
+              "description": "You have seen glimpses of this exact moment in your dreams, but the outcome remains flickering and uncertain. Twice per Long Rest, when you make an attack roll, saving throw, or ability check, you can choose to roll 2d20 instead of one.\n\nRule of Ten: The die that is numerically closer to 10 determines the outcome.\n\nPositive Spectrum (11–20): If the winning die is in this range, the result is a Critical Success.\nNegative Spectrum (1–9): If the winning die is in this range, the result is a Critical Failure.\n\nExamples:\nRolls are 6 and 12. 12 is closer to 10 (dist. 2) than 6 is (dist. 4). Result: Critical Success.\nRolls are 9 and 15. 9 is closer to 10 (dist. 1) than 15 is (dist. 5). Result: Critical Failure.\n\nParadox: If both dice are equidistant from 10 (e.g., 7 and 13), you must reroll both dice.\n",
+              "id": "f6e347bf-47cc-4d54-a646-5ed48d344870"
+            },
+            {
+              "name": "Nightmare Harvest",
+              "description": "Twice per day, you can bestow a magical Sleep upon your enemies, using the Sleep spell mechanics as the base for it.\n\nCOMBAT USE\n\nWhen one or more creatures are put to sleep by this spell, you can extract nightmares from their minds. You can choose one of the following benefits for each creature affected (the same benefit cannot stack with itself):\n• Siphon Vitality: You heal hit points equal to the roll of 2 of your Hit Dice. (the hit die are not used, for the purposes of short rest etc..)\n• Adrenaline Spike: Your walking speed increases by 5 feet for 1 minute. Additionaly you gain an advantage on Strenght checks.\n• Psychic Backlash: The creature takes 3d6 Psychic damage and wakes up screaming. ( No saving throw, only damage )\n• Dream Shield: You gain a +2 bonus to AC until the end of your next turn.\n• Borrowed Instinct: You gain +5 on your next attack roll or ability check within the hour.\n• Lingering Terror: The creature has Disadvantage on its very first attack roll after waking.\n\nRITUAL USE (The Dream Weaver)\n\nAlternatively, you can cast this version of Sleep on targets that are already sleeping (for example, during a Long Rest) to influence their subconscious. You narrate what the affected creatures see in their dreams.\n\nInduce Good Dreams: The group of sleeping creatures within the spell's area wakes up with a bonus 1d6 Inspiration Die, which lasts for the entire day. (Meta Info: See the Inspiration System for rules on usage).\n\nInduce Nightmares: You weave terror into their rest. You can activate up to 3 different effects from the list above to apply to yourself or the targets when they eventually wake. You can even use Psychic Backlash multiple times.",
+              "id": "9395e4cb-4f1e-4fd1-afb1-1d953885964f"
+            },
+            {
+              "name": "Morphelis’ Ownership",
+              "description": "Your sleep belongs to the Oracle. You are immune to the Sleep spell and other magical effects that would force you to sleep against your will.",
+              "id": "34b25e67-3fd6-4fc9-865d-9541a17018fe"
+            },
+            {
+              "name": "Déjà Vu",
+              "description": "Your mind has already lived through many stories in the dreams. You have Advantage on History (Intelligence) checks. Once per Long Rest, you can automatically succeed on a check to remember a piece of lore or a path traveled, as your dream-self whispers the answer.",
+              "id": "19c50bb3-decc-4175-82d0-cefe6cece447"
+            },
+            {
+              "name": "Lucid Drifter",
+              "description": "You are partially tuned into the unseen layers of reality. You gain a +2 bonus to your Passive Perception. Additionally, you can cast Detect Magic at will, but only to sense enchantment or illusion magic.",
+              "id": "493c2796-2301-4b30-84ee-3cca3d2b2d56"
+            },
+            {
+              "name": "Bond: Messengers of Morphelis",
+              "description": "Choose two different animals to be your Dream Totems. These animals are messengers from the Oracle:\n• The Auspice (Good Omen): Seeing this animal means the Oracle’s gaze is favorable. You may receive a minor clue or feel a sense of peace.\n• The Harbinger (Bad Omen): Seeing this animal is a warning of impending misfortune or that Morphelis is displeased.",
+              "id": "93fba835-241e-4d5b-8f08-e21e14c05524"
+            },
+            {
+              "name": "Flaw: Deep slumber",
+              "description": " While sleeping during a Long Rest, you are exceptionally difficult to wake. You only wake up if you take damage, are targeted by a harmful effect, or if an ally uses their Help action to physically shake you awake.",
+              "id": "724b51e5-a0ec-48f8-a8b2-012cc82ff6c9"
+            },
+            {
+              "name": "Detriment: The Fading Flesh (Accelerated Aging)",
+              "description": "Time in Morphelis is dilated. For every hour your mind spends in the dreamscape, your physical body ages by two hours. This applies to all sleep: 6 hours of rest ages the body by 12. You also have Disadvantage on Constitution saving throws against exhaustion or disease.",
+              "id": "bade9fab-40ef-4f53-9b2c-c5d2c791900d"
+            },
+            {
+              "name": "Detriment: Blurred Reality",
+              "description": "Whenever you roll a natural 1 on an attack roll or ability check, you suffer a hallucination. Your next d20 roll is made with Disadvantage, as dream visions overlap with your waking sight.",
+              "id": "861484f4-571c-41d6-93a0-9d1666f4bad3"
+            },
+            {
+              "name": "Detriment: Slowed Reflexes",
+              "description": "You have a -2 penalty to Dexterity saving throws against effects you are not currently in combat with (such as traps or environmental hazards)",
+              "id": "4a1295c2-290b-406e-aa64-6fd324b0d2a2"
+            }
+          ]
+        }
+      ],
+      "uncategorized": []
+    },
+    "equipment": {
+      "weapons": [
+        {
+          "name": "Javelin 3x",
+          "description": "Damage: 1d6 Piercing\nProperties: Thrown (Range 30/120)\nMastery: Slow\nWeight: 2 lb.\nCost: 5 SP",
+          "id": "520b0e59-ec24-46e0-9b7d-85eae63e25a4",
+          "attuned": false,
+          "equipped": false
+        },
+        {
+          "name": "Longsword",
+          "description": "Martial Melee Weapon\n\nDamage: 1d8 Slashing\nProperties: Versatile (1d10)\nMastery: Sap\nWeight: 3 lb.\nCost: 15 GP",
+          "id": "e17f600d-f182-475b-9421-7b0258b8183a",
+          "attuned": false,
+          "equipped": false
+        },
+        {
+          "name": "Scimitar",
+          "description": "Martial Melee Weapon\n\nDamage: 1d6 Slashing\nProperties: Finesse, Light\nMastery: Nick\nWeight: 3 lb.\nCost: 25 GP\n\n",
+          "id": "3b15c8a8-df55-43a1-9bd3-e8537f6515ff",
+          "attuned": false,
+          "equipped": false
+        },
+        {
+          "name": "Light's Favor",
+          "description": "Magic weapon\n\nThis silvery blade with etched runes of light was once held by Templar Captain Raymond Terringar of the Anta'Osir templar order. A coveted blade, it was thought to have been lost forever during a doomed expedition to cleanse the deep-seated corruption of the Faerenden forest. Legend says the blade itself rejects the touch of the very monsters Terringar swore to hunt.\n\nMastery: Sap. If you hit a creature with this weapon, that creature has Disadvantage on its next attack roll before the start of your next turn.\n\nCan be used to cast Shining Smite once in a long rest.\n\nCan be used to cast Divine Favor once in a long rest. \n\nHallowed Grip: The hilt of this blade radiates a faint, holy warmth. An undead creature that attempts to grasp the handle takes 1d6 radiant damage and is unable to hold the ",
+          "id": "9738a451-7088-4d5e-8ca1-48498c7a391d",
+          "attuned": true,
+          "equipped": true
+        }
+      ],
+      "other": [
+        {
+          "name": "Chain mail",
+          "description": "Heavy Armor\n\nArmor Class: 16\nStrength: Str 13\nStealth: Disadvantage\nWeight: 55 lb.\nCost: 75 GP",
+          "id": "28a0fab2-40a2-4c24-a639-162e41ec2fcd",
+          "attuned": false,
+          "equipped": true
+        },
+        {
+          "name": "Blue Scale's tower shield",
+          "description": "AC +3",
+          "id": "02d3439c-a4f0-49ec-94d0-41566fbb4c8b",
+          "attuned": false,
+          "equipped": false
+        },
+        {
+          "name": "Gauntlets of Antar's Vigil",
+          "description": "These gauntlets belonged to Raymond Terringar and were forged within Fort Antar, the ancestral seat of the Anta'Osir order. The fort was constructed upon ground once sacred to forest spirits that have long since faded into myth. Though the spirits are gone, their residual essence lingers in the metal, fueling the Templars' Oath of the Ancients and their eternal devotion to Virelon.\n\nVirelon's Glow: You know the light cantrip. You can cast it at will, but the light originates only from the palms of the gauntlets. \n\nSpirit's Grace: Your Lay on Hands pool increases by +5. This bonus is lost if the gauntlets are removed",
+          "id": "d11779bd-f2e2-4435-a074-9b3542932899",
+          "attuned": true,
+          "equipped": true
+        }
+      ]
+    },
+    "spellList": {
+      "categories": [
+        {
+          "id": "0b62f2bc-e08a-4fa1-b3fb-19c92cb8e664",
+          "name": "Sorcerer",
+          "items": [
+            {
+              "name": "Guidance",
+              "description": "Divination Cantrip (Artificer, Cleric, Druid)\n\nCasting Time: Action\nRange: Touch\nComponents: V, S\nDuration: Concentration, up to 1 minute\n\nYou touch a willing creature and choose a skill. Until the spell ends, the creature adds 1d4 to any ability check using the chosen skill.",
+              "id": "44685d02-5d81-4f3c-8941-f87560527ef1",
+              "level": "c",
+              "prepared": true
+            },
+            {
+              "name": "Light",
+              "description": "Evocation Cantrip (Artificer, Bard, Cleric, Sorcerer, Wizard)\n\nCasting Time: Action\nRange: Touch\nComponents: V, M (a firefly or phosphorescent moss)\nDuration: 1 hour\n\nYou touch one Large or smaller object that isn’t being worn or carried by someone else. Until the spell ends, the object sheds Bright Light in a 20-foot radius and Dim Light for an additional 20 feet. The light can be colored as you like.\n\nCovering the object with something opaque blocks the light. The spell ends if you cast it again.",
+              "id": "78a985f5-d04d-472d-9f6c-4f5aa443ed6f",
+              "level": "c",
+              "prepared": true
+            },
+            {
+              "name": "Thaumaturgy",
+              "description": "Transmutation Cantrip (Cleric)\n\nCasting Time: Action\nRange: 30 feet\nComponents: V\nDuration: Up to 1 minute\n\nYou manifest a minor wonder within range. You create one of the effects below within range. If you cast this spell multiple times, you can have up to three of its 1-minute effects active at a time.\n\nAltered Eyes. You alter the appearance of your eyes for 1 minute.\n\nBooming Voice. Your voice booms up to three times as loud as normal for 1 minute. For the duration, you have Advantage on Charisma (Intimidation) checks.\n\nFire Play. You cause flames to flicker, brighten, dim, or change color for 1 minute.\n\nInvisible Hand. You instantaneously cause an unlocked door or window to fly open or slam shut.\n\nPhantom Sound. You create an instantaneous sound that originates from a point of your choice within range, such as a rumble of thunder, the cry of a raven, or ominous whispers.\n\nTremors. You cause harmless tremors in the ground for 1 minute.",
+              "id": "5b202dc9-0cd0-4053-8ded-ef844cec75dc",
+              "level": "c",
+              "prepared": true
+            },
+            {
+              "name": "True Strike",
+              "description": "Divination Cantrip (Artificer, Bard, Sorcerer, Warlock, Wizard)\n\nCasting Time: Action\nRange: Self\nComponents: S, M (a weapon with which you have proficiency and that is worth 1+ CP)\nDuration: Instantaneous\n\nGuided by a flash of magical insight, you make one attack with the weapon used in the spell’s casting. The attack uses your spellcasting ability for the attack and damage rolls instead of using Strength or Dexterity. If the attack deals damage, it can be Radiant damage or the weapon’s normal damage type (your choice).\n\nCantrip Upgrade. Whether you deal Radiant damage or the weapon’s normal damage type, the attack deals extra Radiant damage when you reach levels 5 (1d6), 11 (2d6), and 17 (3d6).",
+              "id": "7b7b7973-b6ae-4a8f-84dd-a715424d4125",
+              "level": "c",
+              "prepared": true
+            },
+            {
+              "name": "Absorb Elements",
+              "description": "1st-level abjuration\n\nCasting Time: 1 reaction, which you take when you take acid, cold, fire, lightning, or thunder damage\nRange: Self\nComponents: S\nDuration: 1 round\n\nThe spell captures some of the incoming energy, lessening its effect on you and storing it for your next melee attack. You have resistance to the triggering damage type until the start of your next turn. Also, the first time you hit with a melee attack on your next turn, the target takes an extra 1d6 damage of the triggering type, and the spell ends.\n\nAt Higher Levels. When you cast this spell using a spell slot of 2nd level or higher, the extra damage increases by 1d6 for each slot level above 1st.",
+              "id": "5c2ec5c1-da80-4c12-9e8c-b89836a69a15",
+              "level": 1,
+              "prepared": true
+            },
+            {
+              "name": "Shield",
+              "description": "Level 1 Abjuration (Sorcerer, Wizard)\n\nCasting Time: Reaction, which you take when you are hit by an attack roll or targeted by the Magic Missile spell\nRange: Self\nComponents: V, S\nDuration: 1 round\n\nAn imperceptible barrier of magical force protects you. Until the start of your next turn, you have a +5 bonus to AC, including against the triggering attack, and you take no damage from Magic Missile.",
+              "id": "6cf06a7f-1280-40a5-8966-15df50a42a55",
+              "level": 1,
+              "prepared": true
+            },
+            {
+              "name": "Spellfire Flare",
+              "description": "Level 1 Evocation (Sorcerer, Wizard)\nCasting Time: Action\nRange: 60 feet\nComponents: V, S\nDuration: Instantaneous\n\nYou unleash a blast of brilliant fire. Make a ranged spell attack against a target within range; a target gains no benefit from Half Cover or Three-Quarters Cover for this attack roll. On a hit, the target takes 2d10 Radiant damage.\n\nUsing a Higher-Level Spell Slot. You create an additional blast for each spell slot level above 1. You can direct the blasts at the same target or at different ones. Make a separate attack roll for each blast",
+              "id": "62e7da70-3858-43e3-ad2d-05dc4043b6cb",
+              "level": "c",
+              "prepared": true
+            }
+          ]
+        },
+        {
+          "id": "5e7757fb-6fbd-4122-a451-fff7f1d25674",
+          "name": "Sorcerer Divine soul",
+          "items": [
+            {
+              "name": "Bless",
+              "description": "Level 1 Enchantment (Cleric, Paladin)\n\nCasting Time: Action\nRange: 30 feet\nComponents: V, S, M (a Holy Symbol worth 5+ GP)\nDuration: Concentration, up to 1 minute\n\nYou bless up to three creatures within range. Whenever a target makes an attack roll or a saving throw before the spell ends, the target adds 1d4 to the attack roll or save.\n\nUsing a Higher-Level Spell Slot. You can target one additional creature for each spell slot level above 1.",
+              "id": "b0695dbd-0291-4608-a0f3-5381c7e9b6df",
+              "level": 1,
+              "prepared": true
+            },
+            {
+              "name": "Cure Wounds",
+              "description": "Level 1 Abjuration (Artificer, Bard, Cleric, Druid, Paladin, Ranger)\n\nCasting Time: Action\nRange: Touch\nComponents: V, S\nDuration: Instantaneous\n\nA creature you touch regains a number of Hit Points equal to 2d8 plus your spellcasting ability modifier.\n\nUsing a Higher-Level Spell Slot. The healing increases by 2d8 for each spell slot level above 1.",
+              "id": "00b3b7b0-b734-48e8-a3cf-95a025e3292b",
+              "level": 1,
+              "prepared": true
+            },
+            {
+              "name": "Healing Word",
+              "description": "Level 1 Abjuration (Bard, Cleric, Druid)\n\nCasting Time: Bonus Action\nRange: 60 feet\nComponents: V\nDuration: Instantaneous\n\nA creature of your choice that you can see within range regains Hit Points equal to 2d4 plus your spellcasting ability modifier.\n\nUsing a Higher-Level Spell Slot. The healing increases by 2d4 for each spell slot level above 1.",
+              "id": "832d2ca8-ff49-4b4d-9259-12b2ca01e34f",
+              "level": "c",
+              "prepared": true
+            }
+          ]
+        },
+        {
+          "id": "7f0ec37a-16c7-4c41-8384-6624e810334e",
+          "name": "Paladin",
+          "items": [
+            {
+              "name": "Ceremony",
+              "description": "1st-level Abjuration (ritual)\n\nCasting Time: 1 hour\nRange: Touch\nComponents: V, S, M (25 gp worth of powdered silver, which the spell consumes)\nDuration: Instantaneous (see below)\n\nYou perform one of several religious ceremonies. When you cast the spell, choose one of the following ceremonies, the target of which must be within 10 feet of you throughout the casting.\n\nAtonement. You touch one willing creature whose alignment has changed, and you make a DC 20 Wisdom (Insight) check. On a successful check, you restore the target to its original alignment.\n\nBless Water. You touch one vial of water and cause it to become holy water.\n\nComing of Age. You touch one humanoid who is a young adult. For the next 24 hours, whenever the target makes an ability check, it can roll a d4 and add the number rolled to the ability check. A creature can benefit from this rite only once.\n\nDedication. You touch one humanoid who wishes to be dedicated to your god’s service. For the next 24 hours, whenever the target makes a saving throw, it can roll a d4 and add the number rolled to the save. A creature can benefit from this rite only once.\n\nFuneral Rite. You touch one corpse, and for the next 7 days, the target can’t become undead by any means short of a Wish spell.\n\nWedding. You touch adult humanoids willing to be bonded together in marriage. For the next 7 days, each target gains a +2 bonus to AC while they are within 30 feet of each other. A creature can benefit from this rite again only if widowed.",
+              "id": "188488f2-9860-41c2-a56d-b13bd241ea54",
+              "level": 1,
+              "prepared": true
+            },
+            {
+              "name": "Detect Poison and Disease",
+              "description": "Level 1 Divination (Cleric, Druid, Paladin, Ranger)\n\nCasting Time: Action or Ritual\nRange: Self\nComponents: V, S, M (a yew leaf)\nDuration: Concentration, up to 10 minutes\n\nFor the duration, you sense the location of poisons, poisonous or venomous creatures, and magical contagions within 30 feet of yourself. You sense the kind of poison, creature, or contagion in each case.\n\nThe spell is blocked by 1 foot of stone, dirt, or wood; 1 inch of metal; or a thin sheet of lead.",
+              "id": "918edba3-a1bf-42e7-8a6c-5edc5289cade",
+              "level": 1,
+              "prepared": true
+            },
+            {
+              "name": "Divine Smite",
+              "description": "Level 1 Evocation (Paladin)\n\nCasting Time: Bonus Action, which you take immediately after hitting a target with a Melee weapon or an Unarmed Strike\nRange: Self\nComponents: V\nDuration: Instantaneous\n\nThe target takes an extra 2d8 Radiant damage from the attack. The damage increases by 1d8 if the target is a Fiend or an Undead.\n\nUsing a Higher-Level Spell Slot. The damage increases by 1d8 for each spell slot level above 1.",
+              "id": "8014d785-954d-42e3-bb29-068ca50254d3",
+              "level": 1,
+              "prepared": true
+            },
+            {
+              "name": "Guiding Bolt",
+              "description": "Level 1 Evocation (Cleric)\n\nCasting Time: Action\nRange: 120 feet\nComponents: V, S\nDuration: 1 round\n\nYou hurl a bolt of light toward a creature within range. Make a ranged spell attack against the target. On a hit, it takes 4d6 Radiant damage, and the next attack roll made against it before the end of your next turn has Advantage.\n\nUsing a Higher-Level Spell Slot. The damage increases by 1d6 for each spell slot level above 1.",
+              "id": "2d057d4b-7dd3-4436-9342-23913b728037",
+              "level": 1,
+              "prepared": true
+            },
+            {
+              "name": "Heroism",
+              "description": "Level 1 Enchantment (Bard, Paladin)\n\nCasting Time: Action\nRange: Touch\nComponents: V, S\nDuration: Concentration, up to 1 minute\n\nA willing creature you touch is imbued with bravery. Until the spell ends, the creature is immune to the Frightened condition and gains Temporary Hit Points equal to your spellcasting ability modifier at the start of each of its turns.\n\nUsing a Higher-Level Spell Slot. You can target one additional creature for each spell slot level above 1.",
+              "id": "35f4ede6-7a85-43ae-bc26-0d13e8f3f019",
+              "level": 1,
+              "prepared": true
+            },
+            {
+              "name": "Purify Food and Drink",
+              "description": "Level 1 Transmutation (Artificer, Cleric, Druid, Paladin)\n\nCasting Time: Action or Ritual\nRange: 10 feet\nComponents: V, S\nDuration: Instantaneous\n\nYou remove poison and rot from nonmagical food and drink in a 5-foot-radius Sphere centered on a point within range.",
+              "id": "2d4ffb95-7276-42a4-aa9b-bdff61776774",
+              "level": 1,
+              "prepared": true
+            },
+            {
+              "name": "Shield of Faith",
+              "description": "Level 1 Abjuration (Cleric, Paladin)\n\nCasting Time: Bonus Action\nRange: 60 feet\nComponents: V, S, M (a prayer scroll)\nDuration: Concentration, up to 10 minutes\n\nA shimmering field surrounds a creature of your choice within range, granting it a +2 bonus to AC for the duration.",
+              "id": "cde0de93-4fa1-47ad-9c3a-32474a5ad99a",
+              "level": 1,
+              "prepared": true
+            }
+          ]
+        }
+      ],
+      "uncategorized": []
+    },
+    "counters": {
+      "categories": [
+        {
+          "id": "5d4c041e-f955-4bcc-8417-3a253b744808",
+          "name": "Paladin",
+          "items": [
+            {
+              "name": "Lay on Hands pool",
+              "description": "Bonus akce. Reset na long restu.\n\nJe to 5x paladin lvl a k tomu 5 z Light's Favor.",
+              "id": "776f1bab-35c7-400c-a7af-432715703b4f",
+              "current": 20,
+              "total": 20
+            },
+            {
+              "name": "Paladin's Smite (Divine smite)",
+              "description": "Cast bez spell slotu.\n\nReset na long restu.",
+              "id": "ee8319ee-8061-40bf-b690-91dfc6c943fd",
+              "current": 1,
+              "total": 1
+            },
+            {
+              "name": "Channel divinity",
+              "description": "Reset 1 na short restu, všech na long restu.",
+              "id": "4169bb76-c881-45e5-a033-f4d1867c7c6f",
+              "current": 2,
+              "total": 2
+            }
+          ]
+        },
+        {
+          "id": "5da950d5-2e81-46c3-8b93-00942eed8318",
+          "name": "Sorcerer",
+          "items": [
+            {
+              "name": "Sorcery pointy",
+              "description": "Reset na long restu",
+              "id": "e2fa2ad8-83b0-4e71-a899-534e3ba45215",
+              "current": 2,
+              "total": 2
+            },
+            {
+              "name": "Innate sorcery",
+              "description": "Reset na long restu.",
+              "id": "538b2b69-3aa6-470b-8321-bdd5f7bb549e",
+              "current": 2,
+              "total": 2
+            }
+          ]
+        },
+        {
+          "id": "785de4fc-91f0-45b0-96b3-c1e53d5d63db",
+          "name": "Curse of Dreams",
+          "items": [
+            {
+              "name": "Echoes of Fate",
+              "description": "Reset na long restu.",
+              "id": "6a00ac1e-1904-4cc2-aa49-82e438e2d04c",
+              "current": 2,
+              "total": 2
+            },
+            {
+              "name": "Nightmare Harvest",
+              "description": "Reset za úsvitu.",
+              "id": "f7becd06-f26d-4df1-96f1-1e023bbc2e1e",
+              "current": 2,
+              "total": 2
+            },
+            {
+              "name": "Déjà Vu",
+              "description": "Autosuccess na history jde-li o lore nebo cestu.\n\nReset na long restu.",
+              "id": "5a3ebbdf-6b7e-4c68-8c1b-cc187b98ea0c",
+              "current": 1,
+              "total": 1
+            }
+          ]
+        },
+        {
+          "id": "8a30c601-9de4-4220-8cdc-87099990a811",
+          "name": "Attuned items",
+          "items": [
+            {
+              "name": "Light's Favor: Shining smite",
+              "description": "Reset na long restu",
+              "id": "d4a2eca5-1755-46f4-a6eb-4963b8a98c7c",
+              "current": 1,
+              "total": 1
+            },
+            {
+              "name": "Light's Favor: Divine favor",
+              "description": "Reset na long restu",
+              "id": "8a00eacc-6811-4449-b43d-c833966458d8",
+              "current": 1,
+              "total": 1
+            }
+          ]
+        }
+      ],
+      "uncategorized": [
+        {
+          "name": "Purple Dragon Rook (inspirace)",
+          "description": "Při rollu iniciativy rozdej d20 inspirace do výše profky.\n\nReset na long restu.",
+          "id": "112e80e5-ae11-4cae-a5a1-6cec2cab20da",
+          "current": 1,
+          "total": 1
+        }
+      ],
+      "spellSlots": {
+        "1": {
+          "current": 4,
+          "total": 4
+        },
+        "2": {
+          "current": 3,
+          "total": 3
+        },
+        "3": {
+          "current": 0,
+          "total": 0
+        },
+        "4": {
+          "current": 0,
+          "total": 0
+        },
+        "5": {
+          "current": 0,
+          "total": 0
+        },
+        "6": {
+          "current": 0,
+          "total": 0
+        },
+        "7": {
+          "current": 0,
+          "total": 0
+        },
+        "8": {
+          "current": 0,
+          "total": 0
+        },
+        "9": {
+          "current": 0,
+          "total": 0
+        }
+      }
+    },
+    "abilitiesAndSkills": {
+      "proficiencyBonus": 3,
+      "passivePerception": 15,
+      "speed": 30,
+      "abilities": {
+        "strength": {
+          "score": 15,
+          "modifier": 2,
+          "savingThrowModifier": 2,
+          "savingThrowProficient": false
+        },
+        "dexterity": {
+          "score": 10,
+          "modifier": 0,
+          "savingThrowModifier": 0,
+          "savingThrowProficient": false
+        },
+        "constitution": {
+          "score": 14,
+          "modifier": 2,
+          "savingThrowModifier": 2,
+          "savingThrowProficient": false
+        },
+        "intelligence": {
+          "score": 10,
+          "modifier": 0,
+          "savingThrowModifier": 0,
+          "savingThrowProficient": false
+        },
+        "wisdom": {
+          "score": 10,
+          "modifier": 0,
+          "savingThrowModifier": 3,
+          "savingThrowProficient": true
+        },
+        "charisma": {
+          "score": 16,
+          "modifier": 3,
+          "savingThrowModifier": 6,
+          "savingThrowProficient": true
+        }
+      },
+      "skills": {
+        "acrobatics": {
+          "modifier": 0,
+          "proficient": false,
+          "expertise": false
+        },
+        "animalHandling": {
+          "modifier": 0,
+          "proficient": false,
+          "expertise": false
+        },
+        "arcana": {
+          "modifier": 0,
+          "proficient": false,
+          "expertise": false
+        },
+        "athletics": {
+          "modifier": 5,
+          "proficient": true,
+          "expertise": false
+        },
+        "deception": {
+          "modifier": 3,
+          "proficient": false,
+          "expertise": false
+        },
+        "history": {
+          "modifier": 3,
+          "proficient": true,
+          "expertise": false
+        },
+        "insight": {
+          "modifier": 3,
+          "proficient": true,
+          "expertise": false
+        },
+        "intimidation": {
+          "modifier": 3,
+          "proficient": false,
+          "expertise": false
+        },
+        "investigation": {
+          "modifier": 0,
+          "proficient": false,
+          "expertise": false
+        },
+        "medicine": {
+          "modifier": 3,
+          "proficient": true,
+          "expertise": false
+        },
+        "nature": {
+          "modifier": 0,
+          "proficient": false,
+          "expertise": false
+        },
+        "perception": {
+          "modifier": 3,
+          "proficient": true,
+          "expertise": false
+        },
+        "performance": {
+          "modifier": 6,
+          "proficient": true,
+          "expertise": false
+        },
+        "persuasion": {
+          "modifier": 6,
+          "proficient": true,
+          "expertise": false
+        },
+        "religion": {
+          "modifier": 3,
+          "proficient": false,
+          "expertise": false
+        },
+        "sleightOfHand": {
+          "modifier": 0,
+          "proficient": false,
+          "expertise": false
+        },
+        "stealth": {
+          "modifier": 0,
+          "proficient": false,
+          "expertise": false
+        },
+        "survival": {
+          "modifier": 3,
+          "proficient": true,
+          "expertise": false
+        }
+      }
+    }
+  },
+  "portrait": null
+}

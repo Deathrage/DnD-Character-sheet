@@ -16,6 +16,7 @@ const SAVED_AT = new Date('2026-09-22T17:00:00.000Z');
  */
 function stubRepository(): CharacterRepository & {
   saved: CharacterDocument[];
+  portraits: (string | null)[];
   fail: Error | undefined;
 } {
   const stub = {
@@ -29,6 +30,12 @@ function stubRepository(): CharacterRepository & {
     get: () => Promise.resolve(null),
     getRaw: () => Promise.resolve(undefined),
     delete: () => Promise.resolve(),
+    portraits: [] as (string | null)[],
+    getPortrait: () => Promise.resolve(null),
+    savePortrait(_id: string, portrait: string | null) {
+      stub.portraits.push(portrait);
+      return Promise.resolve();
+    },
   };
   return stub;
 }
@@ -231,5 +238,36 @@ describe('Autosave', () => {
 
     expect(failures.map((failure) => failure.code)).toEqual(['UNKNOWN']);
     autosave.stop();
+  });
+
+  it('writes a portrait change on its own, at once, and never inside the document', async () => {
+    const sheet = newSheet();
+    const repository = stubRepository();
+    const autosave = new Autosave(sheet, repository, { debounceMs: 500, now: () => SAVED_AT });
+    autosave.start();
+
+    sheet.setPortrait('data:image/jpeg;base64,/9j/4AAQ');
+    // No timer advanced: a portrait is not debounced. flush() is what waits for its write.
+    await autosave.flush();
+
+    expect(repository.portraits).toEqual(['data:image/jpeg;base64,/9j/4AAQ']);
+    expect(repository.saved).toEqual([]);
+
+    sheet.setPortrait(null);
+    await autosave.flush();
+    expect(repository.portraits).toEqual(['data:image/jpeg;base64,/9j/4AAQ', null]);
+    autosave.stop();
+  });
+
+  it('stops writing portraits once stopped', async () => {
+    const sheet = newSheet();
+    const repository = stubRepository();
+    const autosave = new Autosave(sheet, repository, { debounceMs: 500 });
+    autosave.start();
+    autosave.stop();
+
+    sheet.setPortrait('data:image/jpeg;base64,/9j/4AAQ');
+    await autosave.flush();
+    expect(repository.portraits).toEqual([]);
   });
 });

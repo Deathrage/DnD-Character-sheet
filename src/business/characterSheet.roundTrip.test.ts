@@ -15,6 +15,7 @@ const sheetFor = () =>
 function fill(sheet: CharacterSheetBO): void {
   sheet.setName('Sable Nightwind');
   sheet.setArmorClass(15);
+  sheet.setPortrait('data:image/jpeg;base64,/9j/4AAQ');
   sheet.classes.add({ name: 'Rogue', level: 5 });
   sheet.hitPoints.setTotal(45);
   sheet.hitDices.add(8).setTotal(5);

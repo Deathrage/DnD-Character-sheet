@@ -13,6 +13,7 @@ export type RuleCode =
   | 'TOO_LONG'
   | 'UNKNOWN_CATEGORY'
   | 'INVALID_DIE_SIZE'
+  | 'INVALID_IMAGE'
   | 'GONE';
 
 export class RuleViolation extends Error {

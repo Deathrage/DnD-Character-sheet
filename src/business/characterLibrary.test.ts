@@ -461,3 +461,105 @@ describe('CharacterLibraryBO', () => {
     expect(storageGate.failure).toEqual({ code: 'UNKNOWN', cause: expect.any(Error) as unknown });
   });
 });
+
+describe('CharacterLibraryBO portraits', () => {
+  const PORTRAIT = 'data:image/jpeg;base64,/9j/4AAQ';
+  let repository: CharacterRepository;
+
+  beforeEach(async () => {
+    await wipe();
+    repository = createIndexedDbRepository({ openDb: createOpener() });
+  });
+  afterEach(wipe);
+
+  it('stores a changed portrait beside the document, and shows it on the list row', async () => {
+    const library = libraryOver(repository);
+    const sheet = await library.create('Sable');
+
+    sheet.setPortrait(PORTRAIT);
+    await library.flush();
+
+    expect(await repository.getPortrait(sheet.id)).toBe(PORTRAIT);
+    expect(library.entries[0]?.portrait).toBe(PORTRAIT);
+    const raw = JSON.stringify(await repository.getRaw(sheet.id));
+    expect(raw).not.toContain('base64');
+    sheet.dispose();
+  });
+
+  it('keeps the row portrait when a later document save re-summarises the row', async () => {
+    const library = libraryOver(repository);
+    const sheet = await library.create('Sable');
+    sheet.setPortrait(PORTRAIT);
+    await library.flush();
+
+    sheet.setArmorClass(15);
+    await library.flush();
+
+    expect(library.entries[0]?.portrait).toBe(PORTRAIT);
+    sheet.dispose();
+  });
+
+  it('opens a sheet with its stored portrait', async () => {
+    await repository.save(docFor(ID_A, 'Sable'), PORTRAIT);
+    const library = libraryOver(repository);
+    await library.load();
+
+    const opened = await library.entries[0]!.open();
+    expect(opened.ok).toBe(true);
+    if (opened.ok) {
+      expect(opened.sheet.portrait).toBe(PORTRAIT);
+      opened.sheet.dispose();
+    }
+  });
+
+  it('imports a file with its portrait', async () => {
+    const source = libraryOver(repository);
+    const sheet = await source.create('Sable');
+    sheet.setPortrait(PORTRAIT);
+    const read = CharacterFile.read(CharacterFile.of(sheet, new Date()).text);
+    sheet.dispose();
+    if (!read.ok) throw new Error(read.message);
+
+    const imported = await libraryOver(repository).add(read.file);
+
+    expect(imported.portrait).toBe(PORTRAIT);
+    expect(await repository.getPortrait(imported.id)).toBe(PORTRAIT);
+    imported.dispose();
+  });
+
+  it('clones the portrait with the character', async () => {
+    await repository.save(docFor(ID_A, 'Sable'), PORTRAIT);
+    const library = libraryOver(repository);
+    await library.load();
+
+    expect(await library.entries[0]!.clone()).toBeNull();
+
+    const copy = library.entries.find((entry) => entry.id !== ID_A)!;
+    expect(copy.portrait).toBe(PORTRAIT);
+    expect(await repository.getPortrait(copy.id)).toBe(PORTRAIT);
+  });
+
+  it('removes the portrait with the character', async () => {
+    await repository.save(docFor(ID_A, 'Sable'), PORTRAIT);
+    const library = libraryOver(repository);
+    await library.load();
+
+    await library.entries[0]!.remove();
+
+    expect(await repository.getPortrait(ID_A)).toBeNull();
+  });
+
+  it('leaves the portrait alone when the raw-JSON editor repairs the document', async () => {
+    await repository.save(docFor(ID_A, 'Sable'), PORTRAIT);
+    const library = libraryOver(repository);
+    await library.load();
+    const entry = library.entries[0]!;
+
+    expect(
+      await entry.repair((await entry.rawText()).replace('"Sable"', '"Sable Nightwind"')),
+    ).toBeNull();
+
+    expect(await repository.getPortrait(ID_A)).toBe(PORTRAIT);
+    expect(library.entries[0]?.portrait).toBe(PORTRAIT);
+  });
+});

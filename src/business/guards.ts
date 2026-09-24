@@ -1,3 +1,4 @@
+import { MAX_PORTRAIT, portraitSchema } from '../data/repository/portrait.js';
 import { RuleViolation } from './errors.js';
 
 // Duplicated rather than imported: `src/business/` may not import a schema version directory
@@ -41,6 +42,24 @@ export function longText(value: string): string {
       'TOO_LONG',
       `text must be at most ${MAX_LONG_TEXT} characters, got ${value.length}`,
     );
+  }
+  return value;
+}
+
+/**
+ * A base64 JPEG data URL, capped — the repository would refuse anything else. Imported rather
+ * than duplicated like the limits above: the portrait's rule is not a fact about a schema
+ * version, so it lives outside the version directories this layer may not reach.
+ */
+export function portrait(value: string): string {
+  if (value.length > MAX_PORTRAIT) {
+    throw new RuleViolation(
+      'TOO_LONG',
+      `an image must be at most ${MAX_PORTRAIT} characters, got ${value.length}`,
+    );
+  }
+  if (!portraitSchema.safeParse(value).success) {
+    throw new RuleViolation('INVALID_IMAGE', 'expected a base64 JPEG data URL');
   }
   return value;
 }

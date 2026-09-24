@@ -44,6 +44,7 @@ export const sable: CharacterView = {
     { size: 8, current: 3, total: 5 },
   ],
   armorClass: 15,
+  portrait: null,
 };
 
 export const blankCharacter: CharacterView = {
@@ -54,6 +55,7 @@ export const blankCharacter: CharacterView = {
   hitPoints: { current: 0, total: 0, temporary: 0 },
   hitDices: [],
   armorClass: 10,
+  portrait: null,
 };
 
 export const characterRows: CharacterRow[] = [
@@ -64,6 +66,7 @@ export const characterRows: CharacterRow[] = [
     level: sable.level,
     classes: sable.classes.map(({ name, level }) => ({ name, level })),
     hitPoints: sable.hitPoints,
+    portrait: null,
   },
   {
     ok: true,
@@ -72,6 +75,7 @@ export const characterRows: CharacterRow[] = [
     level: 8,
     classes: [{ name: 'Fighter (Battle Master)', level: 8 }],
     hitPoints: { current: 71, total: 71, temporary: 0 },
+    portrait: null,
   },
   {
     ok: true,
@@ -80,6 +84,7 @@ export const characterRows: CharacterRow[] = [
     level: 4,
     classes: [{ name: 'Druid (Circle of the Moon)', level: 4 }],
     hitPoints: { current: 27, total: 27, temporary: 0 },
+    portrait: null,
   },
 ];
 
@@ -413,6 +418,8 @@ export const noVitalsActions: VitalsActions = {
   setTotalHitPoints: () => {},
   setTemporaryHitPoints: () => {},
   setArmorClass: () => {},
+  setPortrait: () => Promise.resolve(null),
+  removePortrait: () => {},
   addClass: () => null,
   renameClass: () => null,
   setClassLevel: () => {},

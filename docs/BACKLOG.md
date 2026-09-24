@@ -15,6 +15,19 @@ commit or PR that shipped it, rather than deleting it.
 - **Remote backup and restore.** Spec §1: remote storage as a backup synced on command, with
   versioning existing only for upload and restore. The answer to iOS eviction (spec §11) that does
   not need a native shell.
+  Storage decided (2026-09-24): **Firestore only** — Cloud Storage is not on the Spark plan. Spark
+  caps total stored bytes (about 1 GiB) and daily writes (about 20k), so:
+  - Two Firestore collections, mirroring the two local IndexedDB stores one to one (the local
+    split is built: see AGENTS.md, "Portraits live beside the document"). `characters/{id}` holds
+    the document gzipped with the native `CompressionStream` into a Bytes field, plus the few
+    plain fields the list needs (name, level, classes, hit points, `updatedAt`). `portraits/{id}`
+    holds the JPEG as raw Bytes, not base64 — a third smaller — and is written only when the local
+    `portraits` row changes.
+  - Measured against `testAssets/zahir-ibn-talaar-2026-09-23.json` (level 5, 8 sessions): 52 KB
+    minified, 19.5 KB gzipped. Projected after a year of weekly play: ~130 KB, ~48 KB gzipped,
+    plus a portrait of at most ~23 KB. Far under Firestore's 1 MiB document limit.
+  - Firestore bills per write, not per byte, so sync needs its own coarse trigger (on `pagehide`,
+    or every few minutes) — never local autosave's debounce.
 - **Online features as a paid subscription.** Remote backup and cross-device sync would be part of
   a paid subscription, behind user authentication. The local app stays complete and free without
   an account: signing out or lapsing must never lock a player out of characters on their device.

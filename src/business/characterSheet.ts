@@ -6,7 +6,7 @@ import { createId } from './createId.js';
 import { CountersBO } from './counters.js';
 import { EquipmentBO } from './equipment.js';
 import { type FeatsAndTraitsBO, makeFeatsAndTraits } from './featsAndTraits.js';
-import { nonNegativeInt, trimmedName } from './guards.js';
+import { nonNegativeInt, portrait, trimmedName } from './guards.js';
 import { HitDicesBO } from './hitDices.js';
 import { HitPointsBO } from './hitPoints.js';
 import { InventoryBO } from './inventory.js';
@@ -41,8 +41,16 @@ export class CharacterSheetBO {
   readonly counters: CountersBO;
   readonly abilitiesAndSkills: AbilitiesAndSkillsBO;
 
-  constructor(doc: CharacterDocument) {
+  /**
+   * Not in `#doc`: the portrait is stored beside the document, in its own store, so `toDocument()`
+   * — what autosave writes and the raw-JSON editor shows — never carries a 20 KB string. Observable
+   * on its own so the header re-renders and `Autosave` writes it the moment it changes.
+   */
+  readonly #portrait: { value: string | null };
+
+  constructor(doc: CharacterDocument, portrait: string | null = null) {
     this.#doc = observable(doc);
+    this.#portrait = observable({ value: portrait });
     this.classes = new ClassesBO(this.#doc.classes);
     this.hitPoints = new HitPointsBO(this.#doc.hitPoints);
     this.hitDices = new HitDicesBO(this.#doc.hitDices);
@@ -78,6 +86,16 @@ export class CharacterSheetBO {
 
   setArmorClass(value: number): void {
     this.#doc.armorClass = nonNegativeInt(value);
+  }
+
+  /** A data URL ready for `<img src>`, or `null` when the player has not picked one. */
+  get portrait(): string | null {
+    return this.#portrait.value;
+  }
+
+  /** Compressing the picked file is the UI's job; this only refuses what the schema would. */
+  setPortrait(value: string | null): void {
+    this.#portrait.value = value === null ? null : portrait(value);
   }
 
   /** `toJS` of the observable document. This is literally the file that gets saved. */

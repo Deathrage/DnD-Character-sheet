@@ -1,3 +1,4 @@
+import type { CharacterDocument } from '../schema/index.js';
 import { slug } from '../../shared/slug.js';
 
 /**
@@ -7,6 +8,15 @@ import { slug } from '../../shared/slug.js';
  */
 export function toJsonText(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
+}
+
+/**
+ * An exported character: `{ sheet, portrait }`. `sheet` is the stored document exactly as the
+ * raw-JSON editor shows it; `portrait` is kept beside it, as it is in storage, so the one file is
+ * still the whole character — until sync exists, an export is the only backup there is.
+ */
+export function toFileText(doc: CharacterDocument, portrait: string | null): string {
+  return toJsonText({ sheet: doc, portrait });
 }
 
 /** e.g. `sable-nightwind-2026-07-25.json` — sorts chronologically per character. */

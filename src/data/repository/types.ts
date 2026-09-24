@@ -10,6 +10,11 @@ export interface CharacterSummary {
   /** Flattened in creation order for display. */
   classes: { name: string; level: number }[];
   hitPoints: { current: number; total: number; temporary: number };
+  /**
+   * A data URL, or null. Read from the portraits store alongside the document, so the list can
+   * show it without a second round trip per row.
+   */
+  portrait: string | null;
 }
 
 /**
@@ -36,7 +41,22 @@ export interface CharacterRepository {
    * (the raw-JSON editor, import) must catch it and surface `detail.issues`. Every other storage
    * failure (quota, an unavailable database) is also a `StorageError` — see `storageFailure.ts`.
    * Nothing Zod-typed escapes — see errors.ts.
+   *
+   * `portrait`, when given, is validated and written in the same transaction — import and clone,
+   * which must not leave a character without the portrait it came with. Left out, the stored
+   * portrait is untouched: autosave writes the document alone.
    */
-  save(doc: CharacterDocument): Promise<void>;
+  save(doc: CharacterDocument, portrait?: string | null): Promise<void>;
+  /**
+   * The stored portrait, or null when there is none. Not validated on the way out: it is only
+   * ever shown as an `<img src>`, where a bad value is a broken image and nothing more.
+   */
+  getPortrait(id: string): Promise<string | null>;
+  /**
+   * Writes or, with `null`, removes a character's portrait. Validated like `save`: an invalid one
+   * is refused with `SAVE_REFUSED` and never reaches storage.
+   */
+  savePortrait(id: string, portrait: string | null): Promise<void>;
+  /** Removes the character and its portrait together, in one transaction. */
   delete(id: string): Promise<void>;
 }

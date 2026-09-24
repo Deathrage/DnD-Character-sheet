@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
+import { z } from 'zod';
 import { toSchemaIssues } from '../migration/errors.js';
 import {
   defaultRegistry,
@@ -7,17 +8,27 @@ import {
   type MigrationRegistry,
 } from '../migration/parseCharacter.js';
 import { CURRENT_SCHEMA, type CharacterDocument } from '../schema/index.js';
+import { portraitSchema } from './portrait.js';
 import { StorageError, toStorageFailure, type StorageFailure } from './storageFailure.js';
 import { summarize } from './summarize.js';
 import type { CharacterRepository, ListEntry } from './types.js';
 
 export const DB_NAME = 'dnd-character-sheet';
-export const DB_VERSION = 1;
+/**
+ * The database's own version: its stores and their key settings, never the character schema,
+ * which each document carries as `schemaVersion` and which is migrated when read. 1 → 2 added
+ * `portraits`.
+ */
+export const DB_VERSION = 2;
 export const CHARACTER_STORE = 'characters';
+/** Keyed by character id, like `characters`; the value is the portrait's data URL. */
+export const PORTRAIT_STORE = 'portraits';
 
 interface CharacterDb extends DBSchema {
   /** `unknown`, not `CharacterDocument`: a stored row may predate this build's schema, or be damaged. */
   characters: { key: string; value: unknown };
+  /** `unknown` for the same reason: storage is not a place this app trusts on the way out. */
+  portraits: { key: string; value: unknown };
 }
 
 export type OpenDb = () => Promise<IDBPDatabase<CharacterDb>>;
@@ -33,14 +44,28 @@ export interface RepositoryOptions {
 }
 
 /**
- * Creates the character store if it does not already exist yet. Exported so the test opener in
+ * Brings the database from `oldVersion` up to `DB_VERSION`, one step per version, so a browser
+ * that skipped a release still runs every step it missed. Exported so the test opener in
  * `src/test/fixtures.ts` shares this instead of re-implementing it — two copies would let a
  * future change to the store's shape silently diverge the test database from the real one.
+ *
+ * Both stores use out-of-line keys, never a `keyPath`: a `keyPath` reads the key from the stored
+ * value, so a damaged value would become unlistable and unreachable.
  */
-export function upgradeCharacterDb(db: IDBPDatabase<CharacterDb>): void {
-  if (!db.objectStoreNames.contains(CHARACTER_STORE)) {
-    db.createObjectStore(CHARACTER_STORE);
+export function upgradeCharacterDb(db: IDBPDatabase<CharacterDb>, oldVersion: number): void {
+  if (oldVersion < 1) db.createObjectStore(CHARACTER_STORE);
+  if (oldVersion < 2) db.createObjectStore(PORTRAIT_STORE);
+}
+
+/** Wrapped in an object so a refusal's issue path names the field: `portrait: must be …`. */
+const portraitField = z.object({ portrait: portraitSchema.nullable() });
+
+function validatedPortrait(portrait: string | null): string | null {
+  const result = portraitField.safeParse({ portrait });
+  if (!result.success) {
+    throw new StorageError({ code: 'SAVE_REFUSED', issues: toSchemaIssues(result.error) });
   }
+  return result.data.portrait;
 }
 
 /** Not exported: a second connection opened outside the repository is what blocks a version bump. */
@@ -126,8 +151,11 @@ export function createIndexedDbRepository(options: RepositoryOptions = {}): Char
         const db = await openDb();
         try {
           const collected: Array<[string, unknown]> = [];
-          const tx = db.transaction(CHARACTER_STORE);
-          let cursor = await tx.store.openCursor();
+          const portraits = new Map<string, string>();
+          // One transaction over both stores, so a row and its portrait are read as of the same
+          // moment rather than straddling a save.
+          const tx = db.transaction([CHARACTER_STORE, PORTRAIT_STORE]);
+          let cursor = await tx.objectStore(CHARACTER_STORE).openCursor();
 
           while (cursor) {
             // The cursor KEY identifies the row, in both branches. The store uses out-of-line
@@ -139,22 +167,32 @@ export function createIndexedDbRepository(options: RepositoryOptions = {}): Char
             cursor = await cursor.continue();
           }
 
+          let portrait = await tx.objectStore(PORTRAIT_STORE).openCursor();
+          while (portrait) {
+            if (typeof portrait.value === 'string')
+              portraits.set(String(portrait.key), portrait.value);
+            portrait = await portrait.continue();
+          }
+
           // Awaited so an abort with no in-flight request rejects list() instead of surfacing
           // as an unhandled rejection.
           await tx.done;
-          return collected;
+          return { collected, portraits };
         } finally {
           db.close();
         }
       });
 
       const migrated: Array<{ id: string; stored: unknown; doc: unknown }> = [];
-      const entries = rows.map(([id, value]): ListEntry => {
+      const entries = rows.collected.map(([id, value]): ListEntry => {
         const parsed = parseCharacter(value, registry);
         if (!parsed.ok) return { ok: false, id, error: parsed.error };
         if (isOlderThan(value, registry.current))
           migrated.push({ id, stored: value, doc: parsed.doc });
-        return { ok: true, summary: { ...summarize(parsed.doc), id } };
+        return {
+          ok: true,
+          summary: { ...summarize(parsed.doc, rows.portraits.get(id) ?? null), id },
+        };
       });
       await writeBack(migrated);
       return entries;
@@ -190,7 +228,7 @@ export function createIndexedDbRepository(options: RepositoryOptions = {}): Char
       });
     },
 
-    save(doc: CharacterDocument): Promise<void> {
+    save(doc: CharacterDocument, portrait?: string | null): Promise<void> {
       return guard(async () => {
         // Validate at the boundary: an invalid document must never reach storage (spec §6).
         // Always against CURRENT_SCHEMA, not the injected registry: a save always writes the
@@ -203,10 +241,45 @@ export function createIndexedDbRepository(options: RepositoryOptions = {}): Char
           });
         }
         const validated = result.data;
+        const picture = portrait === undefined ? undefined : validatedPortrait(portrait);
 
         const db = await openDb();
         try {
-          await db.put(CHARACTER_STORE, validated, validated.id);
+          // Autosave's path, and the most frequent write the app makes: one put, no portrait.
+          if (picture === undefined) {
+            await db.put(CHARACTER_STORE, validated, validated.id);
+            return;
+          }
+          const tx = db.transaction([CHARACTER_STORE, PORTRAIT_STORE], 'readwrite');
+          await tx.objectStore(CHARACTER_STORE).put(validated, validated.id);
+          if (picture === null) await tx.objectStore(PORTRAIT_STORE).delete(validated.id);
+          else await tx.objectStore(PORTRAIT_STORE).put(picture, validated.id);
+          await tx.done;
+        } finally {
+          db.close();
+        }
+      });
+    },
+
+    getPortrait(id: string): Promise<string | null> {
+      return guard(async () => {
+        const db = await openDb();
+        try {
+          const stored = await db.get(PORTRAIT_STORE, id);
+          return typeof stored === 'string' ? stored : null;
+        } finally {
+          db.close();
+        }
+      });
+    },
+
+    savePortrait(id: string, portrait: string | null): Promise<void> {
+      return guard(async () => {
+        const picture = validatedPortrait(portrait);
+        const db = await openDb();
+        try {
+          if (picture === null) await db.delete(PORTRAIT_STORE, id);
+          else await db.put(PORTRAIT_STORE, picture, id);
         } finally {
           db.close();
         }
@@ -217,7 +290,10 @@ export function createIndexedDbRepository(options: RepositoryOptions = {}): Char
       return guard(async () => {
         const db = await openDb();
         try {
-          await db.delete(CHARACTER_STORE, id);
+          const tx = db.transaction([CHARACTER_STORE, PORTRAIT_STORE], 'readwrite');
+          await tx.objectStore(CHARACTER_STORE).delete(id);
+          await tx.objectStore(PORTRAIT_STORE).delete(id);
+          await tx.done;
         } finally {
           db.close();
         }

@@ -8,7 +8,7 @@ describe('summarize', () => {
   it('carries identity and hit points across', () => {
     const doc = base();
     doc.hitPoints = { current: 38, total: 45, temporary: 5 };
-    const summary = summarize(doc);
+    const summary = summarize(doc, null);
     expect(summary.id).toBe(doc.id);
     expect(summary.name).toBe('Sable Nightwind');
     expect(summary.hitPoints).toEqual({ current: 38, total: 45, temporary: 5 });
@@ -20,11 +20,11 @@ describe('summarize', () => {
       { id: ID_A, name: 'Rogue', level: 5 },
       { id: ID_B, name: 'Wizard', level: 2 },
     ];
-    expect(summarize(doc).totalLevel).toBe(7);
+    expect(summarize(doc, null).totalLevel).toBe(7);
   });
 
   it('reports totalLevel 0 for a character with no classes', () => {
-    expect(summarize(base()).totalLevel).toBe(0);
+    expect(summarize(base(), null).totalLevel).toBe(0);
   });
 
   it('flattens classes in creation order (spec §3.4)', () => {
@@ -33,7 +33,7 @@ describe('summarize', () => {
       { id: ID_A, name: 'Wizard', level: 2 },
       { id: ID_B, name: 'Rogue', level: 5 },
     ];
-    expect(summarize(doc).classes).toEqual([
+    expect(summarize(doc, null).classes).toEqual([
       { name: 'Wizard', level: 2 },
       { name: 'Rogue', level: 5 },
     ]);
@@ -42,7 +42,7 @@ describe('summarize', () => {
   it('does not mutate the document it summarises', () => {
     const doc = base();
     const before = JSON.stringify(doc);
-    summarize(doc);
+    summarize(doc, null);
     expect(JSON.stringify(doc)).toBe(before);
   });
 
@@ -56,7 +56,7 @@ describe('summarize', () => {
     doc.classes = [{ id: ID_A, name: 'Rogue', level: 5 }];
     const before = JSON.stringify(doc);
 
-    const summary = summarize(doc);
+    const summary = summarize(doc, null);
     summary.hitPoints.current = 1;
     summary.hitPoints.total = 2;
     summary.hitPoints.temporary = 3;

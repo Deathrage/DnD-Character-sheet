@@ -35,6 +35,7 @@ describe('toSheetData', () => {
     sheet.classes.add({ name: 'Rogue', level: 5 });
     sheet.classes.add({ name: 'Wizard', level: 2 });
     sheet.hitPoints.setCurrent(38);
+    sheet.setPortrait('data:image/jpeg;base64,/9j/4AAQ');
     sheet.hitPoints.setTotal(45);
     sheet.hitPoints.setTemporary(5);
     sheet.hitDices.add(8).setTotal(5);
@@ -83,6 +84,7 @@ describe('toSheetData', () => {
         { size: 8, current: 0, total: 5 },
       ],
       armorClass: 15,
+      portrait: 'data:image/jpeg;base64,/9j/4AAQ',
     });
 
     expect(data.journalAndNotes).toEqual({
@@ -573,9 +575,11 @@ describe('toCharacterRows', () => {
     sheet.classes.add({ name: 'Rogue', level: 5 });
     sheet.hitPoints.setTotal(45);
     sheet.hitPoints.setCurrent(38);
-    // Autosave writes on the next macrotask (debounceMs 0), and `load()` re-reads the store —
-    // so without settling first the row would be the blank one `create` saved.
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    sheet.setPortrait('data:image/jpeg;base64,/9j/4AAQ');
+    // `load()` re-reads the store, so without flushing first the row would be the blank one
+    // `create` saved. `flush()` rather than a settle: the portrait is written on its own path,
+    // and flush is what waits for both writes to have landed.
+    await library.flush();
     await library.load();
 
     expect(toCharacterRows(library)).toEqual([
@@ -586,6 +590,7 @@ describe('toCharacterRows', () => {
         level: 5,
         classes: [{ name: 'Rogue', level: 5 }],
         hitPoints: { current: 38, total: 45, temporary: 0 },
+        portrait: 'data:image/jpeg;base64,/9j/4AAQ',
       },
     ]);
   });

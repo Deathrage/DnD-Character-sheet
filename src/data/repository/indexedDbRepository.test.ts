@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { SCHEMAS } from '../schema/index.js';
 import { ID_A, ID_B, createOpener, docFor, putRaw, wipe } from '../../test/fixtures.js';
-import { CHARACTER_STORE, createIndexedDbRepository, type OpenDb } from './indexedDbRepository.js';
+import {
+  CHARACTER_STORE,
+  DB_NAME,
+  PORTRAIT_STORE,
+  createIndexedDbRepository,
+  type OpenDb,
+} from './indexedDbRepository.js';
 import { StorageError, type StorageFailure } from './storageFailure.js';
 
 // Autospy: every export of 'idb' still calls through to the real implementation (so every other
@@ -210,7 +216,7 @@ describe('createIndexedDbRepository', () => {
     const openDb = (() =>
       Promise.resolve({
         transaction: () => ({
-          store: { openCursor: () => Promise.resolve(null) },
+          objectStore: () => ({ openCursor: () => Promise.resolve(null) }),
           done: Promise.reject(new DOMException('aborted', 'AbortError')),
         }),
         close: () => {},
@@ -238,7 +244,7 @@ describe('createIndexedDbRepository', () => {
       blocked = callbacks?.blocked;
       return Promise.resolve({
         transaction: () => ({
-          store: { openCursor: () => Promise.resolve(null) },
+          objectStore: () => ({ openCursor: () => Promise.resolve(null) }),
           done: Promise.resolve(),
         }),
         close: () => {},
@@ -271,7 +277,7 @@ describe('createIndexedDbRepository', () => {
       blocking = callbacks?.blocking;
       return Promise.resolve({
         transaction: () => ({
-          store: { openCursor: () => Promise.resolve(null) },
+          objectStore: () => ({ openCursor: () => Promise.resolve(null) }),
           done: Promise.resolve(),
         }),
         close: () => {},
@@ -302,7 +308,7 @@ describe('createIndexedDbRepository', () => {
       terminated = callbacks?.terminated;
       return Promise.resolve({
         transaction: () => ({
-          store: { openCursor: () => Promise.resolve(null) },
+          objectStore: () => ({ openCursor: () => Promise.resolve(null) }),
           done: Promise.resolve(),
         }),
         close: () => {},
@@ -419,5 +425,89 @@ describe('createIndexedDbRepository', () => {
       expect(loaded?.ok).toBe(true);
       expect(failures).toEqual([{ code: 'QUOTA_EXCEEDED' }]);
     });
+  });
+});
+
+describe('portraits', () => {
+  beforeEach(wipe);
+
+  const PORTRAIT = 'data:image/jpeg;base64,/9j/4AAQ';
+
+  it('upgrades a version-1 database in place, keeping its characters', async () => {
+    // A database exactly as the first release left it: one store, no portraits.
+    const v1 = await openDB(DB_NAME, 1, {
+      upgrade: (db) => {
+        db.createObjectStore(CHARACTER_STORE);
+      },
+    });
+    await v1.put(CHARACTER_STORE, docFor(ID_A, 'Sable'), ID_A);
+    v1.close();
+
+    const repository = createIndexedDbRepository();
+    const [row] = await repository.list();
+
+    expect(row).toMatchObject({ ok: true, summary: { name: 'Sable', portrait: null } });
+    await repository.savePortrait(ID_A, PORTRAIT);
+    expect(await repository.getPortrait(ID_A)).toBe(PORTRAIT);
+  });
+
+  it('lists a portrait with its character, saved together', async () => {
+    const repository = createIndexedDbRepository();
+    await repository.save(docFor(ID_A, 'Sable'), PORTRAIT);
+    await repository.save(docFor(ID_B, 'Wren'), null);
+
+    const summaries = (await repository.list()).map((row) => (row.ok ? row.summary : null));
+    expect(summaries).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: ID_A, portrait: PORTRAIT }),
+        expect.objectContaining({ id: ID_B, portrait: null }),
+      ]),
+    );
+  });
+
+  it('leaves the portrait alone when the document is saved without one, as autosave does', async () => {
+    const repository = createIndexedDbRepository();
+    await repository.save(docFor(ID_A, 'Sable'), PORTRAIT);
+    await repository.save(docFor(ID_A, 'Sable Nightwind'));
+
+    expect(await repository.getPortrait(ID_A)).toBe(PORTRAIT);
+  });
+
+  it('removes a portrait with null, and both stores on delete', async () => {
+    const repository = createIndexedDbRepository();
+    await repository.save(docFor(ID_A, 'Sable'), PORTRAIT);
+    await repository.savePortrait(ID_A, null);
+    expect(await repository.getPortrait(ID_A)).toBeNull();
+
+    await repository.savePortrait(ID_A, PORTRAIT);
+    await repository.delete(ID_A);
+    expect(await repository.get(ID_A)).toBeNull();
+    expect(await repository.getPortrait(ID_A)).toBeNull();
+  });
+
+  it('refuses an invalid portrait, naming the field, and writes nothing', async () => {
+    const repository = createIndexedDbRepository();
+    const svg = 'data:image/svg+xml;base64,PHN2Zz4=';
+
+    await expect(repository.savePortrait(ID_A, svg)).rejects.toMatchObject({
+      detail: { code: 'SAVE_REFUSED', issues: [expect.objectContaining({ path: 'portrait' })] },
+    });
+    // Refused before the transaction opens, so the document is not written either.
+    await expect(repository.save(docFor(ID_A, 'Sable'), svg)).rejects.toBeInstanceOf(StorageError);
+    expect(await repository.get(ID_A)).toBeNull();
+    expect(await repository.getPortrait(ID_A)).toBeNull();
+  });
+
+  it('keeps the portrait out of the stored document', async () => {
+    const repository = createIndexedDbRepository();
+    await repository.save(docFor(ID_A, 'Sable'), PORTRAIT);
+
+    expect(JSON.stringify(await repository.getRaw(ID_A))).not.toContain('base64');
+    const db = await createOpener()();
+    try {
+      expect(await db.get(PORTRAIT_STORE, ID_A)).toBe(PORTRAIT);
+    } finally {
+      db.close();
+    }
   });
 });

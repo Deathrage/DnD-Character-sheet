@@ -1,6 +1,10 @@
 import { describeLoadError } from '../data/migration/errors.js';
-import { exportFilename, toJsonText } from '../data/serialization/exportCharacter.js';
-import { fromJsonText } from '../data/serialization/importCharacter.js';
+import { exportFilename, toFileText } from '../data/serialization/exportCharacter.js';
+import {
+  fromFileText,
+  fromJsonText,
+  type ParseFileResult,
+} from '../data/serialization/importCharacter.js';
 import type { CharacterDocument } from '../data/schema/index.js';
 import type { CharacterSheetBO } from './characterSheet.js';
 import { createId } from './createId.js';
@@ -15,24 +19,53 @@ import { createId } from './createId.js';
  * access modifier is internal to nobody. `documentOf` is a module function this barrel does not
  * re-export, so `characterLibrary.ts` can reach the document and a component cannot.
  */
-const documents = new WeakMap<CharacterFile, CharacterDocument>();
+const documents = new WeakMap<CharacterFile, Contents>();
 
-export function documentOf(file: CharacterFile): CharacterDocument {
-  const doc = documents.get(file);
-  if (doc === undefined) {
+interface Contents {
+  doc: CharacterDocument;
+  /** Beside the document, not in it — as in storage. */
+  portrait: string | null;
+}
+
+function contentsOf(file: CharacterFile): Contents {
+  const contents = documents.get(file);
+  if (contents === undefined) {
     throw new Error('unreachable: every CharacterFile registers its document in its constructor');
   }
-  return doc;
+  return contents;
+}
+
+export function documentOf(file: CharacterFile): CharacterDocument {
+  return contentsOf(file).doc;
+}
+
+/** Same module-private reach as `documentOf`, and not on `index.ts` either. */
+export function portraitOf(file: CharacterFile): string | null {
+  return contentsOf(file).portrait;
+}
+
+/** The sentence for text that would not read, whichever layer refused it. */
+function describeFailure(failure: Exclude<ParseFileResult, { ok: true }>): string {
+  switch (failure.kind) {
+    case 'syntax':
+      return `This file is not valid JSON. ${failure.message}`;
+    case 'document':
+      return describeLoadError(failure.error);
+    case 'file':
+      return `This is not a character file. ${failure.issues
+        .map((issue) => (issue.path === '' ? issue.message : `${issue.path}: ${issue.message}`))
+        .join('; ')}`;
+  }
 }
 
 /**
- * Parses text into a document under a chosen id, or into the sentence explaining why not.
+ * Parses a bare document — what the raw-JSON editor edits — under a chosen id, or into the
+ * sentence explaining why not. `CharacterEntryBO.repair` passes the id of the row being
+ * repaired, because a hand-edit of a damaged document is that same character, and a repair that
+ * landed under a new id would leave the broken original in the list beside it.
  *
- * Two callers with opposite needs for that id, which is the whole reason it is a parameter:
- * `CharacterFile.read` mints a fresh one, because importing a character must not overwrite the
- * one it was exported from. `CharacterEntryBO.repair` passes the id of the row being repaired,
- * because a hand-edit of a damaged document is that same character, and a repair that landed
- * under a new id would leave the broken original in the list beside it.
+ * Deliberately not the `{ sheet, portrait }` envelope `CharacterFile.read` takes: the editor
+ * never shows the portrait, so a pasted envelope's portrait would have nowhere honest to go.
  *
  * Not exported from `src/business/index.ts`: it deals in `CharacterDocument`.
  */
@@ -42,13 +75,7 @@ export function parseInto(
 ): { ok: true; doc: CharacterDocument } | { ok: false; message: string } {
   const parsed = fromJsonText(text, { assignId: id });
   if (parsed.ok) return { ok: true, doc: parsed.doc };
-  return {
-    ok: false,
-    message:
-      parsed.kind === 'syntax'
-        ? `This file is not valid JSON. ${parsed.message}`
-        : describeLoadError(parsed.error),
-  };
+  return { ok: false, message: describeFailure(parsed) };
 }
 
 /**
@@ -62,9 +89,9 @@ export function parseInto(
 export class CharacterFile {
   readonly #filename: string;
 
-  private constructor(doc: CharacterDocument, filename: string) {
+  private constructor(doc: CharacterDocument, portrait: string | null, filename: string) {
     this.#filename = filename;
-    documents.set(this, doc);
+    documents.set(this, { doc, portrait });
   }
 
   /**
@@ -75,30 +102,39 @@ export class CharacterFile {
    * `LoadResult`, `ListEntry`, `ParseTextResult` — so a caller discriminates the way it does
    * everywhere else instead of reaching for `instanceof`.
    *
+   * Takes both shapes a file has had: the `{ sheet, portrait }` envelope, and a bare document,
+   * which is every file exported before portraits existed.
+   *
    * The document id is reassigned and the item ids are not (spec §9): item ids are scoped within
    * their document, so a collision across two characters is meaningless, while two characters
    * sharing a document id would collide in the one place it matters, the store key.
    */
   static read(text: string): { ok: true; file: CharacterFile } | { ok: false; message: string } {
-    const parsed = parseInto(text, createId());
-    if (!parsed.ok) return parsed;
+    const parsed = fromFileText(text, { assignId: createId() });
+    if (!parsed.ok) return { ok: false, message: describeFailure(parsed) };
     return {
       ok: true,
-      file: new CharacterFile(parsed.doc, exportFilename(parsed.doc.name, new Date())),
+      file: new CharacterFile(
+        parsed.doc,
+        parsed.portrait,
+        exportFilename(parsed.doc.name, new Date()),
+      ),
     };
   }
 
   /** `now` is a parameter, not a default, so the dated filename is assertable. */
   static of(sheet: CharacterSheetBO, now: Date): CharacterFile {
     const doc = sheet.toDocument();
-    return new CharacterFile(doc, exportFilename(doc.name, now));
+    return new CharacterFile(doc, sheet.portrait, exportFilename(doc.name, now));
   }
 
   get filename(): string {
     return this.#filename;
   }
 
+  /** The `{ sheet, portrait }` envelope: the whole character, portrait included. */
   get text(): string {
-    return toJsonText(documentOf(this));
+    const { doc, portrait } = contentsOf(this);
+    return toFileText(doc, portrait);
   }
 }

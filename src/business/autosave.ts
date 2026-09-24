@@ -41,6 +41,8 @@ export interface AutosaveOptions {
    * was created and the list disagrees with the sheet until the next reload.
    */
   onSaved?: (doc: CharacterDocument) => void;
+  /** The portrait just stored, or `null` for one just removed — so the list row can show it. */
+  onPortraitSaved?: (portrait: string | null) => void;
   /**
    * The event target carrying `pagehide` and `visibilitychange`. Defaults to `globalThis` when
    * it is an event target at all, and to nothing under plain Node, where neither event exists.
@@ -61,9 +63,17 @@ export class Autosave {
   readonly #now: () => Date;
   readonly #onFailure: (failure: StorageFailure) => void;
   readonly #onSaved: (doc: CharacterDocument) => void;
+  readonly #onPortraitSaved: (portrait: string | null) => void;
   readonly #target: Target | null;
 
   #stopReaction: (() => void) | null = null;
+  #stopPortraitReaction: (() => void) | null = null;
+  /**
+   * The portrait write in flight, so `flush()` can wait for it too. Not debounced: a portrait
+   * changes once per pick, not once per keystroke, and it is written alone — never with the
+   * document, which autosave keeps small precisely by leaving the portrait out of it.
+   */
+  #portraitWrite: Promise<void> = Promise.resolve();
   #timer: ReturnType<typeof setTimeout> | null = null;
   /**
    * Whether an edit has arrived that no `save()` has covered yet. A flag rather than the
@@ -84,6 +94,7 @@ export class Autosave {
     this.#now = options.now ?? (() => new Date());
     this.#onFailure = options.onFailure ?? (() => {});
     this.#onSaved = options.onSaved ?? (() => {});
+    this.#onPortraitSaved = options.onPortraitSaved ?? (() => {});
     this.#target = options.target === undefined ? defaultTarget() : options.target;
   }
 
@@ -92,6 +103,10 @@ export class Autosave {
     this.#stopReaction = reaction(
       () => this.#sheet.toDocument(),
       () => this.#schedule(),
+    );
+    this.#stopPortraitReaction = reaction(
+      () => this.#sheet.portrait,
+      (portrait) => this.#savePortrait(portrait),
     );
     this.#target?.addEventListener('pagehide', this.#onHide);
     this.#target?.addEventListener('visibilitychange', this.#onHide);
@@ -107,6 +122,8 @@ export class Autosave {
   stop(): void {
     this.#stopReaction?.();
     this.#stopReaction = null;
+    this.#stopPortraitReaction?.();
+    this.#stopPortraitReaction = null;
     this.#target?.removeEventListener('pagehide', this.#onHide);
     this.#target?.removeEventListener('visibilitychange', this.#onHide);
     void this.flush();
@@ -115,6 +132,7 @@ export class Autosave {
   /** Writes now if there is anything to write. Resolves once the repository has. */
   async flush(): Promise<void> {
     this.#clearTimer();
+    await this.#portraitWrite;
     if (!this.#dirty) return;
     this.#dirty = false;
 
@@ -129,6 +147,18 @@ export class Autosave {
       // change by trying again, and a retry loop would bury the report under its own traffic.
       this.#onFailure(caught instanceof StorageError ? caught.detail : toStorageFailure(caught));
     }
+  }
+
+  /** Chained, so two quick picks land in the order they were made. */
+  #savePortrait(portrait: string | null): void {
+    this.#portraitWrite = this.#portraitWrite.then(async () => {
+      try {
+        await this.#repository.savePortrait(this.#sheet.id, portrait);
+        this.#onPortraitSaved(portrait);
+      } catch (caught) {
+        this.#onFailure(caught instanceof StorageError ? caught.detail : toStorageFailure(caught));
+      }
+    });
   }
 
   #schedule(): void {

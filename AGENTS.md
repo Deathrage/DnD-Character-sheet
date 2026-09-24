@@ -11,7 +11,8 @@ rule, a homebrew feature, or an edition variation.
 
 If you find yourself about to add a calculation, stop. That is a feature request, not a gap.
 
-One character is one versioned JSON document, stored locally in IndexedDB.
+One character is one versioned JSON document, stored locally in IndexedDB. Its portrait, if any,
+is stored beside it, keyed by the same id.
 
 **Read next:** `docs/superpowers/specs/2026-07-25-dnd-character-sheet-design.md` is the design spec
 and the authority on intent. Section numbers referenced below (§3.4, §11) point at it.
@@ -28,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 565 tests across 37 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
+- 638 tests across 44 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -46,6 +47,29 @@ back on the next load (criterion 14).
   still holds exactly what was read (re-checked in the same transaction), so a concurrent
   autosave wins; a failed write-back goes to `onFailure` and never fails the read.
 - Developed on `feature/character-sheet-foundation`, merged into `main` as PR #1 on 2026-09-23.
+- **Portraits live beside the document, never in it** (2026-09-24). The character schema is still
+  v1. A portrait is its own IndexedDB store, `portraits`, keyed by character id — IndexedDB
+  version 2 added it; see "IndexedDB versioning" below. It was briefly a v2 schema field, never
+  committed or deployed, and moved out because a 20 KB base64 string was four fifths of the
+  raw-JSON editor. The split also mirrors the planned Firestore layout (see the sync entry in
+  `docs/BACKLOG.md`).
+  - **The rule** is `src/data/repository/portrait.ts`: a base64 JPEG data URL, at most 32 000
+    characters (~23 KB). Outside the schema version directories because it is not versioned with
+    the document — but exported files carry it, so it may only ever widen.
+  - **Exported files are `{ sheet, portrait }`**, `portrait` always present, `null` when there is
+    none. Import also reads a bare document — every file exported before this — and tells the two
+    apart by the `sheet` key, which a strict document can never have. The raw-JSON editor edits
+    `sheet` alone, and `parseInto` deliberately refuses the envelope.
+  - **Written on its own path.** `Autosave` saves a portrait change at once through
+    `savePortrait`, never inside a document save; `flush()` awaits it. Import and clone write both
+    stores in one transaction (`save(doc, portrait)`); `delete` removes both.
+  - **Compressed in the browser** by `src/ui/portrait.ts` — centre-cropped to 384px, JPEG on a
+    white background, quality stepped down to fit 24 000 characters (~17 KB); even pure random
+    noise fits. Tight because cloud sync will be Firestore-only (Cloud Storage is not on the Spark
+    plan), and Spark caps total stored bytes. **JPEG only, on purpose**: Safari's canvas cannot
+    encode WebP, so allowing WebP would make a portrait's format depend on which browser made it,
+    and the fix — a WASM libwebp — is a large dependency for a 384px image. SVG is refused too,
+    because it can carry script.
 - Schema v1 was restructured in place on 2026-09-20 — see `src/data/schema/README.md` for why an
   in-place edit was still safe: nothing built against `v1/` had shipped or stored a real document
   yet, so its freeze had not begun. `classes` is now an array of `{ id, name, level }`, not a
@@ -227,7 +251,18 @@ telling you something; do not add an exception without a reason you would defend
 
 `createObjectStore('characters')` with `put(value, key)` — never a `keyPath`. A `keyPath` reads the
 key _from_ the stored value, so a corrupt document would become unlistable and unreachable. A
-damaged document must still appear in the list, flagged, and open in a repair screen.
+damaged document must still appear in the list, flagged, and open in a repair screen. The
+`portraits` store follows the same rule.
+
+### IndexedDB versioning is not schema versioning
+
+`DB_VERSION` versions the database's _structure_ — its stores and indexes. The character schema
+is versioned per document (`schemaVersion`) and migrated when read. Never tie the two: an older
+build cannot open a database with a higher version at all (`VersionError`), a bump needs every
+other tab's connection closed, and migrating documents inside `upgrade` would force a choice
+between aborting the whole upgrade for one bad document and silently dropping it. Bump
+`DB_VERSION` only to add or change a store or index, and add one `if (oldVersion < N)` step to
+`upgradeCharacterDb` per version, so a browser that skipped a release runs every step it missed.
 
 ### The test timezone is pinned
 
@@ -304,7 +339,8 @@ src/data/schema/       index.ts is the public face; README.md governs versioning
   v1/                  primitives, document, blank (factory), index — self-contained
 src/data/migration/    versionOf, parseCharacter, the LoadError taxonomy
 src/data/serialization/ export and import (three-outcome ParseTextResult)
-src/data/repository/   the IndexedDB repository, ListEntry, summarize
+src/data/repository/   the IndexedDB repository (characters + portraits stores), ListEntry, summarize,
+                       portrait.ts — the portrait rule
 src/data/characterLifecycle.test.ts   end-to-end across all four modules
 src/test/              fake-indexeddb setup
 src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, wipe, createOpener, putRaw — shared so the

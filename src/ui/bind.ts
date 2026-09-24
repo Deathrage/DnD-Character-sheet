@@ -24,6 +24,7 @@ import {
   type StorageFailure,
   type StorageGate,
 } from '../business/index.js';
+import { compressPortrait } from './portrait.js';
 import { ABILITIES, SKILLS } from './reference.js';
 import type { SheetActions, SheetData } from './screens/CharacterHub.js';
 import type {
@@ -179,6 +180,7 @@ export function toCharacterView(sheet: CharacterSheetBO): CharacterView {
       total: die.total,
     })),
     armorClass: sheet.armorClass,
+    portrait: sheet.portrait,
   };
 }
 
@@ -319,6 +321,17 @@ function vitalsActions(sheet: CharacterSheetBO): VitalsActions {
     setTotalHitPoints: (value) => sheet.hitPoints.setTotal(value),
     setTemporaryHitPoints: (value) => sheet.hitPoints.setTemporary(value),
     setArmorClass: (value) => sheet.setArmorClass(value),
+    // Any failure is the file's — undecodable, or somehow still too large — so it is told to
+    // the player rather than thrown out of an event handler as an unhandled rejection.
+    setPortrait: async (file) => {
+      try {
+        sheet.setPortrait(await compressPortrait(file));
+        return null;
+      } catch {
+        return 'That file could not be used as a portrait. Try a JPEG or PNG.';
+      }
+    },
+    removePortrait: () => sheet.setPortrait(null),
     addClass: (name) =>
       attempt(() => {
         sheet.classes.add({ name });
@@ -526,6 +539,7 @@ export function toCharacterRows(library: CharacterLibraryBO): CharacterRow[] {
           level: entry.totalLevel,
           classes: entry.classes,
           hitPoints: entry.hitPoints,
+          portrait: entry.portrait,
         },
   );
 }

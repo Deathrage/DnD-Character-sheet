@@ -40,6 +40,27 @@ describe('CharacterSheetBO', () => {
     );
   });
 
+  it('sets and clears a portrait, which never enters the document', () => {
+    const sheet = sheetFor();
+    sheet.setPortrait('data:image/jpeg;base64,/9j/4AAQ');
+    expect(sheet.portrait).toBe('data:image/jpeg;base64,/9j/4AAQ');
+    // The raw-JSON editor shows toDocument(); a 20 KB string there is what this split removed.
+    expect(JSON.stringify(sheet.toDocument())).not.toContain('base64');
+    sheet.setPortrait(null);
+    expect(sheet.portrait).toBeNull();
+  });
+
+  it.each([
+    ['an SVG', 'data:image/svg+xml;base64,PHN2Zz4=', 'INVALID_IMAGE'],
+    ['a webp', 'data:image/webp;base64,UklGRg==', 'INVALID_IMAGE'],
+    ['a remote URL', 'https://example.com/a.jpg', 'INVALID_IMAGE'],
+    ['an oversized image', `data:image/jpeg;base64,${'A'.repeat(32_000)}`, 'TOO_LONG'],
+  ])('refuses %s as a portrait', (_label, value, code) => {
+    const sheet = sheetFor();
+    expect(() => sheet.setPortrait(value)).toThrow(expect.objectContaining({ code }) as Error);
+    expect(sheet.portrait).toBeNull();
+  });
+
   it('makes the document observable, so a reader re-runs when a field changes', () => {
     const sheet = sheetFor();
     const seen: string[] = [];

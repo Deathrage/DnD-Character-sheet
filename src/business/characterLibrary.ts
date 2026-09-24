@@ -6,7 +6,7 @@ import type { CharacterRepository, CharacterSummary } from '../data/repository/t
 import { createCharacter, type CharacterDocument } from '../data/schema/index.js';
 import { Autosave, type AutosaveOptions } from './autosave.js';
 import { CharacterSheetBO } from './characterSheet.js';
-import { CharacterFile, documentOf, parseInto } from './characterFile.js';
+import { CharacterFile, documentOf, parseInto, portraitOf } from './characterFile.js';
 import { createId } from './createId.js';
 import { describeLoadError } from '../data/migration/errors.js';
 import { trimmedName } from './guards.js';
@@ -76,12 +76,12 @@ export class CharacterLibraryBO {
    */
   async create(name: string): Promise<CharacterSheetBO> {
     const doc = createCharacter({ name: trimmedName(name), id: createId(), now: new Date() });
-    return this.#adopt(doc);
+    return this.#adopt(doc, null);
   }
 
   /** Import. Identical to `create` after the document exists, which is why both end in `#adopt`. */
   async add(file: CharacterFile): Promise<CharacterSheetBO> {
-    return this.#adopt(documentOf(file));
+    return this.#adopt(documentOf(file), portraitOf(file));
   }
 
   /**
@@ -92,10 +92,10 @@ export class CharacterLibraryBO {
    * - Autosave is attached **here**, not only in `open()`, or every edit to a newly created
    *   character is lost until the player navigates away and back.
    */
-  async #adopt(doc: CharacterDocument): Promise<CharacterSheetBO> {
+  async #adopt(doc: CharacterDocument, portrait: string | null): Promise<CharacterSheetBO> {
     // Written before any edit, so the row exists immediately.
-    await this.store(doc);
-    const sheet = new CharacterSheetBO(doc);
+    await this.store(doc, portrait);
+    const sheet = new CharacterSheetBO(doc, portrait);
     this.attachAutosave(sheet);
     return sheet;
   }
@@ -110,6 +110,7 @@ export class CharacterLibraryBO {
       ...this.#autosaveOptions,
       onFailure: (failure) => this.storageGate.report(failure),
       onSaved: (doc) => this.#refreshRow(doc),
+      onPortraitSaved: (portrait) => this.#refreshPortrait(sheet.id, portrait),
     });
     autosave.start();
     this.#autosaves.add(autosave);
@@ -145,9 +146,13 @@ export class CharacterLibraryBO {
    * cheapest way to keep them agreeing, because the document is already in hand here.
    */
   #refreshRow(doc: CharacterDocument): void {
-    this.#entries
-      .find((entry) => entry.id === doc.id)
-      ?.refresh({ ok: true, summary: summarize(doc) });
+    const entry = this.#entries.find((candidate) => candidate.id === doc.id);
+    entry?.refresh({ ok: true, summary: summarize(doc, entry.portrait) });
+  }
+
+  /** The same, for a portrait: stored on its own, so it refreshes the row on its own. */
+  #refreshPortrait(id: string, portrait: string | null): void {
+    this.#entries.find((entry) => entry.id === id)?.refreshPortrait(portrait);
   }
 
   /** Internal, for `CharacterEntryBO`. Not on `index.ts`. */
@@ -156,12 +161,13 @@ export class CharacterLibraryBO {
   }
 
   /**
-   * Internal, for `#adopt` and `CharacterEntryBO.clone()`: saves a new document and lists it.
-   * A clone gets no sheet, because nobody is looking at it yet and a sheet would need disposing.
+   * Internal, for `#adopt` and `CharacterEntryBO.clone()`: saves a new document and its
+   * portrait together, and lists it. A clone gets no sheet, because nobody is looking at it yet
+   * and a sheet would need disposing.
    */
-  async store(doc: CharacterDocument): Promise<void> {
-    await this.#repository.save(doc);
-    this.#entries.push(new CharacterEntryBO({ ok: true, summary: summarize(doc) }, this));
+  async store(doc: CharacterDocument, portrait: string | null): Promise<void> {
+    await this.#repository.save(doc, portrait);
+    this.#entries.push(new CharacterEntryBO({ ok: true, summary: summarize(doc, portrait) }, this));
   }
 
   /** Internal, for `CharacterEntryBO.remove()`. */
@@ -199,6 +205,12 @@ export class CharacterEntryBO {
     this.#state.row = row;
   }
 
+  /** Internal, for `CharacterLibraryBO`. A damaged row has no portrait to show, so it is left. */
+  refreshPortrait(portrait: string | null): void {
+    const { row } = this.#state;
+    if (row.ok) this.#state.row = { ok: true, summary: { ...row.summary, portrait } };
+  }
+
   get id(): string {
     // Read from the summary the repository built, not re-derived from the document — `list()`
     // keys each row by its store key, which is the id that must be used to fetch it back.
@@ -221,6 +233,10 @@ export class CharacterEntryBO {
     return this.#state.row.ok
       ? this.#state.row.summary.hitPoints
       : { current: 0, total: 0, temporary: 0 };
+  }
+
+  get portrait(): string | null {
+    return this.#state.row.ok ? this.#state.row.summary.portrait : null;
   }
 
   get isDamaged(): boolean {
@@ -246,7 +262,8 @@ export class CharacterEntryBO {
     }
     if (!result.ok) return { ok: false, message: describeLoadError(result.error) };
 
-    const sheet = new CharacterSheetBO(result.doc);
+    const portrait = await this.#library.repository.getPortrait(this.id);
+    const sheet = new CharacterSheetBO(result.doc, portrait);
     this.#library.attachAutosave(sheet);
     return { ok: true, sheet };
   }
@@ -307,12 +324,15 @@ export class CharacterEntryBO {
 
     // 73 + " (copy)" is the 80-character name limit.
     const name = trimmedName(`${result.doc.name.slice(0, 73).trimEnd()} (copy)`);
-    await this.#library.store({
-      ...structuredClone(result.doc),
-      id: createId(),
-      name,
-      updatedAt: new Date().toISOString(),
-    });
+    await this.#library.store(
+      {
+        ...structuredClone(result.doc),
+        id: createId(),
+        name,
+        updatedAt: new Date().toISOString(),
+      },
+      await this.#library.repository.getPortrait(this.id),
+    );
     return null;
   }
 
