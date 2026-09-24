@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
-import type { CharacterRow, ClassSummaryView, HitPointsView } from '../types.js';
+import type { CharacterRow, ClassSummaryView, HitPointsView, InstallView } from '../types.js';
 
 interface Props {
   rows: CharacterRow[];
@@ -12,10 +12,16 @@ interface Props {
   /** Both are called only once the player has confirmed; a delete has no undo (spec §6). */
   onClone(id: string): void;
   onDelete(id: string): void;
+  /** Absent, `installed` or `unavailable` hides the Install button. */
+  install?: InstallView;
+  /** Starts the browser's own prompt; only called when `install` is `prompt`. */
+  onInstall?(): void;
 }
 
 export function CharacterList({
   rows,
+  install,
+  onInstall,
   onOpen,
   onOpenRawJson,
   onCreate,
@@ -27,20 +33,27 @@ export function CharacterList({
     action: 'clone' | 'delete';
     row: CharacterRow;
   } | null>(null);
+  const [showingSteps, setShowingSteps] = useState(false);
 
   return (
     <div className="app">
       <div className="lhead">
         <div className="vtop">
           <h1>Characters</h1>
-          <button
-            type="button"
-            className="txtbtn"
-            style={{ marginLeft: 'auto' }}
-            onClick={onImport}
-          >
-            Import
-          </button>
+          <span style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
+            {(install?.kind === 'prompt' || install?.kind === 'steps') && (
+              <button
+                type="button"
+                className="txtbtn"
+                onClick={() => (install.kind === 'prompt' ? onInstall?.() : setShowingSteps(true))}
+              >
+                Install
+              </button>
+            )}
+            <button type="button" className="txtbtn" onClick={onImport}>
+              Import
+            </button>
+          </span>
         </div>
         <div className="sub">{rows.length === 1 ? '1 saved' : `${rows.length} saved`}</div>
       </div>
@@ -99,6 +112,26 @@ export function CharacterList({
       <button type="button" className="fab" onClick={onCreate} aria-label="New character">
         +
       </button>
+
+      {showingSteps && install?.kind === 'steps' && (
+        <ResponsiveDialog
+          title="Install the app"
+          open
+          onClose={() => setShowingSteps(false)}
+          footer={
+            <button type="button" className="primary" onClick={() => setShowingSteps(false)}>
+              Done
+            </button>
+          }
+        >
+          <p className="hint" style={{ marginTop: 0 }}>
+            {install.steps}
+          </p>
+          <p className="hint">
+            An installed app starts offline and is the one this browser trusts to keep its storage.
+          </p>
+        </ResponsiveDialog>
+      )}
 
       {confirming !== null && (
         <ConfirmDialog

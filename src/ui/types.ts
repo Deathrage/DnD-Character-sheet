@@ -324,3 +324,13 @@ export const SECTIONS: readonly SectionTile[] = [
  * to be edited to stand a section down again, and a story shows the inert state.
  */
 export const WIRED_SECTIONS: readonly SectionKey[] = SECTIONS.map((section) => section.key);
+
+/**
+ * What the app can offer toward installing itself (see `install.ts`): the browser's own prompt,
+ * written steps where the browser installs but will not let a page start it, or nothing.
+ */
+export type InstallView =
+  | { kind: 'prompt' }
+  | { kind: 'steps'; steps: string }
+  | { kind: 'installed' }
+  | { kind: 'unavailable' };

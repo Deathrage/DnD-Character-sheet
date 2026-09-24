@@ -45,6 +45,19 @@ body {
   overflow: hidden;
 }
 
+/* The real page only (Storybook has no `#root`): a column, so the update strip above the app
+   takes its height from the app instead of pushing the page into a scroll. */
+#root {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+#root > .app {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+}
+
 /* Wider than a phone: the wireframe's phone frame, centred on the stage. Same breakpoint as the
    dialog, so the sheet-vs-modal switch and the frame agree on what "a phone" is. The height is
    capped rather than the wireframe's fixed 780px so the frame still fits a short laptop screen. */
@@ -64,6 +77,20 @@ body {
     border: 1px solid var(--line);
     border-radius: 30px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  }
+  /* The frame's 24px of stage above and below is padding, so it shrinks to what the strip leaves
+     rather than to a fixed share of the window. The strip cancels the top padding to sit flush. */
+  #root {
+    box-sizing: border-box;
+    padding-block: 24px;
+  }
+  #root > .updatePrompt {
+    margin: -24px 0 24px;
+  }
+  #root > .app {
+    flex: 0 1 844px;
+    width: 100%;
+    margin: auto;
   }
 }
 
@@ -841,19 +868,16 @@ body {
 }
 
 /* ---------- update prompt ---------- */
+/* A strip across the top of the window, in the flow so it pushes the app down. An open dialog
+   covers it like the rest of the page: the gate has to be dealt with before the update. */
 .updatePrompt {
-  position: fixed;
-  left: 50%;
-  bottom: 16px;
-  transform: translateX(-50%);
-  max-width: calc(100% - 32px);
-  padding: 10px 14px;
-  border-radius: 12px;
+  flex: none;
+  padding: 10px 16px;
+  text-align: center;
   background: var(--paper);
   color: var(--ink);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 0.18);
+  border-bottom: 1px solid var(--line);
   font-size: 14px;
-  z-index: 20;
 }
 
 /* ---------- raw JSON editor ---------- */

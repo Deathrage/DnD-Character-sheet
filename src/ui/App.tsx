@@ -7,6 +7,7 @@ import {
   type CharacterSheetBO,
 } from '../business/index.js';
 import { useCharacterRows, useSheet, useStorageFailure, useStorageGate } from './bind.js';
+import { useInstall } from './install.js';
 import { navigate, useRoute } from './route.js';
 import { CharacterHub } from './screens/CharacterHub.js';
 import { CharacterList } from './screens/CharacterList.js';
@@ -27,6 +28,10 @@ export function App({ library }: { library: CharacterLibraryBO }) {
   const rows = useCharacterRows(library);
   const gate = useStorageGate(library.storageGate);
   const failure = useStorageFailure(library.storageGate);
+  // Installing is what moves `persist()` in Chromium and Safari, so it is asked again straight away.
+  const install = useInstall(
+    useCallback(() => void library.storageGate.requestPersist(), [library]),
+  );
 
   const [ready, setReady] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -105,6 +110,8 @@ export function App({ library }: { library: CharacterLibraryBO }) {
         <>
           <CharacterList
             rows={rows}
+            install={install.view}
+            onInstall={install.install}
             onOpen={(id) => navigate({ name: 'character', id, section: null })}
             onOpenRawJson={(id) => navigate({ name: 'raw', id })}
             onCreate={createCharacter}
@@ -144,6 +151,9 @@ export function App({ library }: { library: CharacterLibraryBO }) {
           {...(gate.estimate === undefined ? {} : { estimate: gate.estimate })}
           onRequestPersist={() => void library.storageGate.requestPersist()}
           onContinueSession={() => library.storageGate.dismissForSession()}
+          install={install.view}
+          asksPermission={install.asksPermission}
+          onInstall={install.install}
         />
       )}
     </>

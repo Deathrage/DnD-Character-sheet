@@ -157,7 +157,7 @@ describe('App', () => {
     fireEvent.click(screen.getByText('Make storage permanent'));
 
     // First-run denial is the likely outcome in Chrome, so the gate must not become a trap.
-    const escape = await screen.findByText('Continue for this session');
+    const escape = await screen.findByText('Continue anyway, my data may be lost');
     fireEvent.click(escape);
     await waitFor(() =>
       expect(screen.queryByText('Your characters are not safe here yet')).toBeNull(),

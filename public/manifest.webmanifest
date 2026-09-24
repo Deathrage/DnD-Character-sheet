@@ -1,7 +1,7 @@
 {
-  "name": "Character Sheet",
-  "short_name": "Sheet",
-  "description": "A D&D 5e character sheet that computes nothing. Every number is yours.",
+  "name": "DnD Character sheet",
+  "short_name": "DnD:CS",
+  "description": "A very unopinionated D&D 5.5e character sheet that computes nothing. Every number is yours.",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

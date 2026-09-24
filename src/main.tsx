@@ -31,7 +31,8 @@ if (import.meta.env.DEV) {
 
 createRoot(root).render(
   <StrictMode>
-    <App library={library} />
+    {/* First, so the strip sits above the app and pushes it down (see `#root` in styles.css). */}
     <UpdatePrompt beforeReload={() => library.flush()} />
+    <App library={library} />
   </StrictMode>,
 );

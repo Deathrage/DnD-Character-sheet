@@ -1,4 +1,5 @@
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
+import type { InstallView } from '../types.js';
 
 interface Props {
   /**
@@ -8,8 +9,16 @@ interface Props {
   phase: 'ask' | 'refused';
   /** `navigator.storage.estimate()`, which the spec pads — so it is presented as approximate. */
   estimate?: { usage: number; quota: number };
+  /** What the refused phase can offer toward installing, the lever silent browsers weigh. */
+  install: InstallView;
+  /**
+   * The browser asked the player itself (Firefox), so a refusal is a permission the player
+   * blocked — which it remembers — and installing is not the fix.
+   */
+  asksPermission: boolean;
   onRequestPersist(): void;
   onContinueSession(): void;
+  onInstall(): void;
 }
 
 /**
@@ -20,7 +29,15 @@ interface Props {
  * so once a request has actually been made, a session-only escape appears. It is session-only:
  * the gate returns on the next launch while storage is still best-effort (criterion 14).
  */
-export function StorageGateDialog({ phase, estimate, onRequestPersist, onContinueSession }: Props) {
+export function StorageGateDialog({
+  phase,
+  estimate,
+  install,
+  asksPermission,
+  onRequestPersist,
+  onContinueSession,
+  onInstall,
+}: Props) {
   return (
     <ResponsiveDialog
       title="Your characters are not safe here yet"
@@ -37,8 +54,13 @@ export function StorageGateDialog({ phase, estimate, onRequestPersist, onContinu
         ) : (
           <>
             <button type="button" className="secondary" onClick={onContinueSession}>
-              Continue for this session
+              Continue anyway, my data may be lost
             </button>
+            {!asksPermission && install.kind === 'prompt' && (
+              <button type="button" className="primary" onClick={onInstall}>
+                Install app
+              </button>
+            )}
             <button type="button" className="primary" onClick={onRequestPersist}>
               Ask again
             </button>
@@ -55,14 +77,19 @@ export function StorageGateDialog({ phase, estimate, onRequestPersist, onContinu
       ) : (
         <>
           <p className="hint" style={{ marginTop: 0 }}>
-            The browser turned the request down. It decides from how much you have used the app, so
-            two things actually move it:
+            {asksPermission
+              ? 'Permanent storage was declined or is blocked, and the browser remembers that choice.'
+              : 'The browser turned the request down. It decides on its own, and what it trusts is an installed app.'}
           </p>
           <ul className="hint">
-            <li>
-              <b>Install the app</b> to your Home Screen or desktop. That is one of the signals the
-              browser weighs, and you can ask again afterwards.
-            </li>
+            {asksPermission ? (
+              <li>
+                <b>Reset the permission</b>: click the padlock next to the address, clear the
+                blocked <i>persistent storage</i> permission, then choose Ask again.
+              </li>
+            ) : (
+              <InstallAdvice install={install} />
+            )}
             <li>
               <b>Export your characters</b> now. An exported <code>.json</code> outlives the browser
               profile entirely — it is the only copy that survives storage being cleared.
@@ -77,6 +104,31 @@ export function StorageGateDialog({ phase, estimate, onRequestPersist, onContinu
       )}
     </ResponsiveDialog>
   );
+}
+
+function InstallAdvice({ install }: { install: InstallView }) {
+  switch (install.kind) {
+    case 'prompt':
+      return (
+        <li>
+          <b>Install the app</b> with the button below, then choose Ask again if this is still up.
+        </li>
+      );
+    case 'steps':
+      return (
+        <li>
+          <b>Install the app</b>: <span>{install.steps}</span> Choose Ask again once it opens.
+        </li>
+      );
+    case 'installed':
+      return (
+        <li>
+          <b>The app is installed.</b> Open it from its icon and choose Ask again there.
+        </li>
+      );
+    case 'unavailable':
+      return null;
+  }
 }
 
 function formatBytes(bytes: number): string {

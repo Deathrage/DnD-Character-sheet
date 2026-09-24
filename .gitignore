@@ -10,6 +10,9 @@ storybook-static/
 # Superpowers brainstorming session scratch (mockups, server state)
 .superpowers/
 
+# Playwright MCP browser session output (snapshots, screenshots, console logs)
+.playwright-mcp/
+
 # Logs
 *.log
 npm-debug.log*
