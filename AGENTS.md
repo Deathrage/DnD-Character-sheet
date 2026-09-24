@@ -156,12 +156,15 @@ back on the next load (criterion 14).
   - **Sign-in is a popup in dev, a redirect in production** (`import.meta.env.DEV`). A popup is
     fine on localhost; the spec picked redirect for the deployed app because popups are unreliable
     in an installed PWA and on iOS.
+  - **Sign-in does not work on PR preview channels.** A preview's origin is neither `authDomain`
+    nor an authorized domain, so Firebase Auth refuses it. Test cloud features on localhost or live.
   - **The Firebase chunk is dynamic** (`import()`, never on launch): `firestoreRepository-*.js` is
     199.33 kB (59.50 kB gzip), split out of a main bundle of 441.22 kB (127.15 kB gzip) — from
     `npm run build`; re-run it if these drift.
   - **Left to the user, one-off** — none of this is done yet:
-    - In the Firebase console: create the Firestore database (production mode, location
-      permanent); Authentication → Sign-in method → enable Google; Authentication → Settings →
+    - In the Firebase console: create the Firestore database in **production mode** — test
+      mode's default rules open every document to anyone for 30 days — and note its location is
+      permanent; Authentication → Sign-in method → enable Google; Authentication → Settings →
       Authorized domains → confirm the `web.app` origin and `localhost`; Project settings → Your
       apps → add a Web app if there is none; IAM → grant the GitHub deploy service account
       **Firebase Rules Admin**.
@@ -171,8 +174,8 @@ back on the next load (criterion 14).
       same path as `UID_B` is Denied.
     - The live round-trip on `dnd-character-sheet-64a24.web.app`: sign in, upload, restore,
       delete, sign out.
-    - **Warning:** CI's rules-deploy step (`deploy.yml`) fails on the first push to `main` until
-      Firestore exists and the deploy account holds Firebase Rules Admin — both above.
+    - **Warning:** create the database and grant Rules Admin **before merging**. CI's
+      rules-deploy step (`deploy.yml`) runs on the first push to `main` and fails until both exist.
 
 What is built: the versioned schema, the migration loop and its error taxonomy, export/import, the
 IndexedDB repository, the whole business layer, the presentational components, and `src/ui/bind.ts`
@@ -370,8 +373,8 @@ src/data/migration/    versionOf, parseCharacter, the LoadError taxonomy
 src/data/serialization/ export and import (three-outcome ParseTextResult)
 src/data/repository/   the IndexedDB repository (characters + portraits stores), ListEntry, summarize,
                        portrait.ts — the portrait rule
-src/data/remote/       codec.ts, cloudError.ts, config.ts, firestoreRepository.ts — the only
-                       importer of `firebase` (lint-enforced)
+src/data/remote/       types.ts (CloudRepository and its shapes), codec.ts, cloudError.ts, config.ts,
+                       firestoreRepository.ts — the only importer of `firebase` (lint-enforced)
 src/data/characterLifecycle.test.ts   end-to-end across all four modules
 src/test/              fake-indexeddb setup
 src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, wipe, createOpener, putRaw — shared so the
