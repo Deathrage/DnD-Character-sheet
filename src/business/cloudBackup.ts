@@ -225,6 +225,8 @@ export class CloudBackup {
       if (this.#state.status === 'unavailable') {
         return { ok: false, message: this.#signInFailure ?? UNAVAILABLE };
       }
+      // Stored before a redirect sign-in navigates away, taking unsaved typing with it.
+      await this.#library.flush();
       this.#write(PENDING_KEY, characterId);
       const failed = await this.#signInOnly();
       this.#write(PENDING_KEY, null);

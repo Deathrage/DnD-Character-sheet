@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CloudError } from '../data/remote/cloudError.js';
 import { decodePayload, type Payload } from '../data/remote/codec.js';
 import { createIndexedDbRepository } from '../data/repository/indexedDbRepository.js';
@@ -183,6 +183,25 @@ describe('CloudBackup', () => {
     const payload = [...cloud.payloads.values()][0]!;
     const decoded = await decodePayload(payload, ID_A);
     expect(decoded.ok && decoded.doc.name).toBe('Sable Nightwind');
+    opened.sheet.dispose();
+  });
+
+  it('stores the last edit before a redirect sign-in navigates away', async () => {
+    const opened = await library.entries[0]!.open();
+    if (!opened.ok) throw new Error(opened.message);
+    opened.sheet.setName('Sable Nightwind'); // inside the 60 s debounce: not yet stored
+    const cloud = fakeCloud(false);
+    const storedAtSignIn: (string | false)[] = [];
+    // A redirect: the page navigates away inside `signIn`, which never settles.
+    cloud.repository.signIn = async () => {
+      const stored = await repository.get(ID_A);
+      storedAtSignIn.push(stored?.ok === true && stored.doc.name);
+      return new Promise<never>(() => {});
+    };
+    const { backup: cloudBackup } = backup(cloud);
+
+    void cloudBackup.upload(ID_A);
+    await vi.waitFor(() => expect(storedAtSignIn).toEqual(['Sable Nightwind']));
     opened.sheet.dispose();
   });
 
