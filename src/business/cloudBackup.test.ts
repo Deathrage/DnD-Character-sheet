@@ -245,6 +245,35 @@ describe('CloudBackup', () => {
     expect(second.lastUpload).toBeNull();
   });
 
+  it('lets a startup resume finish its upload when refresh() runs at the same time', async () => {
+    const cloud = fakeCloud(true);
+    const session = memorySession();
+    session.setItem('dnd-character-sheet.cloud-pending-upload', ID_A);
+    // Real timings: the resume's sign-in check settles a moment late, and the list read is slow,
+    // so an unguarded refresh() takes `busy` first and holds it while the upload asks for it.
+    const later = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    const { currentUser, listCharacters } = cloud.repository;
+    let checks = 0;
+    cloud.repository.currentUser = async () => {
+      if (checks++ === 0) await later(5);
+      return currentUser();
+    };
+    cloud.repository.listCharacters = async () => {
+      await later(20);
+      return listCharacters();
+    };
+    const cloudBackup = new CloudBackup(library, {
+      load: async () => cloud.repository,
+      session,
+      now: clock(),
+    });
+
+    await Promise.all([cloudBackup.resume(), cloudBackup.refresh()]);
+
+    expect(cloud.state.uploads).toBe(1);
+    expect(cloudBackup.lastUpload?.result.ok).toBe(true);
+  });
+
   it('reports a Firebase that will not load as unavailable, without rejecting', async () => {
     const cloudBackup = new CloudBackup(library, {
       load: () => Promise.reject(new TypeError('Failed to fetch dynamically imported module')),
@@ -346,6 +375,28 @@ describe('CloudBackup', () => {
     });
     await cloudBackup.restore(ID_A, uploadedAt, 'replace');
     expect(library.entries[0]?.isDamaged).toBe(false);
+  });
+
+  it('answers a local read that fails during a restore, rather than rejecting', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
+    const broken = new CharacterLibraryBO({
+      repository: { ...repository, get: () => Promise.reject(new Error('IndexedDB is blocked')) },
+      storageGate: new StorageGate({ port: null }),
+      autosave: { debounceMs: 60_000, target: null },
+    });
+    await broken.load();
+    const brokenBackup = new CloudBackup(broken, {
+      load: async () => cloud.repository,
+      session: memorySession(),
+      now: clock(),
+    });
+    await brokenBackup.refresh();
+
+    await expect(brokenBackup.restore(ID_A, uploadedAt)).resolves.toMatchObject({
+      ok: false,
+      kind: 'failed',
+    });
   });
 
   it('refuses Replace while the sheet is open', async () => {

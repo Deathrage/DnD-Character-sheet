@@ -86,6 +86,8 @@ export class CloudBackup {
    * or `null`. Reset by every `#signedInUser()`, so only the caller right after it sees it.
    */
   #signInFailure: string | null = null;
+  /** The startup `resume()`, which `refresh()` waits out so its `busy` cannot refuse the upload. */
+  #resuming: Promise<void> = Promise.resolve();
   readonly #state = observable(
     {
       status: 'signedOut' as CloudStatus,
@@ -133,7 +135,12 @@ export class CloudBackup {
    * it interrupted. The marker is cleared before anything can fail, so a reload after a failed
    * resume does not upload again: the player sees the failure and presses Upload themselves.
    */
-  async resume(): Promise<void> {
+  resume(): Promise<void> {
+    this.#resuming = this.#resume();
+    return this.#resuming;
+  }
+
+  async #resume(): Promise<void> {
     const pending = this.#read(PENDING_KEY);
     if (pending === null) return;
     this.#write(PENDING_KEY, null);
@@ -149,6 +156,9 @@ export class CloudBackup {
 
   /** Signed in: re-reads the index. Signed out: only settles `status`. */
   async refresh(): Promise<string | null> {
+    // Mounting the cloud screen at launch races the resumed upload: without this, `#run` would
+    // hold `busy` and the upload, its marker already cleared, would be refused and lost.
+    await this.#resuming;
     const user = await this.#signedInUser();
     if (user === null) {
       if (this.#signInFailure !== null) return this.#takeSignInFailure();
@@ -270,7 +280,12 @@ export class CloudBackup {
 
     const local = this.#library.entries.find((entry) => entry.id === characterId);
     if (local !== undefined && choice === undefined) {
-      const stored = await this.#library.repository.get(characterId);
+      let stored;
+      try {
+        stored = await this.#library.repository.get(characterId);
+      } catch (caught) {
+        return failed(this.#describe(caught));
+      }
       return {
         ok: false,
         kind: 'conflict',
