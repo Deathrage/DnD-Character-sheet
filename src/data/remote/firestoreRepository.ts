@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import {
+  connectAuthEmulator,
   getAuth,
   getRedirectResult,
   GoogleAuthProvider,
@@ -11,6 +12,7 @@ import {
 import {
   Bytes,
   collection,
+  connectFirestoreEmulator,
   deleteField,
   doc,
   FieldPath,
@@ -50,6 +52,13 @@ export function createFirestoreRepository(): CloudRepository {
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
+  // Dev talks to the local emulators (`npm run dev:cloud`), never the live project, so a test
+  // upload cannot land beside real backups or spend the shared quota. Before any other call on
+  // either, which is when the SDK requires it.
+  if (import.meta.env.DEV) {
+    connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+    connectFirestoreEmulator(db, '127.0.0.1', 8080);
+  }
   // A redirect sign-in completes here, on the load after it. Its failure is remembered and
   // reported once, by `currentUser` below, rather than dropped: a player who never sees it comes
   // back signed out with no error anywhere, for reasons as ordinary as `auth/unauthorized-domain`.

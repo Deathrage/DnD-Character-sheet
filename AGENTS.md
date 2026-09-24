@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 697 tests across 48 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
+- 702 tests across 48 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -156,6 +156,21 @@ back on the next load (criterion 14).
   - **Sign-in is a popup in dev, a redirect in production** (`import.meta.env.DEV`). A popup is
     fine on localhost; the spec picked redirect for the deployed app because popups are unreliable
     in an installed PWA and on iOS.
+  - **Dev never touches the live project.** Under `import.meta.env.DEV` the repository connects to
+    the local Auth (9099) and Firestore (8080) emulators, so a test upload cannot land beside real
+    backups. `npm run dev:cloud` starts both (Java required), seeds them with
+    `scripts/seedEmulator.mjs`, and runs Vite. The emulator UI is at http://127.0.0.1:4000.
+    - The seed is one Google account, **Dev Player** (`dev.player@example.com`), offered by the
+      emulator's sign-in popup, whose cloud holds Zahir ibn Talaar in two versions. Nothing
+      persists: every run starts from the seed.
+    - The emulators enforce the real `firestore.rules`; the seed writes past them with the
+      emulator's `Bearer owner` admin token, which the app never sends.
+    - Plain `npm run dev` still works without Java; cloud actions then answer "could not be
+      reached", because nothing is listening on the emulator ports.
+    - Verified 2026-09-24 in Chromium: sign in as Dev Player, restore (no dialog), restore again
+      (Replace / Keep both, "cloud version is older"), Keep both, upload from a sheet, delete a
+      version; and against the emulator's REST API, another user's read or write of Dev Player's
+      path is 403 while their own path is 200.
   - **Sign-in does not work on PR preview channels.** A preview's origin is neither `authDomain`
     nor an authorized domain, so Firebase Auth refuses it. Test cloud features on localhost or live.
   - **The Firebase chunk is dynamic** (`import()`, never on launch): `firestoreRepository-*.js` is
@@ -172,7 +187,8 @@ back on the next load (criterion 14).
       `npx firebase-tools deploy --only firestore:rules --project dnd-character-sheet-64a24`.
     - The Rules Playground check: a `get` of `/users/UID_A/characters/x` as `UID_A` is Allowed, the
       same path as `UID_B` is Denied.
-    - The live round-trip on `dnd-character-sheet-64a24.web.app`: sign in, upload, restore,
+    - The live round-trip on `dnd-character-sheet-64a24.web.app` (the emulator run above covers
+      everything except the production redirect sign-in): sign in, upload, restore,
       delete, sign out.
     - **Warning:** create the database and grant Rules Admin **before merging**. CI's
       rules-deploy step (`deploy.yml`) runs on the first push to `main` and fails until both exist.

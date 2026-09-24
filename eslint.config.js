@@ -82,7 +82,13 @@ export default tseslint.config(
   {
     files: ['scripts/**/*.mjs'],
     languageOptions: {
-      globals: { Buffer: 'readonly', console: 'readonly', process: 'readonly' },
+      globals: {
+        Buffer: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        process: 'readonly',
+        URL: 'readonly',
+      },
     },
   },
   boundary('shared', ['data', 'business', 'ui'], { extra: [FIREBASE_PATTERN] }),
