@@ -35,6 +35,11 @@ jobs:
       # Rules are live-only: a preview channel has no rules of its own, so a pull request must not
       # replace the live ones. Needs the deploy service account to hold "Firebase Rules Admin".
       - if: github.event_name == 'push'
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DND_CHARACTER_SHEET_64A24 }}
         run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DND_CHARACTER_SHEET_64A24 }}' > "$RUNNER_TEMP/sa.json"
-          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json" npx --yes firebase-tools@latest deploy --only firestore:rules --project dnd-character-sheet-64a24 --non-interactive
+          # Through `env` and `printf`, not interpolated into the script: a key containing a quote
+          # would break an `echo '...'` and put the secret into the shell's parse.
+          trap 'rm -f "$RUNNER_TEMP/sa.json"' EXIT
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json" npx --yes firebase-tools@15 deploy --only firestore:rules --project dnd-character-sheet-64a24 --non-interactive
