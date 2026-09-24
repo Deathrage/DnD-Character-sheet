@@ -50,10 +50,14 @@ export function createFirestoreRepository(): CloudRepository {
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
-  // A redirect sign-in completes here, on the load after it. Its failure is not this call's to
-  // report: `currentUser` below still answers — with nobody — and the player can try again.
+  // A redirect sign-in completes here, on the load after it. Its failure is remembered and
+  // reported once, by `currentUser` below, rather than dropped: a player who never sees it comes
+  // back signed out with no error anywhere, for reasons as ordinary as `auth/unauthorized-domain`.
+  let redirectFailure: CloudError | null = null;
   const ready = getRedirectResult(auth)
-    .catch(() => null)
+    .catch((caught: unknown) => {
+      redirectFailure = toCloudError(caught);
+    })
     .then(() => auth.authStateReady());
 
   const toUser = (user: User): CloudUser => ({
@@ -82,6 +86,11 @@ export function createFirestoreRepository(): CloudRepository {
     currentUser: () =>
       guard(async () => {
         await ready;
+        if (redirectFailure !== null) {
+          const failure = redirectFailure;
+          redirectFailure = null;
+          throw failure;
+        }
         return auth.currentUser === null ? null : toUser(auth.currentUser);
       }),
 

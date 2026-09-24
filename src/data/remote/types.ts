@@ -38,7 +38,10 @@ export interface CloudCharacter {
  * `CloudError`, never with a Firebase type.
  */
 export interface CloudRepository {
-  /** Resolves once Firebase knows who is signed in — including a redirect sign-in just returning. */
+  /**
+   * Rejects once with the failure of a redirect sign-in that just returned; otherwise resolves
+   * once Firebase knows who is signed in.
+   */
   currentUser(): Promise<CloudUser | null>;
   /** With a redirect this navigates away and never settles; with a popup it resolves. */
   signIn(): Promise<CloudUser>;

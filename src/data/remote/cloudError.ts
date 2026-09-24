@@ -22,6 +22,7 @@ const CODES: Readonly<Record<string, CloudFailure>> = {
   'resource-exhausted': 'QUOTA',
   'auth/popup-closed-by-user': 'CANCELLED',
   'auth/cancelled-popup-request': 'CANCELLED',
+  'auth/redirect-cancelled-by-user': 'CANCELLED',
   'not-found': 'NOT_FOUND',
 };
 
