@@ -15,6 +15,10 @@ commit or PR that shipped it, rather than deleting it.
 - **Remote backup and restore.** Spec §1: remote storage as a backup synced on command, with
   versioning existing only for upload and restore. The answer to iOS eviction (spec §11) that does
   not need a native shell.
+- **Online features as a paid subscription.** Remote backup and cross-device sync would be part of
+  a paid subscription, behind user authentication. The local app stays complete and free without
+  an account: signing out or lapsing must never lock a player out of characters on their device.
+  Open: auth provider, billing, and what a lapsed subscriber's remote copies become.
 - **Periodic update check.** The service worker only checks for a new version on launch or
   reload; a long-open tab never sees one.
 - **Undo.** Cheap against a single-document model. Out of scope by decision today (spec §6), so

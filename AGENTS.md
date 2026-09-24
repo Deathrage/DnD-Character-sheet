@@ -329,6 +329,16 @@ live in `docs/BACKLOG.md` — add new ones there, not here:
   and clicking Reload inside the debounce window: the edit survived. `.storybook/main.ts` strips
   the plugin, because under Storybook it tries to precache Storybook's own bundles and fails.
   Updates are only checked for on launch or reload; there is no periodic check.
+- **Hosted on Firebase Hosting**, chosen over GitHub Pages and Azure for the backlog's online
+  features: same-origin Auth, and Storage behind Security Rules with no backend of our own.
+  `.github/workflows/deploy.yml` deploys `main` live and each PR to a preview channel, to project
+  `dnd-character-sheet-64a24` — so the origin is `dnd-character-sheet-64a24.web.app`. Re-running
+  `firebase init hosting:github` writes two more workflows that would deploy twice; delete them.
+  **The origin
+  is permanent**: IndexedDB belongs to it, so moving the app to another address strands every
+  player's characters behind export/import. `<id>.web.app` and `<id>.firebaseapp.com` are two
+  origins; share only one. The local emulator ignores `firebase.json` `headers`, so check them
+  with `curl -I` against a real deploy.
 - **Chrome will usually refuse `persist()` anyway.** Verified against Chrome 153 on localhost: it
   returns false with no prompt and no exception, because Chrome grants persistence only to origins
   it considers important — installed, or with accrued site engagement. Granting notification
