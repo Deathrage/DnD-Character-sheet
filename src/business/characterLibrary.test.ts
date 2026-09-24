@@ -593,9 +593,12 @@ describe('CharacterLibraryBO restore', () => {
     await library.restore(docFor(ID_A, 'Sable'), null);
 
     // Same object: the raw-JSON screen keys an effect on entry identity.
-    expect(library.entries).toEqual([entry]);
+    expect(library.entries).toHaveLength(1);
+    expect(library.entries[0]).toBe(entry);
     expect(entry?.isDamaged).toBe(false);
     expect(entry?.name).toBe('Sable');
+    const stored = await repository.get(ID_A);
+    expect(stored?.ok && stored.doc.name).toBe('Sable');
   });
 
   it('stores the portrait with the document', async () => {

@@ -353,6 +353,18 @@ describe('CloudBackup', () => {
     expect(library.entries).toHaveLength(1);
   });
 
+  it('Replace writes the cloud version over the stored local copy', async () => {
+    const { backup: cloudBackup } = backup();
+    const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
+    await repository.save(docFor(ID_A, 'Edited locally'));
+    await library.load();
+
+    expect(await cloudBackup.restore(ID_A, uploadedAt, 'replace')).toEqual({ ok: true, id: ID_A });
+
+    const stored = await repository.get(ID_A);
+    expect(stored?.ok && stored.doc.name).toBe('Sable');
+  });
+
   it('Keep both stores a copy under a new id', async () => {
     const { backup: cloudBackup } = backup();
     const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
