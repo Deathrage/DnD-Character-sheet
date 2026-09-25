@@ -176,22 +176,23 @@ back on the next load (criterion 14).
   - **The Firebase chunk is dynamic** (`import()`, never on launch): `firestoreRepository-*.js` is
     199.33 kB (59.50 kB gzip), split out of a main bundle of 441.22 kB (127.15 kB gzip) — from
     `npm run build`; re-run it if these drift.
-  - **Left to the user, one-off** — none of this is done yet:
-    - In the Firebase console: create the Firestore database in **production mode** — test
-      mode's default rules open every document to anyone for 30 days — and note its location is
-      permanent; Authentication → Sign-in method → enable Google; Authentication → Settings →
-      Authorized domains → confirm the `web.app` origin and `localhost`; Project settings → Your
-      apps → add a Web app if there is none; IAM → grant the GitHub deploy service account
-      **Firebase Rules Admin**.
-    - The first rules deploy, by hand:
-      `npx firebase-tools deploy --only firestore:rules --project dnd-character-sheet-64a24`.
-    - The Rules Playground check: a `get` of `/users/UID_A/characters/x` as `UID_A` is Allowed, the
-      same path as `UID_B` is Denied.
-    - The live round-trip on `dnd-character-sheet-64a24.web.app` (the emulator run above covers
-      everything except the production redirect sign-in): sign in, upload, restore,
-      delete, sign out.
-    - **Warning:** create the database and grant Rules Admin **before merging**. CI's
-      rules-deploy step (`deploy.yml`) runs on the first push to `main` and fails until both exist.
+  - **Project setup** (done 2026-09-25; the list is what a fresh project would need):
+    - Firestore database `(default)` in **production mode** — test mode's default rules open
+      every document to anyone for 30 days — at a permanent location. Rules are deployed by CI.
+    - Authentication → Sign-in method → Google enabled. Authorized domains: the `web.app` and
+      `firebaseapp.com` origins only. `localhost` is not needed — dev signs in against the Auth
+      emulator, which ignores the list.
+    - **The OAuth client must list the `web.app` handler by hand.** Enabling Google creates
+      "Web client (auto created by Google Service)" with only the `firebaseapp.com` origin and
+      handler. Because `authDomain` is `web.app` (same-origin redirect), Google Cloud →
+      Credentials → that client needs origin `https://dnd-character-sheet-64a24.web.app` and
+      redirect URI `https://dnd-character-sheet-64a24.web.app/__/auth/handler`; without them
+      sign-in fails with `Error 400: redirect_uri_mismatch`.
+    - IAM → the GitHub deploy service account (`github-action-…`) holds **Firebase Rules Admin**
+      beside Firebase Hosting Admin, or CI's rules step fails with `firebaserules … 403`. A new
+      grant took a few minutes to take effect.
+    - Still to verify by hand: the live round-trip on `dnd-character-sheet-64a24.web.app` — the
+      production redirect sign-in is the one path the emulators cannot cover.
 
 What is built: the versioned schema, the migration loop and its error taxonomy, export/import, the
 IndexedDB repository, the whole business layer, the presentational components, and `src/ui/bind.ts`
