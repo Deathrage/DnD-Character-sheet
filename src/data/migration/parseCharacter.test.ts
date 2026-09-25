@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { ID_A, docFor } from '../../test/fixtures.js';
 import type { Migration } from './migrations.js';
-import { parseCharacter, type MigrationRegistry } from './parseCharacter.js';
+import { defaultRegistry, parseCharacter, type MigrationRegistry } from './parseCharacter.js';
 
 const validRaw = () => {
   const doc = docFor(ID_A, 'Sable Nightwind');
@@ -22,6 +22,13 @@ const validRaw = () => {
 };
 
 describe('parseCharacter', () => {
+  it('reads schemaVersion even from a registry that carries another versionKey', () => {
+    // A registry is a parameter, so it can be any object: one spread over the key must not
+    // redirect the walk to another field (the cloud layout's is `layoutVersion`).
+    const registry = { ...defaultRegistry, versionKey: 'layoutVersion' } as MigrationRegistry;
+    expect(parseCharacter(validRaw(), registry).ok).toBe(true);
+  });
+
   it('returns a valid current-version file completely unaltered', () => {
     // toEqual against the captured raw input, not a single field. parseCharacter returns Zod's
     // result.data, so a `.default()`, `.catch()` or `.transform()` added to any primitive later

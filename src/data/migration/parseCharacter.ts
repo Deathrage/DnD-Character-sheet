@@ -33,9 +33,10 @@ export function parseCharacter(
   raw: unknown,
   registry: MigrationRegistry = defaultRegistry,
 ): LoadResult {
+  // The key last, so nothing spread from `registry` can redirect the walk to another field.
   const parsed = parseVersioned<CharacterDocument>(raw, {
-    versionKey: 'schemaVersion',
     ...registry,
+    versionKey: 'schemaVersion',
   });
   return parsed.ok ? { ok: true, doc: parsed.value } : parsed;
 }
