@@ -1,16 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CloudError } from '../data/remote/cloudError.js';
-import { decodePayload, type Payload } from '../data/remote/codec.js';
+import { cloudDocumentSize, withoutVersions, withVersion } from '../data/remote/cloudDocument.js';
+import { decodePayload, encodePayload } from '../data/remote/codec.js';
+import { parseCloudDocument, type CloudDocument } from '../data/remote/layout/index.js';
+import { MAX_DOCUMENT_BYTES } from '../data/remote/size.js';
+import type { CloudLoad, CloudRepository, CloudUser } from '../data/remote/types.js';
 import { createIndexedDbRepository } from '../data/repository/indexedDbRepository.js';
-import type {
-  CloudCharacter,
-  CloudRepository,
-  CloudUser,
-  CloudVersion,
-} from '../data/remote/types.js';
 import type { CharacterRepository } from '../data/repository/types.js';
 import type { CharacterDocument } from '../data/schema/index.js';
-import { ID_A, createOpener, docFor, putRaw, wipe } from '../test/fixtures.js';
+import { ID_A, ID_B, createOpener, docFor, putRaw, wipe } from '../test/fixtures.js';
 import { CharacterLibraryBO } from './characterLibrary.js';
 import { CloudBackup } from './cloudBackup.js';
 import { StorageGate } from './storageGate.js';
@@ -18,18 +16,19 @@ import { StorageGate } from './storageGate.js';
 const USER: CloudUser = { uid: 'u1', name: 'Ja', email: 'ja@example.com' };
 
 /**
- * An in-memory cloud with the real one's semantics: a batch lands whole or not at all, and a
- * delete of an absent payload succeeds. `failNext` makes the next call reject, as Firestore would.
+ * An in-memory cloud. It holds the raw document, as Firestore would, and parses it with the real
+ * layout. `failNext` makes the next call reject, as Firestore would.
  */
 function fakeCloud(signedIn = true) {
-  const index = new Map<string, Map<string, CloudVersion>>();
-  const payloads = new Map<string, Payload>();
   const state = {
     user: signedIn ? USER : null,
-    failNext: null as CloudError | null,
+    failNext: null as unknown,
     /** A redirect sign-in that just failed: `currentUser` rejects with it once. */
     redirectFailure: null as CloudError | null,
+    /** The document as Firestore holds it; `undefined` until the first upload. */
+    stored: undefined as unknown,
     uploads: 0,
+    loads: 0,
     signIns: 0,
   };
   const check = () => {
@@ -38,7 +37,11 @@ function fakeCloud(signedIn = true) {
     if (failure) throw failure;
     if (state.user === null) throw new CloudError('SIGNED_OUT');
   };
-  const key = (characterId: string, uploadedAt: string) => `${characterId}/${uploadedAt}`;
+  const read = (): CloudLoad => {
+    if (state.stored === undefined) return { ok: true, doc: null };
+    const parsed = parseCloudDocument(state.stored);
+    return parsed.ok ? { ok: true, doc: parsed.value } : { ok: false, error: parsed.error };
+  };
 
   const repository: CloudRepository = {
     currentUser: async () => {
@@ -58,40 +61,36 @@ function fakeCloud(signedIn = true) {
     signOut: async () => {
       state.user = null;
     },
-    listCharacters: async (): Promise<CloudCharacter[]> => {
+    load: async () => {
       check();
-      // An emptied index is hidden, as the real one hides it (spec §12).
-      return [...index]
-        .filter(([, versions]) => versions.size > 0)
-        .map(([characterId, versions]) => ({
-          characterId,
-          versions: [...versions.values()].sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt)),
-        }));
+      state.loads += 1;
+      return read();
     },
-    upload: async (characterId, version, payload) => {
+    upload: async (characterId, uploadedAt, version) => {
       check();
+      const current = read();
+      // The rules refuse a write over a newer layout.
+      if (!current.ok) throw new CloudError('PERMISSION_DENIED');
+      const after = withVersion(current.doc, characterId, uploadedAt, version);
+      if (cloudDocumentSize(USER.uid, after) > MAX_DOCUMENT_BYTES) {
+        // What the emulator answers (spec §5); production's code may differ, which is the point.
+        throw Object.assign(new Error('maximum entity size is 1048576 bytes'), {
+          code: 'failed-precondition',
+        });
+      }
       state.uploads += 1;
-      payloads.set(key(characterId, version.uploadedAt), payload);
-      const versions = index.get(characterId) ?? new Map<string, CloudVersion>();
-      versions.set(version.uploadedAt, version);
-      index.set(characterId, versions);
+      state.stored = after;
     },
-    getPayload: async (characterId, uploadedAt) => {
+    deleteVersions: async (characterId, uploadedAts) => {
       check();
-      return payloads.get(key(characterId, uploadedAt)) ?? null;
-    },
-    deleteVersion: async (characterId, uploadedAt) => {
-      check();
-      payloads.delete(key(characterId, uploadedAt));
-      index.get(characterId)?.delete(uploadedAt);
-    },
-    deleteCharacter: async (characterId, uploadedAts) => {
-      check();
-      for (const uploadedAt of uploadedAts) payloads.delete(key(characterId, uploadedAt));
-      index.delete(characterId);
+      const current = read();
+      if (!current.ok || current.doc === null) return current;
+      const { doc } = withoutVersions(current.doc, characterId, uploadedAts);
+      state.stored = doc;
+      return { ok: true, doc };
     },
   };
-  return { repository, state, index, payloads };
+  return { repository, state };
 }
 
 /** Advances a millisecond per call, so two uploads never share an `uploadedAt`. */
@@ -99,6 +98,17 @@ function clock(start = Date.parse('2026-09-24T18:00:00.000Z')) {
   let now = start;
   return () => new Date(now++);
 }
+
+/** Lists first, as the cloud screen does, so an upload lands in the list. */
+async function uploaded(cloudBackup: CloudBackup, id = ID_A): Promise<string> {
+  await cloudBackup.refresh();
+  const result = await cloudBackup.upload(id);
+  if (!result.ok) throw new Error(result.message);
+  return result.uploadedAt;
+}
+
+const PORTRAIT = `data:image/jpeg;base64,${btoa('\xff\xd8\xff\xe0 not really a jpeg \xff\xd9')}`;
+const AT = '2026-09-25T10:00:00.000Z';
 
 describe('CloudBackup', () => {
   let repository: CharacterRepository;
@@ -160,20 +170,16 @@ describe('CloudBackup', () => {
 
   it('uploads one version: one index entry and one payload', async () => {
     const { backup: cloudBackup, cloud } = backup();
+    await cloudBackup.refresh();
 
     const result = await cloudBackup.upload(ID_A);
 
     expect(result).toEqual({ ok: true, uploadedAt: '2026-09-24T18:00:00.000Z' });
-    expect(cloud.index.get(ID_A)?.size).toBe(1);
-    expect(cloud.payloads.size).toBe(1);
-    expect(cloudBackup.characters).toEqual([
-      {
-        characterId: ID_A,
-        versions: [
-          expect.objectContaining({ name: 'Sable', totalLevel: 0, schemaVersion: 1 }) as unknown,
-        ],
-      },
-    ]);
+    expect(Object.keys((cloud.state.stored as CloudDocument).characters[ID_A]!)).toHaveLength(1);
+    expect(cloudBackup.characters[0]?.versions[0]?.sheet).toMatchObject({
+      name: 'Sable',
+      totalLevel: 0,
+    });
     expect(cloudBackup.lastUpload).toEqual({ characterId: ID_A, result });
   });
 
@@ -183,10 +189,10 @@ describe('CloudBackup', () => {
     opened.sheet.setName('Sable Nightwind'); // inside the 60 s debounce: not yet stored
     const { backup: cloudBackup, cloud } = backup();
 
-    await cloudBackup.upload(ID_A);
+    const result = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
 
-    const payload = [...cloud.payloads.values()][0]!;
-    const decoded = await decodePayload(payload, ID_A);
+    const { sheet } = (cloud.state.stored as CloudDocument).characters[ID_A]![result.uploadedAt]!;
+    const decoded = await decodePayload({ sheet, portrait: null }, ID_A);
     expect(decoded.ok && decoded.doc.name).toBe('Sable Nightwind');
     opened.sheet.dispose();
   });
@@ -253,7 +259,7 @@ describe('CloudBackup', () => {
 
   it('restores into an empty browser under the same id, with no dialog', async () => {
     const { backup: cloudBackup } = backup();
-    const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
+    const uploadedAt = await uploaded(cloudBackup);
     await library.entries[0]!.remove();
 
     expect(await cloudBackup.restore(ID_A, uploadedAt)).toEqual({ ok: true, id: ID_A });
@@ -262,7 +268,7 @@ describe('CloudBackup', () => {
 
   it('asks when the character is already here, then Replace keeps the id', async () => {
     const { backup: cloudBackup } = backup();
-    const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
+    const uploadedAt = await uploaded(cloudBackup);
 
     const asked = await cloudBackup.restore(ID_A, uploadedAt);
     expect(asked).toEqual({
@@ -279,7 +285,7 @@ describe('CloudBackup', () => {
 
   it('Replace writes the cloud version over the stored local copy', async () => {
     const { backup: cloudBackup } = backup();
-    const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
+    const uploadedAt = await uploaded(cloudBackup);
     await repository.save(docFor(ID_A, 'Edited locally'));
     await library.load();
 
@@ -291,7 +297,7 @@ describe('CloudBackup', () => {
 
   it('Keep both stores a copy under a new id', async () => {
     const { backup: cloudBackup } = backup();
-    const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
+    const uploadedAt = await uploaded(cloudBackup);
 
     const result = await cloudBackup.restore(ID_A, uploadedAt, 'keepBoth');
 
@@ -301,7 +307,7 @@ describe('CloudBackup', () => {
 
   it('offers to replace a damaged local copy, and shows it as damaged', async () => {
     const { backup: cloudBackup } = backup();
-    const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
+    const uploadedAt = await uploaded(cloudBackup);
     await putRaw(ID_A, { not: 'a character' });
     await library.load();
 
@@ -324,7 +330,7 @@ describe('CloudBackup', () => {
       load: async () => fakeCloud().repository,
       now: clock(),
     });
-    const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
+    const uploadedAt = await uploaded(cloudBackup);
     await repository.save(docFor(ID_A, 'Edited in another tab'));
     expect(unloaded.entries).toEqual([]);
 
@@ -339,7 +345,7 @@ describe('CloudBackup', () => {
 
   it('answers a local read that fails during a restore, rather than rejecting', async () => {
     const { backup: cloudBackup, cloud } = backup();
-    const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
+    const uploadedAt = await uploaded(cloudBackup);
     const broken = new CharacterLibraryBO({
       repository: { ...repository, get: () => Promise.reject(new Error('IndexedDB is blocked')) },
       storageGate: new StorageGate({ port: null }),
@@ -360,7 +366,7 @@ describe('CloudBackup', () => {
 
   it('refuses Replace while the sheet is open', async () => {
     const { backup: cloudBackup } = backup();
-    const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
+    const uploadedAt = await uploaded(cloudBackup);
     const opened = await library.entries[0]!.open();
     if (!opened.ok) throw new Error(opened.message);
 
@@ -372,39 +378,34 @@ describe('CloudBackup', () => {
     opened.sheet.dispose();
   });
 
-  it('reports a version from a newer app and stores nothing', async () => {
+  it('lists a version from a newer app flagged, and refuses to restore it', async () => {
     const { backup: cloudBackup, cloud } = backup();
-    const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
-    const { encodePayload } = await import('../data/remote/codec.js');
-    cloud.payloads.set(
-      `${ID_A}/${uploadedAt}`,
-      // `schemaVersion` is the literal `1` in the type, so a newer version needs the cast.
-      await encodePayload(
-        { ...docFor(ID_A, 'Future'), schemaVersion: 99 } as unknown as CharacterDocument,
-        null,
-      ),
+    const future = await encodePayload(
+      { ...docFor(ID_A, 'Future'), schemaVersion: 99 } as unknown as CharacterDocument,
+      null,
     );
+    cloud.state.stored = {
+      layoutVersion: 2,
+      characters: { [ID_A]: { [AT]: { sheet: future.sheet, portrait: null } } },
+    };
     await library.entries[0]!.remove();
 
-    const result = await cloudBackup.restore(ID_A, uploadedAt);
-
-    expect(result).toMatchObject({
-      ok: false,
-      kind: 'failed',
-      message: expect.stringMatching(/newer version/) as unknown,
-    });
+    expect(await cloudBackup.refresh()).toBeNull();
+    const version = cloudBackup.characters[0]!.versions[0]!;
+    expect(version).toMatchObject({ sheet: null, fromNewerApp: true });
+    expect(version.problem).toMatch(/newer version/);
+    expect(await cloudBackup.restore(ID_A, AT)).toMatchObject({ ok: false, kind: 'failed' });
     expect(library.entries).toEqual([]);
   });
 
   it('deleting the last version removes the character from the cloud', async () => {
     const { backup: cloudBackup, cloud } = backup();
-    const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
+    const uploadedAt = await uploaded(cloudBackup);
 
     expect(await cloudBackup.deleteVersion(ID_A, uploadedAt)).toBeNull();
 
-    expect(cloud.payloads.size).toBe(0);
+    expect((cloud.state.stored as CloudDocument).characters).toEqual({});
     expect(cloudBackup.characters).toEqual([]);
-    // The emptied index stays behind, hidden from every later list.
     expect(await cloudBackup.refresh()).toBeNull();
     expect(cloudBackup.characters).toEqual([]);
   });
@@ -412,6 +413,7 @@ describe('CloudBackup', () => {
   it('deleting the last version this list knows of keeps one another device uploaded since', async () => {
     const cloud = fakeCloud();
     const { backup: here } = backup(cloud);
+    await here.refresh();
     const { uploadedAt } = (await here.upload(ID_A)) as { uploadedAt: string };
     const elsewhere = new CloudBackup(library, {
       load: async () => cloud.repository,
@@ -421,24 +423,25 @@ describe('CloudBackup', () => {
 
     expect(await here.deleteVersion(ID_A, uploadedAt)).toBeNull();
 
-    expect([...(cloud.index.get(ID_A)?.keys() ?? [])]).toEqual([other.uploadedAt]);
-    expect(cloud.payloads.has(`${ID_A}/${other.uploadedAt}`)).toBe(true);
+    expect(Object.keys((cloud.state.stored as CloudDocument).characters[ID_A]!)).toEqual([
+      other.uploadedAt,
+    ]);
   });
 
   it('deleting one of several versions keeps the others', async () => {
     const { backup: cloudBackup, cloud } = backup();
-    const first = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
+    const first = await uploaded(cloudBackup);
     await cloudBackup.upload(ID_A);
 
-    await cloudBackup.deleteVersion(ID_A, first.uploadedAt);
+    await cloudBackup.deleteVersion(ID_A, first);
 
-    expect(cloud.index.get(ID_A)?.size).toBe(1);
+    expect(Object.keys((cloud.state.stored as CloudDocument).characters[ID_A]!)).toHaveLength(1);
     expect(cloudBackup.characters[0]?.versions).toHaveLength(1);
   });
 
   it('a character delete that fails can be retried, and keeps its row until it succeeds', async () => {
     const { backup: cloudBackup, cloud } = backup();
-    await cloudBackup.upload(ID_A);
+    await uploaded(cloudBackup);
     await cloudBackup.upload(ID_A);
     cloud.state.failNext = new CloudError('OFFLINE');
 
@@ -447,15 +450,22 @@ describe('CloudBackup', () => {
 
     expect(await cloudBackup.deleteCharacter(ID_A)).toBeNull();
     expect(cloudBackup.characters).toEqual([]);
-    expect(cloud.payloads.size).toBe(0);
+    expect((cloud.state.stored as CloudDocument).characters).toEqual({});
   });
 
-  it('adds up the usage', async () => {
-    const { backup: cloudBackup } = backup();
+  it('shows usage as the cloud document’s size, out of 1 MiB', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    await uploaded(cloudBackup);
     await cloudBackup.upload(ID_A);
-    await cloudBackup.upload(ID_A);
-    const sizes = cloudBackup.characters[0]!.versions.map((version) => version.bytes);
-    expect(cloudBackup.totalBytes).toBe(sizes[0]! + sizes[1]!);
+    expect(cloudBackup.limitBytes).toBe(1_048_576);
+    expect(cloudBackup.usedBytes).toBe(
+      cloudDocumentSize(USER.uid, cloud.state.stored as CloudDocument),
+    );
+    const [first] = cloudBackup.characters[0]!.versions;
+    await cloudBackup.deleteVersion(ID_A, first!.uploadedAt);
+    expect(cloudBackup.usedBytes).toBe(
+      cloudDocumentSize(USER.uid, cloud.state.stored as CloudDocument),
+    );
   });
 
   it('signing out forgets the list, so the next person at this device does not see it', async () => {
@@ -467,5 +477,134 @@ describe('CloudBackup', () => {
     expect(cloudBackup.status).toBe('signedOut');
     expect(cloudBackup.user).toBeNull();
     expect(cloudBackup.characters).toEqual([]);
+  });
+
+  it('restores from the listing, downloading nothing more', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    const at = await uploaded(cloudBackup);
+    await library.entries[0]!.remove();
+    const loads = cloud.state.loads;
+    expect(await cloudBackup.restore(ID_A, at)).toEqual({ ok: true, id: ID_A });
+    expect(cloud.state.loads).toBe(loads);
+  });
+
+  it('an upload before the cloud was listed waits for the next listing', async () => {
+    const { backup: cloudBackup } = backup();
+    expect((await cloudBackup.upload(ID_A)).ok).toBe(true);
+    expect(cloudBackup.characters).toEqual([]);
+    await cloudBackup.refresh();
+    expect(cloudBackup.characters[0]?.versions).toHaveLength(1);
+  });
+
+  it('lists a damaged sheet flagged, not dropped, and it can still be deleted', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    cloud.state.stored = {
+      layoutVersion: 2,
+      characters: { [ID_A]: { [AT]: { sheet: new Uint8Array([1, 2, 3]), portrait: null } } },
+    };
+    await cloudBackup.refresh();
+    expect(cloudBackup.characters[0]!.versions[0]).toMatchObject({
+      sheet: null,
+      fromNewerApp: false,
+    });
+    expect(cloudBackup.characters[0]!.versions[0]!.problem).toMatch(/damaged/);
+    expect(await cloudBackup.deleteVersion(ID_A, AT)).toBeNull();
+    expect(cloudBackup.characters).toEqual([]);
+  });
+
+  it('flags a version whose portrait is missing from the cloud', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    const { sheet } = await encodePayload(docFor(ID_A, 'Sable'), null);
+    cloud.state.stored = {
+      layoutVersion: 2,
+      characters: { [ID_A]: { [AT]: { sheet, portrait: 'f'.repeat(64) } } },
+    };
+    await cloudBackup.refresh();
+    expect(cloudBackup.characters[0]!.versions[0]!.problem).toBe(
+      'Its portrait is missing from the cloud.',
+    );
+  });
+
+  it('reports a cloud from a newer layout, and changes nothing in it', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    cloud.state.stored = { layoutVersion: 3 };
+    const sentence =
+      'Your cloud backups were made by a newer version of the app. Reload to update.';
+    expect(await cloudBackup.refresh()).toBe(sentence);
+    expect(await cloudBackup.deleteCharacter(ID_A)).toBe(sentence);
+    expect(cloud.state.stored).toEqual({ layoutVersion: 3 });
+  });
+
+  it('stores a portrait once for two versions that share it', async () => {
+    await repository.savePortrait(ID_A, PORTRAIT);
+    const { backup: cloudBackup, cloud } = backup();
+    await uploaded(cloudBackup);
+    const before = cloudBackup.usedBytes;
+    await cloudBackup.upload(ID_A);
+    const stored = cloud.state.stored as CloudDocument;
+    expect(Object.keys(stored.portraits ?? {})).toHaveLength(1);
+    expect(cloudBackup.usedBytes - before).toBe(cloudBackup.characters[0]!.versions[0]!.bytes);
+  });
+
+  it('keeps a portrait another version uses, and removes it with its last user', async () => {
+    await repository.savePortrait(ID_A, PORTRAIT);
+    const { backup: cloudBackup, cloud } = backup();
+    const first = await uploaded(cloudBackup);
+    const second = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
+    await cloudBackup.deleteVersion(ID_A, first);
+    expect(Object.keys((cloud.state.stored as CloudDocument).portraits ?? {})).toHaveLength(1);
+    await cloudBackup.deleteVersion(ID_A, second.uploadedAt);
+    expect((cloud.state.stored as CloudDocument).portraits).toEqual({});
+  });
+
+  it('Delete all versions also removes one another device uploaded since', async () => {
+    const cloud = fakeCloud();
+    const { backup: here } = backup(cloud);
+    await uploaded(here);
+    const elsewhere = new CloudBackup(library, {
+      load: async () => cloud.repository,
+      now: clock(Date.parse('2026-09-25T18:00:00.000Z')),
+    });
+    await elsewhere.upload(ID_A);
+    expect(await here.deleteCharacter(ID_A)).toBeNull();
+    expect((cloud.state.stored as CloudDocument).characters).toEqual({});
+  });
+
+  it('says how much space an upload needs when the cloud is full, even unlisted', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    cloud.state.stored = {
+      layoutVersion: 2,
+      characters: {
+        [ID_B]: { [AT]: { sheet: new Uint8Array(MAX_DOCUMENT_BYTES - 200), portrait: null } },
+      },
+    };
+    const result = await cloudBackup.upload(ID_A); // no refresh: straight from a sheet
+    expect(result).toEqual({
+      ok: false,
+      message: expect.stringMatching(
+        /^Not enough cloud space: this version needs [\d.]+ KB and [\d.]+ KB is free\./,
+      ) as unknown,
+    });
+  });
+
+  it('an unexplained upload failure that is not about space keeps its own sentence', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    cloud.state.failNext = Object.assign(new Error('boom'), { code: 'internal' });
+    expect(await cloudBackup.upload(ID_A)).toEqual({
+      ok: false,
+      message: 'Cloud backup failed unexpectedly. Try again.',
+    });
+  });
+
+  it('after signing out, nothing of that account can be restored', async () => {
+    const { backup: cloudBackup } = backup();
+    const at = await uploaded(cloudBackup);
+    await cloudBackup.signOut();
+    expect(cloudBackup.usedBytes).toBe(0);
+    expect(await cloudBackup.restore(ID_A, at)).toEqual({
+      ok: false,
+      kind: 'failed',
+      message: 'This version is no longer in the cloud.',
+    });
   });
 });

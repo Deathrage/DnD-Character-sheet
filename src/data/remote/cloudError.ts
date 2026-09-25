@@ -1,3 +1,6 @@
+import { formatBytes } from '../../shared/formatBytes.js';
+import type { LoadError } from '../migration/errors.js';
+
 export type CloudFailure =
   'OFFLINE' | 'SIGNED_OUT' | 'PERMISSION_DENIED' | 'QUOTA' | 'CANCELLED' | 'NOT_FOUND' | 'UNKNOWN';
 
@@ -51,4 +54,14 @@ export function describeCloudError(error: CloudError): string {
     case 'UNKNOWN':
       return 'Cloud backup failed unexpectedly. Try again.';
   }
+}
+
+export function describeLayoutError(error: LoadError): string {
+  return error.code === 'FROM_FUTURE'
+    ? 'Your cloud backups were made by a newer version of the app. Reload to update.'
+    : 'Your cloud backups could not be read. Nothing in the cloud was changed.';
+}
+
+export function describeFull(neededBytes: number, freeBytes: number): string {
+  return `Not enough cloud space: this version needs ${formatBytes(neededBytes)} and ${formatBytes(Math.max(0, freeBytes))} is free. Delete old versions on the Cloud screen to make room.`;
 }

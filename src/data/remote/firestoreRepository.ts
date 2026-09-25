@@ -9,40 +9,11 @@ import {
   signOut,
   type User,
 } from 'firebase/auth';
-import {
-  Bytes,
-  collection,
-  connectFirestoreEmulator,
-  deleteField,
-  doc,
-  FieldPath,
-  getDoc,
-  getDocs,
-  getFirestore,
-  writeBatch,
-} from 'firebase/firestore/lite';
-import { z } from 'zod';
+import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore/lite';
 import { CloudError, toCloudError } from './cloudError.js';
+import { createCloudStore } from './cloudStore.js';
 import { firebaseConfig } from './config.js';
-import type { CloudCharacter, CloudRepository, CloudUser, CloudVersion, Payload } from './types.js';
-
-/**
- * Not strict, unlike every schema in `src/data/schema/`: this is the app's own index, not a
- * character, and a newer build that adds a field must not make an older one's cloud screen fail.
- * Still validated, so a malformed entry fails the list loudly instead of rendering `undefined`.
- */
-const entrySchema = z.object({
-  name: z.string(),
-  classes: z.array(z.object({ name: z.string(), level: z.number() })),
-  totalLevel: z.number(),
-  sheetUpdatedAt: z.string(),
-  schemaVersion: z.number(),
-  bytes: z.number(),
-});
-const indexSchema = z.object({ versions: z.record(z.string(), entrySchema) });
-
-/** Batches cap at 500 writes. */
-const BATCH = 500;
+import type { CloudRepository, CloudUser } from './types.js';
 
 /**
  * Lite Firestore: plain get/set, no realtime listeners, no offline cache — the cloud is only
@@ -79,9 +50,7 @@ export function createFirestoreRepository(): CloudRepository {
     if (user === null) throw new CloudError('SIGNED_OUT');
     return user.uid;
   };
-  const indexRef = (characterId: string) => doc(db, 'users', uid(), 'characters', characterId);
-  const payloadRef = (characterId: string, uploadedAt: string) =>
-    doc(db, 'users', uid(), 'characters', characterId, 'payloads', uploadedAt);
+  const store = createCloudStore(db, uid);
 
   async function guard<T>(run: () => Promise<T>): Promise<T> {
     try {
@@ -114,68 +83,8 @@ export function createFirestoreRepository(): CloudRepository {
 
     signOut: () => guard(() => signOut(auth)),
 
-    listCharacters: () =>
-      guard(async () => {
-        const snapshot = await getDocs(collection(db, 'users', uid(), 'characters'));
-        const characters: CloudCharacter[] = snapshot.docs.map((row) => ({
-          characterId: row.id,
-          versions: Object.entries(indexSchema.parse(row.data()).versions)
-            .map(([uploadedAt, entry]): CloudVersion => ({ uploadedAt, ...entry }))
-            // ISO 8601 with milliseconds sorts lexically in time order.
-            .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt)),
-        }));
-        // An emptied index: another device deleted a version at the same moment. Nothing to show.
-        return characters.filter((character) => character.versions.length > 0);
-      }),
-
-    upload: (characterId, { uploadedAt, ...entry }, payload) =>
-      guard(() =>
-        writeBatch(db)
-          .set(payloadRef(characterId, uploadedAt), {
-            sheet: Bytes.fromUint8Array(payload.sheet),
-            portrait: payload.portrait === null ? null : Bytes.fromUint8Array(payload.portrait),
-          })
-          // `merge`: adds this one key and leaves the others, so two devices uploading at once
-          // both keep their version. Map keys in `set` data are literal, dots included.
-          .set(indexRef(characterId), { versions: { [uploadedAt]: entry } }, { merge: true })
-          .commit(),
-      ),
-
-    getPayload: (characterId, uploadedAt) =>
-      guard(async () => {
-        const snapshot = await getDoc(payloadRef(characterId, uploadedAt));
-        if (!snapshot.exists()) return null;
-        const { sheet, portrait } = snapshot.data();
-        if (!(sheet instanceof Bytes))
-          throw new CloudError('UNKNOWN', 'payload has no sheet bytes');
-        return {
-          sheet: new Uint8Array(sheet.toUint8Array()),
-          portrait: portrait instanceof Bytes ? new Uint8Array(portrait.toUint8Array()) : null,
-        } satisfies Payload;
-      }),
-
-    deleteVersion: (characterId, uploadedAt) =>
-      guard(() =>
-        writeBatch(db)
-          .delete(payloadRef(characterId, uploadedAt))
-          // A `FieldPath`, not the string `versions.${uploadedAt}`: the key contains dots, which a
-          // string path would read as nesting.
-          .update(indexRef(characterId), new FieldPath('versions', uploadedAt), deleteField())
-          .commit(),
-      ),
-
-    deleteCharacter: (characterId, uploadedAts) =>
-      guard(async () => {
-        for (let start = 0; start < uploadedAts.length; start += BATCH) {
-          const batch = writeBatch(db);
-          for (const uploadedAt of uploadedAts.slice(start, start + BATCH)) {
-            batch.delete(payloadRef(characterId, uploadedAt));
-          }
-          await batch.commit();
-        }
-        // Last, so a failure above leaves the index naming what is still there, and a retry —
-        // deleting an absent payload succeeds — finishes the job.
-        await writeBatch(db).delete(indexRef(characterId)).commit();
-      }),
+    load: () => guard(store.load),
+    upload: (...args) => guard(() => store.upload(...args)),
+    deleteVersions: (...args) => guard(() => store.deleteVersions(...args)),
   };
 }
