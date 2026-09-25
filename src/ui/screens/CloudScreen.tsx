@@ -81,8 +81,12 @@ export function CloudScreen({
       )}
 
       {!signedIn ? (
-        <div className="empty">
-          <p>Back up characters to your Google account, and restore them on any device.</p>
+        // `.sv`, the sheet's own button pad — not `.empty`, whose placeholder opacity would grey
+        // out the button inside it and whose 2px inset put it at the screen edge.
+        <div className="sv">
+          <p className="hint">
+            Back up characters to your Google account, and restore them on any device.
+          </p>
           <button
             type="button"
             className="newcat"
@@ -110,7 +114,7 @@ export function CloudScreen({
               </div>
               <ul>
                 {character.versions.map((version) => (
-                  <li key={version.uploadedAt} className="sv">
+                  <li key={version.uploadedAt} className="cver">
                     <span>
                       Uploaded {formatWhen(version.uploadedAt)} {'·'} edited{' '}
                       {formatWhen(version.sheetUpdatedAt)} {'·'} {formatBytes(version.bytes)}
