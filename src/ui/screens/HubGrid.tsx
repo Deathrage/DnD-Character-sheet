@@ -76,7 +76,7 @@ export function HubGrid({
             Upload to cloud
           </button>
         )}
-        {uploadDisabled && uploadHint !== null && <p className="hint">{uploadHint}</p>}
+        {uploadDisabled && uploadHint !== null && <p className="hint btnhint">{uploadHint}</p>}
         {uploadNotice != null && <p className="hint">{uploadNotice}</p>}
       </div>
     </div>

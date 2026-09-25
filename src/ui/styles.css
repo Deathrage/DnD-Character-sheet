@@ -607,6 +607,24 @@ body {
 .newcat:active {
   background: var(--accent-soft);
 }
+/* Disabled drops the accent — in this palette the accent is what says "press me" — and the dashed
+   outline, which reads as "a place to add something". No opacity fade: a faded accent label on a
+   full-width button still looks pressable. */
+.newcat:disabled {
+  color: var(--ink-2);
+  background: var(--fill-2);
+  border-style: solid;
+  border-color: var(--fill);
+  cursor: default;
+}
+.newcat:disabled:active {
+  background: var(--fill-2);
+}
+/* The reason under a disabled button: closer to it than the next button is, so it reads as that
+   button's caption rather than a paragraph of its own. */
+.hint.btnhint {
+  margin: 6px 2px 0;
+}
 
 /* ---------- fields ---------- */
 .num {
