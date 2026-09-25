@@ -192,10 +192,26 @@ back on the next load (criterion 14).
       emulator's `Bearer owner` admin token, which the app never sends.
     - Plain `npm run dev` still works without Java; cloud actions then answer "could not be
       reached", because nothing is listening on the emulator ports.
-    - Verified 2026-09-24 in Chromium: sign in as Dev Player, restore (no dialog), restore again
-      (Replace / Keep both, "cloud version is older"), Keep both, upload from a sheet, delete a
-      version; and against the emulator's REST API, another user's read or write of Dev Player's
-      path is 403 while their own path is 200.
+    - Verified 2026-09-25 in Chromium against layout 2 (emulators on spare ports):
+      - sign in as Dev Player from the menu; the list and "39.3 KB / of 1.0 MB" show
+      - restore with no dialog, restore again with Replace / Keep both, and a restored copy keeps
+        its portrait
+      - two uploads with one portrait store it once (6,178 bytes), both versions pointing at it
+      - deleting one of them keeps the portrait, deleting the other removes it, and Delete all
+        empties the cloud
+      - a signed-out `#/cloud` lands on the character list
+      Another account's access is covered by `npm run test:rules`, against the real rules.
+    - **A nearly full cloud is slow to open on a phone.** Measured 2026-09-25 with 50 versions
+      (980 KB), from pressing Manage cloud to a full list, in the dev build:
+      - desktop: about 0.3 s
+      - 4× CPU throttle: 3.1–3.6 s
+      - 6× CPU throttle: 7.3 s
+      With 2 versions the same steps take 0.3 s and 0.6 s, so decoding 48 sheets (gunzip, parse,
+      validate) costs about 3 s on a mid-range phone. Not optimised yet. Candidates:
+      - decode in a Web Worker, which keeps the page responsive but no faster
+      - render versions as they decode instead of all at once
+      - summarise from the raw JSON and validate in full only on restore, which would change
+        when a damaged sheet is flagged (spec §4)
   - **The Firebase chunk is dynamic** (`import()`, never on launch): `firestoreRepository-*.js` is
     196.63 kB (58.94 kB gzip), split out of a main bundle of 465.04 kB (134.74 kB gzip) — from
     `npm run build`; re-run it if these drift.
