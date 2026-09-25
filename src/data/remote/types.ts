@@ -1,6 +1,11 @@
+import type { LoadError } from '../migration/errors.js';
 import type { Payload } from './codec.js';
+import type { CloudDocument } from './layout/index.js';
 
 export type { Payload };
+
+/** The cloud document, read. `doc: null`: this player has never uploaded. */
+export type CloudLoad = { ok: true; doc: CloudDocument | null } | { ok: false; error: LoadError };
 
 export interface CloudUser {
   uid: string;

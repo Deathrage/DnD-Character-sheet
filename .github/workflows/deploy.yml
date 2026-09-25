@@ -21,6 +21,12 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      # The emulator needs Java. Runs on every PR, and before the rules deploy on main.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm run test:rules
       - run: npm run build
       - if: github.event_name == 'push'
         uses: FirebaseExtended/action-hosting-deploy@v0
@@ -28,7 +34,8 @@ jobs:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DND_CHARACTER_SHEET_64A24 }}
           projectId: dnd-character-sheet-64a24
           channelId: live
-      # Needs the deploy service account to hold "Firebase Rules Admin".
+      # Needs the deploy service account to hold "Firebase Rules Admin", and possibly "Cloud
+      # Datastore Index Admin" for the indexes.
       - if: github.event_name == 'push'
         env:
           SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DND_CHARACTER_SHEET_64A24 }}
@@ -37,4 +44,4 @@ jobs:
           # would break an `echo '...'` and put the secret into the shell's parse.
           trap 'rm -f "$RUNNER_TEMP/sa.json"' EXIT
           printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
-          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json" npx --yes firebase-tools@15 deploy --only firestore:rules --project dnd-character-sheet-64a24 --non-interactive
+          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json" npx --yes firebase-tools@15 deploy --only firestore:rules,firestore:indexes --project dnd-character-sheet-64a24 --non-interactive
