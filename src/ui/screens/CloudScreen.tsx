@@ -1,6 +1,7 @@
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import { ConflictDialog } from '../components/ConflictDialog.js';
 import { formatWhen, initialOf } from '../format.js';
+import { formatBytes } from '../../shared/formatBytes.js';
 import type { CloudView, ConflictView } from '../types.js';
 import { CloudTerms } from './Legal.js';
 
@@ -16,12 +17,6 @@ interface Props {
   onDeleteCharacter(characterId: string): void;
   /** `null` is Cancel. */
   onResolveConflict(choice: 'replace' | 'keepBoth' | null): void;
-}
-
-export function formatBytes(bytes: number): string {
-  return bytes < 1_000_000
-    ? `${(bytes / 1000).toFixed(1)} KB`
-    : `${(bytes / 1_000_000).toFixed(1)} MB`;
 }
 
 /**
