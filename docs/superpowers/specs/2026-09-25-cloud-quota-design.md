@@ -402,3 +402,8 @@ Every test proven to bite, as AGENTS.md requires.
    reach into `schema/v1/`), so it needed a separate, explicit exclusion to stay barred from
    reaching into `remote/layout/v2.ts` — the two isolations are unrelated and neither implies the
    other.
+9. **CI deploys rules, then hosting, then indexes, as three steps** — not hosting then
+   `firestore:rules,firestore:indexes` as §7 and §12 say. The new client works only against the
+   new rules, so hosting first left a window in which the live app was refused by the old ones;
+   and one combined step meant a missing "Cloud Datastore Index Admin" role failed the rules
+   deploy too. Indexes are not needed for correctness, so they go last, on their own.

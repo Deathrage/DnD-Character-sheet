@@ -21,21 +21,17 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
-      # The emulator needs Java. Runs on every PR, and before the rules deploy on main.
+      # The emulator needs Java. Runs on every PR, and before any deploy on main.
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
       - run: npm run test:rules
       - run: npm run build
-      - if: github.event_name == 'push'
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DND_CHARACTER_SHEET_64A24 }}
-          projectId: dnd-character-sheet-64a24
-          channelId: live
-      # Needs the deploy service account to hold "Firebase Rules Admin", and possibly "Cloud
-      # Datastore Index Admin" for the indexes.
+      # Rules before hosting: the new client works only against the new rules, and old clients get
+      # `permission-denied` from them in either order, so this order leaves no window in which the
+      # live app is the new one against the old rules.
+      # Needs the deploy service account to hold "Firebase Rules Admin".
       - if: github.event_name == 'push'
         env:
           SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DND_CHARACTER_SHEET_64A24 }}
@@ -44,4 +40,20 @@ jobs:
           # would break an `echo '...'` and put the secret into the shell's parse.
           trap 'rm -f "$RUNNER_TEMP/sa.json"' EXIT
           printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
-          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json" npx --yes firebase-tools@15 deploy --only firestore:rules,firestore:indexes --project dnd-character-sheet-64a24 --non-interactive
+          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json" npx --yes firebase-tools@15 deploy --only firestore:rules --project dnd-character-sheet-64a24 --non-interactive
+      - if: github.event_name == 'push'
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DND_CHARACTER_SHEET_64A24 }}
+          projectId: dnd-character-sheet-64a24
+          channelId: live
+      # Indexes last, apart: nothing needs them to be correct (they only stop the maps being
+      # indexed), so a failure here — the deploy service account may also need "Cloud Datastore
+      # Index Admin" — leaves the rules and the app already live.
+      - if: github.event_name == 'push'
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DND_CHARACTER_SHEET_64A24 }}
+        run: |
+          trap 'rm -f "$RUNNER_TEMP/sa.json"' EXIT
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json" npx --yes firebase-tools@15 deploy --only firestore:indexes --project dnd-character-sheet-64a24 --non-interactive

@@ -165,7 +165,7 @@ back on the next load (criterion 14).
     than sending `{}`.
   - **`npm run test:rules`.** Runs `src/data/remote/cloudStore.emulator.test.ts` (12 tests) against
     the real `firestore.rules`, on its own port 8181 (`firebase.test.json`) so it never collides
-    with `dev:cloud`'s 8080/9099, and in CI (`deploy.yml`, before the rules and indexes deploy). On
+    with `dev:cloud`'s 8080/9099, and in CI (`deploy.yml`, before any deploy). On
     Windows, `emulators:exec` can leave a `java` process listening on 8181 after a run; stop only
     that process (confirm it is `java` first) if the next run says the port is taken — 8080 and
     9099 belong to `dev:cloud` and must never be touched by this.
@@ -454,7 +454,11 @@ live in `docs/BACKLOG.md` — add new ones there, not here:
 - **Hosted on Firebase Hosting**, chosen over GitHub Pages and Azure for the backlog's online
   features: same-origin Auth, and Storage behind Security Rules with no backend of our own.
   `.github/workflows/deploy.yml` checks each PR and deploys only `main`, live — no preview channels — to project
-  `dnd-character-sheet-64a24` — so the origin is `dnd-character-sheet-64a24.web.app`. Re-running
+  `dnd-character-sheet-64a24` — so the origin is `dnd-character-sheet-64a24.web.app`. On `main`
+  it deploys in three steps, in this order: `firestore:rules`, then hosting, then
+  `firestore:indexes`. Rules go first because the new client works only against the new rules;
+  indexes go last and apart because nothing needs them to be correct, so a missing IAM role there
+  fails the run without leaving the live app broken. Re-running
   `firebase init hosting:github` writes two more workflows that would deploy twice; delete them.
   **The origin
   is permanent**: IndexedDB belongs to it, so moving the app to another address strands every
