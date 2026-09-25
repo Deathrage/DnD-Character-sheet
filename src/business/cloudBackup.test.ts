@@ -589,6 +589,15 @@ describe('CloudBackup', () => {
     expect(cloudBackup.characters[0]?.versions).toHaveLength(1);
   });
 
+  it('after signing out, an upload waits for a new listing rather than joining the old one', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    await uploaded(cloudBackup);
+    await cloudBackup.signOut();
+    cloud.state.user = USER; // signed in again elsewhere, with no listing in this tab since
+    expect((await cloudBackup.upload(ID_A)).ok).toBe(true);
+    expect(cloudBackup.characters).toEqual([]);
+  });
+
   it('lists a damaged sheet flagged, not dropped, and it can still be deleted', async () => {
     const { backup: cloudBackup, cloud } = backup();
     cloud.state.stored = {

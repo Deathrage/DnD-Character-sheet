@@ -738,7 +738,6 @@ describe('toCloudView', () => {
     return sheet;
   };
 
-  /** One millisecond later each call, so two uploads never share an `uploadedAt`. */
   interface FakeVersion {
     sheet: Uint8Array<ArrayBuffer>;
     portrait: string | null;
@@ -803,7 +802,7 @@ describe('toCloudView', () => {
     const cloud = fakeCloud();
     const backup = new CloudBackup(library, {
       load: async () => cloud.repository,
-      now: clock('2026-09-24T18:00:00.000Z'),
+      now: clock(),
     });
 
     const uploaded = await backup.upload(sheet.id);
@@ -841,7 +840,7 @@ describe('toCloudView', () => {
     const cloud = fakeCloud();
     const backup = new CloudBackup(library, {
       load: async () => cloud.repository,
-      now: clock('2026-09-24T18:00:00.000Z'),
+      now: clock(),
     });
 
     const uploaded = await backup.upload(sheet.id);
