@@ -10,9 +10,9 @@ import type { CharacterDocument } from '../schema/index.js';
  */
 export interface Payload {
   /** `JSON.stringify(doc)`, gzipped. */
-  sheet: Uint8Array<ArrayBuffer>;
+  sheet: Uint8Array;
   /** The JPEG itself, decoded from its data URL: a third smaller than the base64. */
-  portrait: Uint8Array<ArrayBuffer> | null;
+  portrait: Uint8Array | null;
 }
 
 export type DecodeResult =
@@ -82,4 +82,11 @@ export async function decodePayload(payload: Payload, assignId: string): Promise
     return { ok: false, kind: 'corrupt', message: 'Its portrait is not a valid JPEG.' };
   }
   return { ok: true, doc: { ...parsed.doc, id: assignId }, portrait };
+}
+
+/** Lowercase hex SHA-256 of a portrait's bytes: its key in the cloud document (spec §2). */
+export async function portraitHash(bytes: Uint8Array): Promise<string> {
+  // Copied: `digest` wants an ArrayBuffer-backed view, whatever buffer `bytes` sits on.
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(bytes)));
+  return Array.from(digest, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }

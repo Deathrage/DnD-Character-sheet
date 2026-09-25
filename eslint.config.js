@@ -65,6 +65,16 @@ const FIREBASE_PATTERN = {
     'Only src/data/remote may import firebase (see docs/superpowers/specs/2026-09-24-cloud-backup-design.md §2).',
 };
 
+/**
+ * The same isolation for the cloud layout: `src/data/remote/layout/v2.ts` is imported only by
+ * `layout/index.ts`, so a consumer asks for the current layout and never a version by name.
+ */
+const LAYOUT_VERSION_PATTERN = {
+  group: ['**/layout/v*'],
+  message:
+    'Import src/data/remote/layout (its index), not a layout version file directly (see docs/superpowers/specs/2026-09-25-cloud-quota-design.md §8).',
+};
+
 export default tseslint.config(
   { ignores: ['dist', 'coverage', 'storybook-static', 'node_modules', '.superpowers', 'docs'] },
   js.configs.recommended,
@@ -94,16 +104,29 @@ export default tseslint.config(
   boundary('shared', ['data', 'business', 'ui'], { extra: [FIREBASE_PATTERN] }),
   boundary('data', ['business', 'ui'], {
     ignores: ['src/data/schema/**/*.ts', 'src/data/remote/**/*.ts'],
-    extra: [SCHEMA_VERSION_PATTERN, FIREBASE_PATTERN],
+    extra: [SCHEMA_VERSION_PATTERN, FIREBASE_PATTERN, LAYOUT_VERSION_PATTERN],
   }),
   // src/data/schema/ is the one place allowed to reach into a version directory, so it is
   // split out of the `data` boundary above instead of inheriting the schema-version pattern.
   boundary('data/schema', ['business', 'ui'], { extra: [FIREBASE_PATTERN] }),
-  // src/data/remote/ is the one place allowed to import firebase — split out for the same reason.
-  boundary('data/remote', ['business', 'ui'], { extra: [SCHEMA_VERSION_PATTERN] }),
-  boundary('business', ['ui'], { extra: [SCHEMA_VERSION_PATTERN, FIREBASE_PATTERN] }),
+  // src/data/remote/ is the one place allowed to import firebase — split out for the same
+  // reason. Its own layout/ subdirectory is carved out below so it, alone, may import a layout
+  // version file.
+  boundary('data/remote', ['business', 'ui'], {
+    ignores: ['src/data/remote/layout/**/*.ts'],
+    extra: [SCHEMA_VERSION_PATTERN, LAYOUT_VERSION_PATTERN],
+  }),
+  // The one place that may import a layout version file. Pure: no `firebase` either.
+  boundary('data/remote/layout', ['business', 'ui'], {
+    extra: [SCHEMA_VERSION_PATTERN, FIREBASE_PATTERN],
+  }),
+  boundary('business', ['ui'], {
+    extra: [SCHEMA_VERSION_PATTERN, FIREBASE_PATTERN, LAYOUT_VERSION_PATTERN],
+  }),
   // `ui` may import `business` and `shared` only (spec §2) — reaching past the business layer
   // into `data` is a violation, so `data` must be listed here. An empty forbidden list would
   // leave this boundary restricting nothing at all.
-  boundary('ui', ['data'], { extra: [SCHEMA_VERSION_PATTERN, FIREBASE_PATTERN] }),
+  boundary('ui', ['data'], {
+    extra: [SCHEMA_VERSION_PATTERN, FIREBASE_PATTERN, LAYOUT_VERSION_PATTERN],
+  }),
 );
