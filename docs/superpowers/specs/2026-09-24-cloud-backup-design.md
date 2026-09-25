@@ -6,6 +6,8 @@ accounts" becomes "accounts only for optional cloud backup; the local app stays 
 without one". Discharges the "Remote backup and restore" entry in `docs/BACKLOG.md`, with one
 deliberate change to its layout (§3 below).
 
+**§3–§5 are superseded** by `2026-09-25-cloud-quota-design.md`, which also amends §6–§11.
+
 ## 1. Decisions
 
 | Decision | Choice | Reason |

@@ -3,7 +3,13 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ID_A, ID_B, docFor } from '../../test/fixtures.js';
 import type { CharacterDocument } from '../schema/index.js';
-import { bytesToPortrait, decodePayload, encodePayload, portraitToBytes } from './codec.js';
+import {
+  bytesToPortrait,
+  decodePayload,
+  encodePayload,
+  portraitHash,
+  portraitToBytes,
+} from './codec.js';
 
 // A real exported character: 8 sessions of journal, so compression has something to do.
 const zahir = (
@@ -80,5 +86,12 @@ describe('codec', () => {
       kind: 'document',
       error: { code: 'INVALID_AT_VERSION' },
     });
+  });
+
+  it('keys a portrait by the lowercase hex SHA-256 of its bytes', async () => {
+    // The published SHA-256 of "abc".
+    expect(await portraitHash(new TextEncoder().encode('abc'))).toBe(
+      'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+    );
   });
 });

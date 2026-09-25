@@ -6,17 +6,20 @@
  * bypass — so the seed skips `firestore.rules`, and the app, which never sends that header, does
  * not. No Admin SDK: two `fetch` calls per document are a smaller thing to own than a dependency.
  *
- * The documents are laid out exactly as `src/data/remote/firestoreRepository.ts` writes them —
- * `users/{uid}/characters/{id}` holding `{ versions: { [uploadedAt]: entry } }`, and
- * `.../payloads/{uploadedAt}` holding the gzipped sheet as Bytes — so restoring one exercises the
- * real decode path. If that layout changes, change this with it.
+ * The document is laid out exactly as `src/data/remote/cloudStore.ts` writes it: `cloud/{uid}`
+ * holding `{ layoutVersion: 2, characters: { [id]: { [uploadedAt]: { sheet, portrait: null } } } }`,
+ * the sheet gzipped as Bytes. If that layout changes, change this with it.
+ *
+ * Hosts come from the environment variables `firebase emulators:exec` sets for its child —
+ * `FIRESTORE_EMULATOR_HOST` and `FIREBASE_AUTH_EMULATOR_HOST`, both `host:port` with no scheme —
+ * falling back to the ports `npm run dev:cloud` runs on.
  */
 import { gzipSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 
 const PROJECT = 'dnd-character-sheet-64a24';
-const AUTH = 'http://127.0.0.1:9099';
-const FIRESTORE = 'http://127.0.0.1:8080';
+const AUTH = `http://${process.env.FIREBASE_AUTH_EMULATOR_HOST ?? '127.0.0.1:9099'}`;
+const FIRESTORE = `http://${process.env.FIRESTORE_EMULATOR_HOST ?? '127.0.0.1:8080'}`;
 const ADMIN = { Authorization: 'Bearer owner', 'Content-Type': 'application/json' };
 
 const PLAYER = {
@@ -48,43 +51,26 @@ async function seedPlayer() {
   );
 }
 
-const string = (value) => ({ stringValue: value });
 const integer = (value) => ({ integerValue: String(value) });
+const bytesValue = (buffer) => ({ bytesValue: buffer.toString('base64') });
+const map = (fields) => ({ mapValue: { fields } });
 
-async function seedVersion(uid, doc, uploadedAt) {
-  const sheet = gzipSync(JSON.stringify(doc));
-  const classes = doc.classes.map(({ name, level }) => ({
-    mapValue: { fields: { name: string(name), level: integer(level) } },
-  }));
-  const character = `${FIRESTORE}/v1/projects/${PROJECT}/databases/(default)/documents/users/${uid}/characters/${doc.id}`;
-
-  await call(`${character}/payloads/${encodeURIComponent(uploadedAt)}`, 'PATCH', {
-    fields: { sheet: { bytesValue: sheet.toString('base64') }, portrait: { nullValue: null } },
-  });
-  // `updateMask` on this one key, so the second version merges beside the first — as the app's
-  // `set(..., { merge: true })` does — instead of replacing the whole map.
-  const mask = `updateMask.fieldPaths=${encodeURIComponent(`versions.\`${uploadedAt}\``)}`;
-  await call(`${character}?${mask}`, 'PATCH', {
-    fields: {
-      versions: {
-        mapValue: {
-          fields: {
-            [uploadedAt]: {
-              mapValue: {
-                fields: {
-                  name: string(doc.name),
-                  classes: { arrayValue: { values: classes } },
-                  totalLevel: integer(doc.classes.reduce((total, c) => total + c.level, 0)),
-                  sheetUpdatedAt: string(doc.updatedAt),
-                  schemaVersion: integer(doc.schemaVersion),
-                  bytes: integer(sheet.byteLength),
-                },
-              },
-            },
-          },
-        },
-      },
-    },
+/** Every version in one write: layout 2 is one document per player. */
+async function seedCloud(uid, versions) {
+  const byCharacter = {};
+  for (const { doc, uploadedAt } of versions) {
+    byCharacter[doc.id] ??= {};
+    byCharacter[doc.id][uploadedAt] = map({
+      sheet: bytesValue(gzipSync(JSON.stringify(doc))),
+      portrait: { nullValue: null },
+    });
+  }
+  const characters = Object.fromEntries(
+    Object.entries(byCharacter).map(([id, entries]) => [id, map(entries)]),
+  );
+  const path = `${FIRESTORE}/v1/projects/${PROJECT}/databases/(default)/documents/cloud/${uid}`;
+  await call(path, 'PATCH', {
+    fields: { layoutVersion: integer(2), characters: map(characters) },
   });
 }
 
@@ -99,6 +85,8 @@ const older = {
 };
 
 await seedPlayer();
-await seedVersion(PLAYER.localId, older, '2026-09-16T21:00:00.000Z');
-await seedVersion(PLAYER.localId, zahir, '2026-09-23T15:00:00.000Z');
+await seedCloud(PLAYER.localId, [
+  { doc: older, uploadedAt: '2026-09-16T21:00:00.000Z' },
+  { doc: zahir, uploadedAt: '2026-09-23T15:00:00.000Z' },
+]);
 console.log(`Seeded ${PLAYER.displayName} <${PLAYER.email}> with ${zahir.name} (2 versions).`);

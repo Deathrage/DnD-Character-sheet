@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 702 tests across 48 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean.
+- 805 tests across 57 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -146,10 +146,35 @@ back on the next load (criterion 14).
     raw-JSON editor commits a fix. It writes under the entry's own id, so a repair cannot clone the
     character or overwrite a different one.
 - **Cloud backup** (2026-09-24): Google sign-in, dated versions in Firestore — upload, list,
-  restore, delete. `docs/superpowers/specs/2026-09-24-cloud-backup-design.md` is the design; §12
-  there records what was decided during the build rather than up front.
-  - **`src/data/remote/` is the only importer of `firebase`** (lint-enforced). Everything above it
-    speaks `CloudRepository`, so `CloudBackup` and its tests never see the SDK.
+  restore, delete. `docs/superpowers/specs/2026-09-24-cloud-backup-design.md` is the original
+  design; §12 there records what was decided during that build. **Cloud quota and layout
+  versioning** (2026-09-25) rebuilt the storage layer onto one document per player before any real
+  backup existed — `docs/superpowers/specs/2026-09-25-cloud-quota-design.md` supersedes its §3–§5
+  and amends §6–§11; §13 there records this build's deviations.
+  - **One document per player, `cloud/{uid}`, layout 2.** Its 1 MiB document limit — Firestore's
+    own document-size cap — is the quota: nothing a client sends can escape it. The cloud screen
+    shows usage stacked, the value over "of 1.0 MB" beneath it, computed by
+    `src/data/remote/size.ts`, which `npm run test:rules` checks agrees with the emulator at the
+    limit, one byte at a time.
+  - **Layout versioning.** `src/data/remote/layout/` is versioned like `src/data/schema/`: one
+    strict file per version (`v2.ts` today), `index.ts` the only way in (lint-enforced), parsed by
+    the same generic `parseVersioned` walk (`src/data/migration/versioned.ts`) that
+    `parseCharacter` is now a thin wrapper over.
+  - **Uploads never write an empty map.** Merging `portraits: {}` wipes every stored portrait —
+    checked against the emulator — so an upload without a portrait omits the key entirely rather
+    than sending `{}`.
+  - **`npm run test:rules`.** Runs `src/data/remote/cloudStore.emulator.test.ts` (12 tests) against
+    the real `firestore.rules`, on its own port 8181 (`firebase.test.json`) so it never collides
+    with `dev:cloud`'s 8080/9099, and in CI (`deploy.yml`, before any deploy). On
+    Windows, `emulators:exec` can leave a `java` process listening on 8181 after a run; stop only
+    that process (confirm it is `java` first) if the next run says the port is taken — 8080 and
+    9099 belong to `dev:cloud` and must never be touched by this.
+  - **Still to do by hand after the first deploy:** delete the `users` collection (layout 1) in the
+    console — old builds already get `permission-denied` from the new rules, so this is safe
+    whenever it happens — and check that the index overrides in `firestore.indexes.json` deployed.
+  - **`src/data/remote/` is the only importer of `firebase`**, excluding `src/data/remote/layout/`
+    (both lint-enforced). Everything above it speaks `CloudRepository`, so `CloudBackup` and its
+    tests never see the SDK.
   - **The service worker's precache denylists `/^\/__\//`.** `/__/auth/handler` is Firebase
     Hosting's reserved path for the redirect sign-in, and it must reach the network, never the
     cached app shell.
@@ -167,12 +192,28 @@ back on the next load (criterion 14).
       emulator's `Bearer owner` admin token, which the app never sends.
     - Plain `npm run dev` still works without Java; cloud actions then answer "could not be
       reached", because nothing is listening on the emulator ports.
-    - Verified 2026-09-24 in Chromium: sign in as Dev Player, restore (no dialog), restore again
-      (Replace / Keep both, "cloud version is older"), Keep both, upload from a sheet, delete a
-      version; and against the emulator's REST API, another user's read or write of Dev Player's
-      path is 403 while their own path is 200.
+    - Verified 2026-09-25 in Chromium against layout 2 (emulators on spare ports):
+      - sign in as Dev Player from the menu; the list and "39.3 KB / of 1.0 MB" show
+      - restore with no dialog, restore again with Replace / Keep both, and a restored copy keeps
+        its portrait
+      - two uploads with one portrait store it once (6,178 bytes), both versions pointing at it
+      - deleting one of them keeps the portrait, deleting the other removes it, and Delete all
+        empties the cloud
+      - a signed-out `#/cloud` lands on the character list
+        Another account's access is covered by `npm run test:rules`, against the real rules.
+    - **A nearly full cloud is slow to open on a phone.** Measured 2026-09-25 with 50 versions
+      (980 KB), from pressing Manage cloud to a full list, in the dev build:
+      - desktop: about 0.3 s
+      - 4× CPU throttle: 3.1–3.6 s
+      - 6× CPU throttle: 7.3 s
+        With 2 versions the same steps take 0.3 s and 0.6 s, so decoding 48 sheets (gunzip, parse,
+        validate) costs about 3 s on a mid-range phone. Not optimised yet. Candidates:
+      - decode in a Web Worker, which keeps the page responsive but no faster
+      - render versions as they decode instead of all at once
+      - summarise from the raw JSON and validate in full only on restore, which would change
+        when a damaged sheet is flagged (spec §4)
   - **The Firebase chunk is dynamic** (`import()`, never on launch): `firestoreRepository-*.js` is
-    199.33 kB (59.50 kB gzip), split out of a main bundle of 441.22 kB (127.15 kB gzip) — from
+    196.63 kB (58.94 kB gzip), split out of a main bundle of 465.04 kB (134.74 kB gzip) — from
     `npm run build`; re-run it if these drift.
   - **Project setup** (done 2026-09-25; the list is what a fresh project would need):
     - Firestore database `(default)` in **production mode** — test mode's default rules open
@@ -188,7 +229,9 @@ back on the next load (criterion 14).
       sign-in fails with `Error 400: redirect_uri_mismatch`.
     - IAM → the GitHub deploy service account (`github-action-…`) holds **Firebase Rules Admin**
       beside Firebase Hosting Admin, or CI's rules step fails with `firebaserules … 403`. A new
-      grant took a few minutes to take effect.
+      grant took a few minutes to take effect. Deploying `firestore:indexes` (added 2026-09-25) may
+      also need **Cloud Datastore Index Admin** — `deploy.yml`'s own comment flags this; the first
+      failing run will say so.
     - Still to verify by hand: the live round-trip on `dnd-character-sheet-64a24.web.app` — the
       production redirect sign-in is the one path the emulators cannot cover.
 
@@ -202,6 +245,7 @@ composing the screens into an application (spec §7-8), with all seven hub secti
 ```
 npm test           # vitest run
 npm run test:watch
+npm run test:rules # firestore.rules against the emulator, port 8181 — see "Cloud backup" above
 npm run typecheck  # tsc --noEmit
 npm run lint       # eslint .
 npm run format     # prettier --write .
@@ -343,7 +387,8 @@ rejects a bare `baseUrl`. Guessing produced wrong code three times during the bu
 ## Map
 
 ```
-src/shared/            slug()
+src/shared/            slug(), formatBytes() — decimal units, shared by the quota message and the
+                       cloud screen's usage line
 src/business/          index.ts is the public face; CharacterSheetBO is the observable root
   characterSheet.ts    id, name, armorClass, the derived `level`, toDocument() (a toJS copy)
   classes.ts           ClassesBO / ClassBO
@@ -384,12 +429,20 @@ src/main.tsx           the composition root; the only place the real library is 
 index.html             the app document; vite.config.ts builds and tests it
 src/data/schema/       index.ts is the public face; README.md governs versioning
   v1/                  primitives, document, blank (factory), index — self-contained
-src/data/migration/    versionOf, parseCharacter, the LoadError taxonomy
+src/data/migration/    versionOf, versioned.ts (parseVersioned, the generic validate-migrate walk
+                       shared by `schemaVersion` and `layoutVersion`), parseCharacter (now a thin
+                       wrapper over it), the LoadError taxonomy
 src/data/serialization/ export and import (three-outcome ParseTextResult)
 src/data/repository/   the IndexedDB repository (characters + portraits stores), ListEntry, summarize,
                        portrait.ts — the portrait rule
 src/data/remote/       types.ts (CloudRepository and its shapes), codec.ts, cloudError.ts, config.ts,
-                       firestoreRepository.ts — the only importer of `firebase` (lint-enforced)
+                       size.ts (Firestore's document-size rules, no dependency), cloudDocument.ts
+                       (withVersion, withoutVersions, cloudDocumentSize — the document after an
+                       upload or a delete, shared by the store and its tests), cloudStore.ts (+
+                       cloudStore.emulator.test.ts, run by `test:rules`), firestoreRepository.ts —
+                       the only importer of `firebase` (lint-enforced), excluding `layout/`
+  layout/              layout 2's schema (v2.ts, one strict file per version like schema/v1/) and
+                       index.ts — the only entry point (lint-enforced), parsed by parseVersioned
 src/data/characterLifecycle.test.ts   end-to-end across all four modules
 src/test/              fake-indexeddb setup
 src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, wipe, createOpener, putRaw — shared so the
@@ -417,7 +470,10 @@ live in `docs/BACKLOG.md` — add new ones there, not here:
 - **Hosted on Firebase Hosting**, chosen over GitHub Pages and Azure for the backlog's online
   features: same-origin Auth, and Storage behind Security Rules with no backend of our own.
   `.github/workflows/deploy.yml` runs only on pushes to `main`, never on PRs, and deploys it live — no preview channels — to project
-  `dnd-character-sheet-64a24` — so the origin is `dnd-character-sheet-64a24.web.app`. Re-running
+  `dnd-character-sheet-64a24` — so the origin is `dnd-character-sheet-64a24.web.app`. It deploys in three steps, in this order: `firestore:rules`, then hosting, then
+  `firestore:indexes`. Rules go first because the new client works only against the new rules;
+  indexes go last and apart because nothing needs them to be correct, so a missing IAM role there
+  fails the run without leaving the live app broken. Re-running
   `firebase init hosting:github` writes two more workflows that would deploy twice; delete them.
   **The origin
   is permanent**: IndexedDB belongs to it, so moving the app to another address strands every

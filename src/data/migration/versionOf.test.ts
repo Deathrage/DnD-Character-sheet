@@ -55,4 +55,9 @@ describe('versionOf', () => {
       });
     }
   });
+
+  it('reads the field it is told to', () => {
+    expect(versionOf({ layoutVersion: 2 }, 2, 'layoutVersion')).toBe(2);
+    expect(() => versionOf({ schemaVersion: 2 }, 2, 'layoutVersion')).toThrow(CharacterLoadError);
+  });
 });

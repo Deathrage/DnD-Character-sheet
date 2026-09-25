@@ -1,8 +1,8 @@
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import { ConflictDialog } from '../components/ConflictDialog.js';
 import { formatWhen, initialOf } from '../format.js';
+import { formatBytes } from '../../shared/formatBytes.js';
 import type { CloudView, ConflictView } from '../types.js';
-import { CloudTerms } from './Legal.js';
 
 interface Props {
   view: CloudView;
@@ -10,7 +10,6 @@ interface Props {
   message: string | null;
   conflict: ConflictView | null;
   onBack(): void;
-  onSignIn(): void;
   onRestore(characterId: string, uploadedAt: string): void;
   onDeleteVersion(characterId: string, uploadedAt: string): void;
   onDeleteCharacter(characterId: string): void;
@@ -18,23 +17,16 @@ interface Props {
   onResolveConflict(choice: 'replace' | 'keepBoth' | null): void;
 }
 
-export function formatBytes(bytes: number): string {
-  return bytes < 1_000_000
-    ? `${(bytes / 1000).toFixed(1)} KB`
-    : `${(bytes / 1_000_000).toFixed(1)} MB`;
-}
-
 /**
- * Sign-out is not here: it lives in the list menu's account panel, beside sign-in. This screen
- * is only reached signed in, and leaving it by signing out would strand the player on a page
- * whose whole content just disappeared.
+ * Only for a signed-in player: sign-in and sign-out both live in the list menu's account panel,
+ * and the shell sends a signed-out player back to the characters. Until the sign-in check settles,
+ * or when the cloud cannot be reached, only the message shows.
  */
 export function CloudScreen({
   view,
   message,
   conflict,
   onBack,
-  onSignIn,
   onRestore,
   onDeleteVersion,
   onDeleteCharacter,
@@ -61,30 +53,7 @@ export function CloudScreen({
           </div>
         )}
 
-        {!signedIn ? (
-          <div className="chero">
-            <span className="cheroico" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M7 19a5 5 0 0 1-.6-9.96A6 6 0 0 1 18 10a4.5 4.5 0 0 1-.5 9z" />
-                <path d="M12 16v-5M9.5 13.5 12 11l2.5 2.5" />
-              </svg>
-            </span>
-            <h2>Back up to your Google account</h2>
-            <p className="hint">
-              Keep dated copies of your characters, and restore them on any device.
-            </p>
-            <button
-              type="button"
-              className="primary"
-              disabled={view.status === 'signingIn'}
-              onClick={onSignIn}
-            >
-              Sign in with Google
-            </button>
-            {view.status === 'signingIn' && <p className="hint">Waiting for Google{'…'}</p>}
-            <CloudTerms />
-          </div>
-        ) : (
+        {signedIn && (
           <>
             {/* The list menu's account panel, so the account looks the same wherever it shows. */}
             <div className="mgroup">
@@ -99,8 +68,8 @@ export function CloudScreen({
                   )}
                 </span>
                 <span className="cusage">
-                  <span className="cusagev">{formatBytes(view.totalBytes)}</span>
-                  <span className="mdesc">in the cloud</span>
+                  <span className="cusagev">{formatBytes(view.usedBytes)}</span>
+                  <span className="mdesc">of {formatBytes(view.limitBytes)}</span>
                 </span>
               </div>
             </div>
@@ -115,7 +84,7 @@ export function CloudScreen({
               <section key={character.characterId} className="cchar">
                 <div className="cchead">
                   <div className="cctitle">
-                    <h2 className="cn">{character.name}</h2>
+                    <h2 className="cn">{character.name ?? 'Unreadable character'}</h2>
                     <span className="cid">ID: {character.characterId}</span>
                   </div>
                   <span className="cc">
@@ -134,18 +103,26 @@ export function CloudScreen({
                         </span>
                         {/* Each part kept whole, so a wrap falls between them, never inside one. */}
                         <span className="cvmeta">
-                          <span>Level {version.level}</span> {'·'}{' '}
-                          <span>edited {formatWhen(version.sheetUpdatedAt)}</span> {'·'}{' '}
+                          {version.sheetUpdatedAt !== null && (
+                            <>
+                              <span>Level {version.level}</span> {'·'}{' '}
+                              <span>edited {formatWhen(version.sheetUpdatedAt)}</span> {'·'}{' '}
+                            </>
+                          )}
                           <span>{formatBytes(version.bytes)}</span>
                         </span>
-                        {version.fromNewerApp && (
+                        {version.fromNewerApp ? (
                           <span className="cvwarn">Made by a newer version of the app</span>
+                        ) : (
+                          version.problem !== null && (
+                            <span className="cvwarn">{version.problem}</span>
+                          )
                         )}
                       </span>
                       <button
                         type="button"
                         className="txtbtn"
-                        disabled={view.busy}
+                        disabled={view.busy || version.sheetUpdatedAt === null}
                         onClick={() => onRestore(character.characterId, version.uploadedAt)}
                       >
                         Restore
@@ -164,7 +141,7 @@ export function CloudScreen({
                   ))}
                 </ol>
                 <ConfirmDelete
-                  what={`Every cloud version of ${character.name}`}
+                  what={`Every cloud version of ${character.name ?? 'Unreadable character'}`}
                   onConfirm={() => onDeleteCharacter(character.characterId)}
                   className="cdelall"
                 >
