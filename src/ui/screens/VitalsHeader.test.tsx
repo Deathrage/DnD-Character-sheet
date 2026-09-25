@@ -133,4 +133,22 @@ describe('VitalsHeader classes', () => {
       (screen.getByLabelText('Level of Rogue (Arcane Trickster)') as HTMLInputElement).value,
     ).toBe('5');
   });
+
+  it('steps a class level with − and +, never below 1', () => {
+    const setClassLevel = vi.fn();
+    const wizard = { id: 'c1', name: 'Wizard', level: 1 };
+    render(
+      <VitalsHeader
+        character={{ ...sable, classes: [wizard], level: 1 }}
+        actions={{ ...noVitalsActions, setClassLevel }}
+        onBack={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Lvl 1/ }));
+    expect(screen.getByLabelText<HTMLButtonElement>('Decrease Level of Wizard').disabled).toBe(
+      true,
+    );
+    fireEvent.click(screen.getByLabelText('Increase Level of Wizard'));
+    expect(setClassLevel).toHaveBeenCalledWith('c1', 2);
+  });
 });

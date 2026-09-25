@@ -322,6 +322,7 @@ function ClassesDialog({ open, onClose, character, actions }: DialogProps) {
             min={1}
             value={entry.level}
             onChange={(level) => actions.setClassLevel(entry.id, level)}
+            stepper
           />
           <ConfirmDelete
             className="delx"
