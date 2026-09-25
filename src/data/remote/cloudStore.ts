@@ -31,16 +31,25 @@ function toLoad(snapshot: DocumentSnapshot): CloudLoad {
 
 export type CloudStore = ReturnType<typeof createCloudStore>;
 
-/** The player's one cloud document (cloud-quota spec §2, §4). `uid` is read per call. */
-export function createCloudStore(db: Firestore, uid: () => string) {
-  const ref = () => doc(db, ...cloudDocumentPath(uid()));
+/**
+ * A player's one cloud document (cloud-quota spec §2, §4). Every call names the uid it acts for,
+ * never `auth.currentUser`: another tab can switch accounts between a listing and a delete, and
+ * the rules then refuse the stale uid instead of this acting on the new account's document.
+ */
+export function createCloudStore(db: Firestore) {
+  const ref = (uid: string) => doc(db, ...cloudDocumentPath(uid));
 
   return {
-    load: async (): Promise<CloudLoad> => toLoad(await getDoc(ref())),
+    load: async (uid: string): Promise<CloudLoad> => toLoad(await getDoc(ref(uid))),
 
-    upload: (characterId: string, uploadedAt: string, version: NewVersion): Promise<void> =>
+    upload: (
+      uid: string,
+      characterId: string,
+      uploadedAt: string,
+      version: NewVersion,
+    ): Promise<void> =>
       setDoc(
-        ref(),
+        ref(uid),
         {
           layoutVersion: CURRENT_LAYOUT,
           // Absent, never `{}`: merging an empty map replaces the stored one (spec §4).
@@ -65,26 +74,30 @@ export function createCloudStore(db: Firestore, uid: () => string) {
       ),
 
     deleteVersions: (
+      uid: string,
       characterId: string,
       uploadedAts: readonly string[] | null,
-    ): Promise<CloudLoad> =>
+    ): Promise<CloudLoad> => {
+      // One ref, so every attempt reads and updates the same document.
+      const target = ref(uid);
       // A transaction, so a portrait another device starts using mid-delete is not removed:
       // the commit fails on the changed document and this runs again on the new one.
-      runTransaction(db, async (transaction) => {
-        const loaded = toLoad(await transaction.get(ref()));
+      return runTransaction(db, async (transaction) => {
+        const loaded = toLoad(await transaction.get(target));
         // Unreadable or newer: nothing is written to a document this build cannot read.
         if (!loaded.ok || loaded.doc === null) return loaded;
         const { doc: after, removed } = withoutVersions(loaded.doc, characterId, uploadedAts);
         const [first, ...rest] = removed.map((path) => new FieldPath(...path));
         if (first !== undefined) {
           transaction.update(
-            ref(),
+            target,
             first,
             deleteField(),
             ...rest.flatMap((path) => [path, deleteField()]),
           );
         }
         return { ok: true, doc: after };
-      }),
+      });
+    },
   };
 }

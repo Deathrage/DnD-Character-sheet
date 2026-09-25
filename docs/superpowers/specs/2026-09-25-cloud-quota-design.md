@@ -370,8 +370,20 @@ Every test proven to bite, as AGENTS.md requires.
    and drops its result if they differ, and `restore` refuses outright once signed out — so nothing
    of a signed-out account can be restored, even from a listing that was already in flight when
    sign-out happened. Known residual: another tab signing out does not clear this tab's list from
-   the screen until this tab signs out itself (restore still refuses regardless, so nothing unsafe
-   follows from the stale display).
+   the screen until this tab next checks. For a **sign-out** that is safe: every cloud call then
+   rejects `SIGNED_OUT`, and restore refuses once a check has seen it.
+
+   An **account switch** in another tab is different, because Firebase Auth syncs the new user
+   into this tab while this tab's listing, and `#state.user`, still say the old one. What protects
+   it is that every `CloudRepository` call takes the uid it acts for — `load(uid)`,
+   `upload(uid, …)`, `deleteVersions(uid, …)` — and the store builds its document path from that
+   argument, never from `auth.currentUser`. A delete from the stale listing therefore names the
+   old account's document while the request carries the new account's token, and the rules refuse
+   it with `permission-denied`: neither account's document is touched, and the player reads "The
+   cloud refused this account…". Before this, the store read `auth.currentUser` at call time, so
+   Delete all versions ran against the new account's document. Still residual: restore makes no
+   cloud call, so until this tab checks again it can restore a version from the old account's
+   listing into this browser — a copy this tab was already showing, not a write to either cloud.
 6. **`scripts/seedEmulator.mjs` reads its emulator hosts from the environment**
    (`FIRESTORE_EMULATOR_HOST`, `FIREBASE_AUTH_EMULATOR_HOST`) rather than hardcoding
    `dev:cloud`'s 8080/9099, falling back to those only when the variables are absent. `firebase

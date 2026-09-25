@@ -28,10 +28,16 @@ export interface CloudRepository {
   /** With a redirect this navigates away and never settles; with a popup it resolves. */
   signIn(): Promise<CloudUser>;
   signOut(): Promise<void>;
-  /** The player's whole cloud document (spec §4). */
-  load(): Promise<CloudLoad>;
+  // The three below take the uid they act for: the one the caller listed, never whoever Auth says
+  // is signed in now, which another tab can change. The rules refuse any other uid.
+  /** `uid`'s whole cloud document (spec §4). */
+  load(uid: string): Promise<CloudLoad>;
   /** One merge write, no read. Over the limit, Firestore refuses it. */
-  upload(characterId: string, uploadedAt: string, version: NewVersion): Promise<void>;
+  upload(uid: string, characterId: string, uploadedAt: string, version: NewVersion): Promise<void>;
   /** One transaction. `null` deletes every version. Unreadable documents are returned, not written. */
-  deleteVersions(characterId: string, uploadedAts: readonly string[] | null): Promise<CloudLoad>;
+  deleteVersions(
+    uid: string,
+    characterId: string,
+    uploadedAts: readonly string[] | null,
+  ): Promise<CloudLoad>;
 }

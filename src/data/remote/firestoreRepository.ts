@@ -45,12 +45,13 @@ export function createFirestoreRepository(): CloudRepository {
     name: user.displayName,
     email: user.email,
   });
-  const uid = (): string => {
-    const user = auth.currentUser;
-    if (user === null) throw new CloudError('SIGNED_OUT');
-    return user.uid;
-  };
-  const store = createCloudStore(db, uid);
+  const store = createCloudStore(db);
+  /** Signed out, nothing is sent. Signed in as someone else, the rules refuse the caller's uid. */
+  const signedIn = <T>(run: () => Promise<T>): Promise<T> =>
+    guard(async () => {
+      if (auth.currentUser === null) throw new CloudError('SIGNED_OUT');
+      return run();
+    });
 
   async function guard<T>(run: () => Promise<T>): Promise<T> {
     try {
@@ -83,8 +84,8 @@ export function createFirestoreRepository(): CloudRepository {
 
     signOut: () => guard(() => signOut(auth)),
 
-    load: () => guard(store.load),
-    upload: (...args) => guard(() => store.upload(...args)),
-    deleteVersions: (...args) => guard(() => store.deleteVersions(...args)),
+    load: (uid) => signedIn(() => store.load(uid)),
+    upload: (...args) => signedIn(() => store.upload(...args)),
+    deleteVersions: (...args) => signedIn(() => store.deleteVersions(...args)),
   };
 }

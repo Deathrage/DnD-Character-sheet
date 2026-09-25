@@ -34,7 +34,17 @@ function as(uid: string): Firestore {
   connectFirestoreEmulator(db, HOST, Number(PORT), { mockUserToken: { sub: uid, user_id: uid } });
   return db;
 }
-const storeAs = (uid: string) => createCloudStore(as(uid), () => uid);
+/** The store as `uid`, acting for `uid`: the uid argument bound, as `CloudBackup` passes it. */
+const storeAs = (uid: string) => {
+  const store = createCloudStore(as(uid));
+  return {
+    load: () => store.load(uid),
+    upload: (characterId: string, uploadedAt: string, version: NewVersion) =>
+      store.upload(uid, characterId, uploadedAt, version),
+    deleteVersions: (characterId: string, uploadedAts: readonly string[] | null) =>
+      store.deleteVersions(uid, characterId, uploadedAts),
+  };
+};
 
 /** Writes past the rules, as the seed script does. The app never sends this header. */
 async function adminPatch(path: string, fields: object): Promise<void> {
@@ -159,9 +169,15 @@ describe('cloudStore against the emulator and the real rules', () => {
     await storeAs('u1').upload(ID_A, T1, plain(1));
     const eve = as('eve');
     expect(await refusal(getDoc(doc(eve, 'cloud', 'u1')))).toBe('permission-denied');
-    expect(await refusal(createCloudStore(eve, () => 'u1').upload(ID_A, T2, plain(1)))).toBe(
-      'permission-denied',
-    );
+    // What a tab still holding u1's listing sends after another tab switched Auth to eve.
+    const stale = createCloudStore(eve);
+    expect(await refusal(stale.load('u1'))).toBe('permission-denied');
+    expect(await refusal(stale.upload('u1', ID_A, T2, plain(1)))).toBe('permission-denied');
+    expect(await refusal(stale.deleteVersions('u1', ID_A, null))).toBe('permission-denied');
+    expect(await storeAs('u1').load()).toMatchObject({
+      ok: true,
+      doc: { characters: { [ID_A]: { [T1]: { portrait: null } } } },
+    });
   });
 
   it('refuses every other path, including the old layout', async () => {

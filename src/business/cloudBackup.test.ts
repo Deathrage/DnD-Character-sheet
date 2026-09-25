@@ -15,9 +15,12 @@ import { StorageGate } from './storageGate.js';
 
 const USER: CloudUser = { uid: 'u1', name: 'Ja', email: 'ja@example.com' };
 
+const OTHER: CloudUser = { uid: 'u2', name: 'Other', email: 'other@example.com' };
+
 /**
- * An in-memory cloud. It holds the raw document, as Firestore would, and parses it with the real
- * layout. `failNext` makes the next call reject, as Firestore would.
+ * An in-memory cloud. It holds each account's raw document, as Firestore would, and parses it with
+ * the real layout. `failNext` makes the next call reject, as Firestore would. Like the rules, it
+ * refuses any uid but the signed-in one's.
  */
 function fakeCloud(signedIn = true) {
   const state = {
@@ -25,21 +28,29 @@ function fakeCloud(signedIn = true) {
     failNext: null as unknown,
     /** A redirect sign-in that just failed: `currentUser` rejects with it once. */
     redirectFailure: null as CloudError | null,
-    /** The document as Firestore holds it; `undefined` until the first upload. */
-    stored: undefined as unknown,
+    /** Each account's document as Firestore holds it; absent until its first upload. */
+    docs: {} as Record<string, unknown>,
+    /** `USER`'s document. */
+    get stored(): unknown {
+      return this.docs[USER.uid];
+    },
+    set stored(value: unknown) {
+      this.docs[USER.uid] = value;
+    },
     uploads: 0,
     loads: 0,
     signIns: 0,
   };
-  const check = () => {
+  const check = (uid: string) => {
     const failure = state.failNext;
     state.failNext = null;
     if (failure) throw failure;
     if (state.user === null) throw new CloudError('SIGNED_OUT');
+    if (state.user.uid !== uid) throw new CloudError('PERMISSION_DENIED');
   };
-  const read = (): CloudLoad => {
-    if (state.stored === undefined) return { ok: true, doc: null };
-    const parsed = parseCloudDocument(state.stored);
+  const read = (uid: string): CloudLoad => {
+    if (state.docs[uid] === undefined) return { ok: true, doc: null };
+    const parsed = parseCloudDocument(state.docs[uid]);
     return parsed.ok ? { ok: true, doc: parsed.value } : { ok: false, error: parsed.error };
   };
 
@@ -61,32 +72,32 @@ function fakeCloud(signedIn = true) {
     signOut: async () => {
       state.user = null;
     },
-    load: async () => {
-      check();
+    load: async (uid) => {
+      check(uid);
       state.loads += 1;
-      return read();
+      return read(uid);
     },
-    upload: async (characterId, uploadedAt, version) => {
-      check();
-      const current = read();
+    upload: async (uid, characterId, uploadedAt, version) => {
+      check(uid);
+      const current = read(uid);
       // The rules refuse a write over a newer layout.
       if (!current.ok) throw new CloudError('PERMISSION_DENIED');
       const after = withVersion(current.doc, characterId, uploadedAt, version);
-      if (cloudDocumentSize(USER.uid, after) > MAX_DOCUMENT_BYTES) {
+      if (cloudDocumentSize(uid, after) > MAX_DOCUMENT_BYTES) {
         // What the emulator answers (spec §5); production's code may differ, which is the point.
         throw Object.assign(new Error('maximum entity size is 1048576 bytes'), {
           code: 'failed-precondition',
         });
       }
       state.uploads += 1;
-      state.stored = after;
+      state.docs[uid] = after;
     },
-    deleteVersions: async (characterId, uploadedAts) => {
-      check();
-      const current = read();
+    deleteVersions: async (uid, characterId, uploadedAts) => {
+      check(uid);
+      const current = read(uid);
       if (!current.ok || current.doc === null) return current;
       const { doc } = withoutVersions(current.doc, characterId, uploadedAts);
-      state.stored = doc;
+      state.docs[uid] = doc;
       return { ok: true, doc };
     },
   };
@@ -489,8 +500,8 @@ describe('CloudBackup', () => {
     let release!: () => void;
     const called = new Promise<void>((resolve) => (started = resolve));
     const gate = new Promise<void>((resolve) => (release = resolve));
-    cloud.repository.load = async () => {
-      const result = load(); // read while still signed in
+    cloud.repository.load = async (uid) => {
+      const result = load(uid); // read while still signed in
       started();
       await gate; // still on the network
       return result;
@@ -521,6 +532,21 @@ describe('CloudBackup', () => {
       message: 'Sign in with Google to use cloud backup.',
     });
     expect(library.entries).toEqual([]);
+  });
+
+  it('switched to another account in another tab, a delete touches neither account', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    await uploaded(cloudBackup);
+    const mine = structuredClone(cloud.state.stored);
+    // The other account holds the same character, so a delete aimed at it would show.
+    cloud.state.docs[OTHER.uid] = structuredClone(mine);
+    cloud.state.user = OTHER; // another tab switched accounts; this one has not checked since
+
+    expect(await cloudBackup.deleteCharacter(ID_A)).toBe(
+      'The cloud refused this account. Sign out, sign in again, and retry.',
+    );
+    expect(cloud.state.docs[OTHER.uid]).toEqual(mine);
+    expect(cloud.state.stored).toEqual(mine);
   });
 
   it('restores from the listing, downloading nothing more', async () => {

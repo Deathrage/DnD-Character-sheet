@@ -760,7 +760,12 @@ describe('toCloudView', () => {
       load: async () => ({ ok: true as const, doc }),
       // No portrait is ever attached in these tests, so `version.portrait` is always `null` —
       // the one case where `NewVersion`'s shape and the stored `CloudVersionData`'s coincide.
-      upload: async (characterId: string, uploadedAt: string, version: { sheet: Uint8Array }) =>
+      upload: async (
+        _uid: string,
+        characterId: string,
+        uploadedAt: string,
+        version: { sheet: Uint8Array },
+      ) =>
         // The real `sheet` is always a plain `ArrayBuffer`-backed view (never a
         // `SharedArrayBuffer`, which is all this narrows out); `encodePayload` builds it from a
         // `Response#arrayBuffer()`.

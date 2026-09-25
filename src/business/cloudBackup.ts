@@ -186,7 +186,7 @@ export class CloudBackup {
       return this.#state.status === 'unavailable' ? UNAVAILABLE : null;
     }
     return this.#run(async (repository, uid) => {
-      const loaded = await repository.load();
+      const loaded = await repository.load(uid);
       if (!loaded.ok) throw refused(describeLayoutError(loaded.error));
       await this.#apply(loaded.doc, uid);
     });
@@ -280,7 +280,7 @@ export class CloudBackup {
       };
       const uploadedAt = this.#now().toISOString();
       try {
-        await repository.upload(characterId, uploadedAt, version);
+        await repository.upload(user.uid, characterId, uploadedAt, version);
       } catch (caught) {
         return {
           ok: false,
@@ -315,7 +315,7 @@ export class CloudBackup {
   ): Promise<string> {
     if (toCloudError(caught).code === 'UNKNOWN') {
       try {
-        const loaded = await repository.load();
+        const loaded = await repository.load(uid);
         if (loaded.ok) {
           const before = loaded.doc === null ? 0 : cloudDocumentSize(uid, loaded.doc);
           const after = cloudDocumentSize(
@@ -372,7 +372,7 @@ export class CloudBackup {
 
   #delete(characterId: string, uploadedAts: readonly string[] | null): Promise<string | null> {
     return this.#run(async (repository, uid) => {
-      const loaded = await repository.deleteVersions(characterId, uploadedAts);
+      const loaded = await repository.deleteVersions(uid, characterId, uploadedAts);
       if (!loaded.ok) throw refused(describeLayoutError(loaded.error));
       await this.#apply(loaded.doc, uid);
     });
