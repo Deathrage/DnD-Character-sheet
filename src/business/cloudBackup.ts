@@ -304,7 +304,15 @@ export class CloudBackup {
     }
   }
 
-  /** Spec §5: the numbers decide "full", never the error code, which production may word differently. */
+  /**
+   * Reads the document to explain a refused upload; if that read fails too, the upload's own
+   * failure is the one to report.
+   *
+   * - Spec §5: the numbers decide "full", never the error code, which production may word
+   *   differently.
+   * - Spec §6: the rules refuse this build's write over a newer layout, and "sign in again" would
+   *   be useless advice there.
+   */
   async #uploadFailure(
     caught: unknown,
     repository: CloudRepository,
@@ -313,21 +321,24 @@ export class CloudBackup {
     uploadedAt: string,
     version: NewVersion,
   ): Promise<string> {
-    if (toCloudError(caught).code === 'UNKNOWN') {
-      try {
-        const loaded = await repository.load(uid);
-        if (loaded.ok) {
-          const before = loaded.doc === null ? 0 : cloudDocumentSize(uid, loaded.doc);
-          const after = cloudDocumentSize(
-            uid,
-            withVersion(loaded.doc, characterId, uploadedAt, version),
-          );
-          if (after > MAX_DOCUMENT_BYTES) {
-            return describeFull(after - before, MAX_DOCUMENT_BYTES - before);
-          }
+    const { code } = toCloudError(caught);
+    const load = () => repository.load(uid).catch(() => null);
+    if (code === 'PERMISSION_DENIED') {
+      const loaded = await load();
+      if (loaded?.ok === false && loaded.error.code === 'FROM_FUTURE') {
+        return describeLayoutError(loaded.error);
+      }
+    } else if (code === 'UNKNOWN') {
+      const loaded = await load();
+      if (loaded?.ok) {
+        const before = loaded.doc === null ? 0 : cloudDocumentSize(uid, loaded.doc);
+        const after = cloudDocumentSize(
+          uid,
+          withVersion(loaded.doc, characterId, uploadedAt, version),
+        );
+        if (after > MAX_DOCUMENT_BYTES) {
+          return describeFull(after - before, MAX_DOCUMENT_BYTES - before);
         }
-      } catch {
-        // The upload's own failure is the one to report.
       }
     }
     return this.#describe(caught);

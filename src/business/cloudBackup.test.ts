@@ -634,6 +634,28 @@ describe('CloudBackup', () => {
     expect(cloud.state.stored).toEqual({ layoutVersion: 3 });
   });
 
+  it('an upload over a newer layout says to update, not to sign in again', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    cloud.state.stored = { layoutVersion: 3 };
+    expect(await cloudBackup.upload(ID_A)).toEqual({
+      ok: false,
+      message: 'Your cloud backups were made by a newer version of the app. Reload to update.',
+    });
+    expect(cloud.state.stored).toEqual({ layoutVersion: 3 });
+
+    // Any other refusal keeps its own sentence: over a readable cloud, or one unreadable for
+    // another reason than a newer layout.
+    const refusedAccount = {
+      ok: false,
+      message: 'The cloud refused this account. Sign out, sign in again, and retry.',
+    };
+    cloud.state.stored = undefined;
+    cloud.state.failNext = new CloudError('PERMISSION_DENIED');
+    expect(await cloudBackup.upload(ID_A)).toEqual(refusedAccount);
+    cloud.state.stored = { layoutVersion: 'two' };
+    expect(await cloudBackup.upload(ID_A)).toEqual(refusedAccount);
+  });
+
   it('an upload into a layout-2 cloud this build cannot read still lands, as the rules allow', async () => {
     const { backup: cloudBackup, cloud } = backup();
     const damaged = { layoutVersion: 2, characters: { [ID_B]: 'not a version map' } };

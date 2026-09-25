@@ -407,3 +407,8 @@ Every test proven to bite, as AGENTS.md requires.
    new rules, so hosting first left a window in which the live app was refused by the old ones;
    and one combined step meant a missing "Cloud Datastore Index Admin" role failed the rules
    deploy too. Indexes are not needed for correctness, so they go last, on their own.
+10. **A refused upload over a newer layout says to update.** Once layout 3 ships, §6's last rule
+    refuses this build's uploads with `permission-denied`, whose sentence ("Sign out, sign in
+    again…") cannot help. On `PERMISSION_DENIED`, `CloudBackup` therefore reads the document too,
+    like §5 does for `UNKNOWN`: if it is `FROM_FUTURE`, the sentence is `describeLayoutError`'s
+    "Reload to update"; otherwise, or if the read fails, the original.
