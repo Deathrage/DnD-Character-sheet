@@ -416,7 +416,7 @@ live in `docs/BACKLOG.md` — add new ones there, not here:
   Updates are only checked for on launch or reload; there is no periodic check.
 - **Hosted on Firebase Hosting**, chosen over GitHub Pages and Azure for the backlog's online
   features: same-origin Auth, and Storage behind Security Rules with no backend of our own.
-  `.github/workflows/deploy.yml` checks each PR and deploys only `main`, live — no preview channels — to project
+  `.github/workflows/deploy.yml` runs only on pushes to `main`, never on PRs, and deploys it live — no preview channels — to project
   `dnd-character-sheet-64a24` — so the origin is `dnd-character-sheet-64a24.web.app`. Re-running
   `firebase init hosting:github` writes two more workflows that would deploy twice; delete them.
   **The origin

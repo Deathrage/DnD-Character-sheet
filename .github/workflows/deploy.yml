@@ -1,11 +1,11 @@
-# Checks every pull request; deploys `main` to Firebase Hosting live. No preview channels.
+# Runs only on pushes to `main`, never on pull requests; deploys it to Firebase Hosting live.
+# No preview channels.
 # The secret was created by `firebase init hosting:github`; the project is in `.firebaserc`.
 name: Deploy
 
 on:
   push:
     branches: [main]
-  pull_request:
 
 jobs:
   deploy:
@@ -22,15 +22,13 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
-      - if: github.event_name == 'push'
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DND_CHARACTER_SHEET_64A24 }}
           projectId: dnd-character-sheet-64a24
           channelId: live
       # Needs the deploy service account to hold "Firebase Rules Admin".
-      - if: github.event_name == 'push'
-        env:
+      - env:
           SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DND_CHARACTER_SHEET_64A24 }}
         run: |
           # Through `env` and `printf`, not interpolated into the script: a key containing a quote
