@@ -117,8 +117,12 @@ describe('App', () => {
       fireEvent.click(screen.getByLabelText('New character'));
 
       const upload = await screen.findByRole('button', { name: 'Upload to cloud' });
-      await waitFor(() => expect(screen.queryByText(HINT) !== null).toBe(disabled));
-      expect((upload as HTMLButtonElement).disabled).toBe(disabled);
+      // Both at once: until the sign-in check settles, Upload is disabled and the hint hidden, so
+      // waiting on the hint alone lets the signed-in case assert before the button is enabled.
+      await waitFor(() => {
+        expect(screen.queryByText(HINT) !== null).toBe(disabled);
+        expect((upload as HTMLButtonElement).disabled).toBe(disabled);
+      });
     },
   );
 
