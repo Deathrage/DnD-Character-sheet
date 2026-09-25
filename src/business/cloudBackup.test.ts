@@ -13,7 +13,7 @@ import type { CloudLoad, CloudRepository, CloudUser } from '../data/remote/types
 import { createIndexedDbRepository } from '../data/repository/indexedDbRepository.js';
 import type { CharacterRepository } from '../data/repository/types.js';
 import type { CharacterDocument } from '../data/schema/index.js';
-import { ID_A, ID_B, createOpener, docFor, putRaw, wipe } from '../test/fixtures.js';
+import { ID_A, ID_B, clock, createOpener, docFor, putRaw, wipe } from '../test/fixtures.js';
 import { CharacterLibraryBO } from './characterLibrary.js';
 import { CloudBackup } from './cloudBackup.js';
 import { StorageGate } from './storageGate.js';
@@ -131,12 +131,6 @@ function fakeCloud(signedIn = true) {
     },
   };
   return { repository, state };
-}
-
-/** Advances a millisecond per call, so two uploads never share an `uploadedAt`. */
-function clock(start = Date.parse('2026-09-24T18:00:00.000Z')) {
-  let now = start;
-  return () => new Date(now++);
 }
 
 /** Lists first, as the cloud screen does, so an upload lands in the list. */
@@ -457,7 +451,7 @@ describe('CloudBackup', () => {
     const { uploadedAt } = (await here.upload(ID_A)) as { uploadedAt: string };
     const elsewhere = new CloudBackup(library, {
       load: async () => cloud.repository,
-      now: clock(Date.parse('2026-09-25T18:00:00.000Z')),
+      now: clock('2026-09-25T18:00:00.000Z'),
     });
     const other = (await elsewhere.upload(ID_A)) as { uploadedAt: string };
 
@@ -699,7 +693,7 @@ describe('CloudBackup', () => {
     await uploaded(here);
     const elsewhere = new CloudBackup(library, {
       load: async () => cloud.repository,
-      now: clock(Date.parse('2026-09-25T18:00:00.000Z')),
+      now: clock('2026-09-25T18:00:00.000Z'),
     });
     await elsewhere.upload(ID_A);
     expect(await here.deleteCharacter(ID_A)).toBeNull();

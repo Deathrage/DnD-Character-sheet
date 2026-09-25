@@ -121,9 +121,11 @@ export class CloudBackup {
    * or `null`. Reset by every `#signedInUser()`, so only the caller right after it sees it.
    */
   #signInFailure: string | null = null;
-  /** The last document read, and whether one has been read since sign-in: an upload is only listed on top of a real listing. */
-  #doc: CloudDocument | null = null;
-  #listed = false;
+  /**
+   * The last document read: `undefined` until one has been read since sign-in, `null` when the
+   * player has none. An upload is only listed on top of a real listing.
+   */
+  #doc: CloudDocument | null | undefined = undefined;
   /** Every listed version, decoded. Keyed `${characterId}/${uploadedAt}`; a version never changes, so a key never goes stale. */
   #decoded = new Map<string, Decoded>();
   readonly #state = observable(
@@ -217,8 +219,7 @@ export class CloudBackup {
     }
     // Forgotten at once: the next person at this device must not see, or restore, this account's
     // characters.
-    this.#doc = null;
-    this.#listed = false;
+    this.#doc = undefined;
     this.#decoded = new Map();
     this.#state.user = null;
     this.#state.characters = [];
@@ -294,7 +295,7 @@ export class CloudBackup {
           ),
         };
       }
-      if (this.#listed) {
+      if (this.#doc !== undefined) {
         this.#decoded.set(`${characterId}/${uploadedAt}`, { ok: true, doc: stored.doc, portrait });
         await this.#apply(withVersion(this.#doc, characterId, uploadedAt, version), user.uid);
       }
@@ -392,14 +393,24 @@ export class CloudBackup {
 
   /** Rebuilds the list and the usage from a document, decoding only versions not seen before. */
   async #apply(doc: CloudDocument | null, uid: string): Promise<void> {
+    // Every version not yet decoded, at once: each decode is independent, and none rejects.
     const decoded = new Map<string, Decoded>();
+    await Promise.all(
+      Object.entries(doc?.characters ?? {}).flatMap(([characterId, versions]) =>
+        Object.entries(versions).map(async ([uploadedAt, version]) => {
+          const key = `${characterId}/${uploadedAt}`;
+          decoded.set(
+            key,
+            this.#decoded.get(key) ?? (await decodeVersion(doc!, characterId, version)),
+          );
+        }),
+      ),
+    );
     const characters: CloudCharacter[] = [];
     for (const [characterId, versions] of Object.entries(doc?.characters ?? {})) {
       const list: CloudVersion[] = [];
       for (const [uploadedAt, version] of Object.entries(versions)) {
-        const key = `${characterId}/${uploadedAt}`;
-        const entry = this.#decoded.get(key) ?? (await decodeVersion(doc!, characterId, version));
-        decoded.set(key, entry);
+        const entry = decoded.get(`${characterId}/${uploadedAt}`)!;
         list.push({
           uploadedAt,
           bytes: stringSize(uploadedAt) + valueSize(version),
@@ -416,7 +427,6 @@ export class CloudBackup {
     // cloud may be put back after `signOut` cleared it.
     if (this.#state.user?.uid !== uid) return;
     this.#doc = doc;
-    this.#listed = true;
     this.#decoded = decoded;
     this.#state.characters = characters;
     this.#state.usedBytes = doc === null ? 0 : cloudDocumentSize(uid, doc);

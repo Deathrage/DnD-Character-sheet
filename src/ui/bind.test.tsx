@@ -8,7 +8,7 @@ import {
   createCharacterSheet,
   type CharacterSheetBO,
 } from '../business/index.js';
-import { ID_A, putRaw, wipe } from '../test/fixtures.js';
+import { ID_A, clock, putRaw, wipe } from '../test/fixtures.js';
 import {
   toCharacterRows,
   toCloudView,
@@ -739,11 +739,6 @@ describe('toCloudView', () => {
   };
 
   /** One millisecond later each call, so two uploads never share an `uploadedAt`. */
-  const clock = (start: string) => {
-    let now = Date.parse(start);
-    return () => new Date(now++);
-  };
-
   interface FakeVersion {
     sheet: Uint8Array<ArrayBuffer>;
     portrait: string | null;
