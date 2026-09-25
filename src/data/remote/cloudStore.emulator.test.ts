@@ -47,6 +47,18 @@ async function adminPatch(path: string, fields: object): Promise<void> {
   if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
 }
 
+interface RestDocument {
+  fields?: Record<string, unknown>;
+}
+
+/** Reads past the rules too: what a write actually left in storage, not what the store computed. */
+async function adminGet(path: string): Promise<RestDocument> {
+  const url = `${EMULATOR}/v1/projects/${PROJECT}/databases/(default)/documents/${path}`;
+  const response = await fetch(url, { headers: { Authorization: 'Bearer owner' } });
+  if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
+  return (await response.json()) as RestDocument;
+}
+
 const refusal = (promise: Promise<unknown>) =>
   promise.then(
     () => 'allowed',
@@ -77,11 +89,43 @@ describe('cloudStore against the emulator and the real rules', () => {
         characters: { [ID_A]: { [T1]: { sheet: sheet(3), portrait: null } } },
       },
     });
-    expect(await store.deleteVersions(ID_A, [T1])).toEqual({
+    const deleted = await store.deleteVersions(ID_A, [T1]);
+    expect(deleted).toEqual({
       ok: true,
       doc: { layoutVersion: 2, characters: {} },
     });
-    expect((await store.load()).ok).toBe(true);
+    // Not just the return value (computed locally by withoutVersions): what the transaction
+    // actually left in storage.
+    expect(await store.load()).toEqual(deleted);
+  });
+
+  it('a partial delete removes only the named version, in the stored document too', async () => {
+    const store = storeAs('u1');
+    await store.upload(ID_A, T1, plain(1));
+    await store.upload(ID_A, T2, plain(2));
+    const deleted = await store.deleteVersions(ID_A, [T1]);
+    expect(deleted).toEqual({
+      ok: true,
+      doc: {
+        layoutVersion: 2,
+        characters: { [ID_A]: { [T2]: { sheet: sheet(2), portrait: null } } },
+      },
+    });
+    // `T1` is an ISO timestamp and contains dots: a field path built by joining segments with
+    // '.' rather than `new FieldPath(...)` would split on them and silently miss this field,
+    // leaving T1 stored even though the return value above says it is gone.
+    expect(await store.load()).toEqual(deleted);
+  });
+
+  it('a delete removes a portrait no longer referenced, in the stored document too', async () => {
+    const store = storeAs('u1');
+    await store.upload(ID_A, T1, pictured(1));
+    const deleted = await store.deleteVersions(ID_A, [T1]);
+    expect(deleted).toEqual({
+      ok: true,
+      doc: { layoutVersion: 2, characters: {}, portraits: {} },
+    });
+    expect(await store.load()).toEqual(deleted);
   });
 
   it('an upload without a portrait keeps the portraits already stored', async () => {
@@ -149,10 +193,37 @@ describe('cloudStore against the emulator and the real rules', () => {
   });
 
   it('reports a newer layout on load and on delete, and deletes nothing', async () => {
-    await adminPatch('cloud/u1', { layoutVersion: { integerValue: '3' } });
+    // Firestore's REST wire shape, not the store's — seeded so there is something in the
+    // document a broken guard could actually delete, and something to check survived.
+    const seededCharacters = {
+      mapValue: {
+        fields: {
+          [ID_A]: {
+            mapValue: {
+              fields: {
+                [T1]: {
+                  mapValue: {
+                    fields: {
+                      sheet: { stringValue: 'unreadable at this layout' },
+                      portrait: { nullValue: null },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+    await adminPatch('cloud/u1', {
+      layoutVersion: { integerValue: '3' },
+      characters: seededCharacters,
+    });
     const store = storeAs('u1');
     expect(await store.load()).toMatchObject({ ok: false, error: { code: 'FROM_FUTURE' } });
     expect(await store.deleteVersions(ID_A, null)).toMatchObject({ ok: false });
+    // Not just the return value: the document this build could not read must be untouched.
+    expect((await adminGet('cloud/u1')).fields?.characters).toEqual(seededCharacters);
   });
 
   it('refuses a write exactly where size.ts puts the limit', async () => {
