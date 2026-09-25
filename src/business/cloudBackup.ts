@@ -346,6 +346,8 @@ export class CloudBackup {
     const failed = (message: string): RestoreResult => ({ ok: false, kind: 'failed', message });
     const entry = this.#decoded.get(`${characterId}/${uploadedAt}`);
     if (entry === undefined) return failed(describeCloudError(new CloudError('NOT_FOUND')));
+    // A copy decoded for an account that is no longer signed in is not this player's to restore.
+    if (this.#state.user === null) return failed(describeCloudError(new CloudError('SIGNED_OUT')));
     if (!entry.ok) return failed(entry.problem);
     if (this.#state.busy) return failed(BUSY);
     this.#state.busy = true;
@@ -398,6 +400,9 @@ export class CloudBackup {
       list.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
       characters.push({ characterId, versions: list });
     }
+    // Signed out (or in as someone else) while this was loading or decoding: nothing of `uid`'s
+    // cloud may be put back after `signOut` cleared it.
+    if (this.#state.user?.uid !== uid) return;
     this.#doc = doc;
     this.#listed = true;
     this.#decoded = decoded;

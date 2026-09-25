@@ -470,13 +470,57 @@ describe('CloudBackup', () => {
 
   it('signing out forgets the list, so the next person at this device does not see it', async () => {
     const { backup: cloudBackup } = backup();
-    await cloudBackup.upload(ID_A);
+    await uploaded(cloudBackup);
+    expect(cloudBackup.characters).not.toEqual([]);
 
     await cloudBackup.signOut();
 
     expect(cloudBackup.status).toBe('signedOut');
     expect(cloudBackup.user).toBeNull();
     expect(cloudBackup.characters).toEqual([]);
+  });
+
+  it('a listing still loading when the player signs out puts nothing of that account back', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    const at = await uploaded(cloudBackup);
+    await library.entries[0]!.remove();
+    const { load } = cloud.repository;
+    let started!: () => void;
+    let release!: () => void;
+    const called = new Promise<void>((resolve) => (started = resolve));
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    cloud.repository.load = async () => {
+      const result = load(); // read while still signed in
+      started();
+      await gate; // still on the network
+      return result;
+    };
+
+    const refreshing = cloudBackup.refresh();
+    await called;
+    await cloudBackup.signOut();
+    release();
+    await refreshing;
+
+    expect(cloudBackup.characters).toEqual([]);
+    expect(cloudBackup.usedBytes).toBe(0);
+    expect(await cloudBackup.restore(ID_A, at)).toMatchObject({ ok: false, kind: 'failed' });
+    expect(library.entries).toEqual([]);
+  });
+
+  it('signed out in another tab, a version this list decoded is not restored', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    const at = await uploaded(cloudBackup);
+    await library.entries[0]!.remove();
+    cloud.state.user = null; // another tab signed out; this one learns it on the next check
+    await cloudBackup.refresh();
+
+    expect(await cloudBackup.restore(ID_A, at)).toEqual({
+      ok: false,
+      kind: 'failed',
+      message: 'Sign in with Google to use cloud backup.',
+    });
+    expect(library.entries).toEqual([]);
   });
 
   it('restores from the listing, downloading nothing more', async () => {
