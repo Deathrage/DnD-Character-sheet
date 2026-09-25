@@ -1,0 +1,7 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    { "collectionGroup": "cloud", "fieldPath": "characters", "indexes": [] },
+    { "collectionGroup": "cloud", "fieldPath": "portraits", "indexes": [] }
+  ]
+}

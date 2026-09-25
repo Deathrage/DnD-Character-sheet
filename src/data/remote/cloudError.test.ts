@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { CloudError, describeCloudError, toCloudError } from './cloudError.js';
+import {
+  CloudError,
+  describeCloudError,
+  describeFull,
+  describeLayoutError,
+  toCloudError,
+} from './cloudError.js';
 
 /** Firebase errors are `FirebaseError`s with a string `code`; a plain object stands in for one. */
 const firebaseError = (code: string) => Object.assign(new Error(code), { code });
@@ -43,5 +49,21 @@ describe('toCloudError', () => {
     ] as const) {
       expect(describeCloudError(new CloudError(code))).toMatch(/\.$/);
     }
+  });
+
+  it('describes a cloud document from a newer layout, and any other that will not load', () => {
+    expect(describeLayoutError({ code: 'FROM_FUTURE', found: 3, current: 2 })).toBe(
+      'Your cloud backups were made by a newer version of the app. Reload to update.',
+    );
+    expect(describeLayoutError({ code: 'UNVERSIONED' })).toBe(
+      'Your cloud backups could not be read. Nothing in the cloud was changed.',
+    );
+  });
+
+  it('says how much a version needs and how much is free', () => {
+    expect(describeFull(19_600, 12_000)).toBe(
+      'Not enough cloud space: this version needs 19.6 KB and 12.0 KB is free. Delete old versions on the Cloud screen to make room.',
+    );
+    expect(describeFull(19_600, -5)).toMatch(/and 0\.0 KB is free/);
   });
 });

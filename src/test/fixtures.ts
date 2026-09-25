@@ -12,6 +12,12 @@ export const ID_A = '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e';
 export const ID_B = '9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d';
 export const FIXED_NOW = new Date('2026-07-25T09:41:00.000Z');
 
+/** Advances a millisecond per call, so two cloud uploads never share an `uploadedAt`. */
+export function clock(start = '2026-09-24T18:00:00.000Z'): () => Date {
+  let now = Date.parse(start);
+  return () => new Date(now++);
+}
+
 export function docFor(id: string, name: string): CharacterDocument {
   return createCharacter({ name, id, now: FIXED_NOW });
 }

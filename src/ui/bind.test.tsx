@@ -1,15 +1,17 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   CharacterLibraryBO,
+  CloudBackup,
   StorageGate,
   createCharacterSheet,
   type CharacterSheetBO,
 } from '../business/index.js';
-import { ID_A, putRaw, wipe } from '../test/fixtures.js';
+import { ID_A, clock, putRaw, wipe } from '../test/fixtures.js';
 import {
   toCharacterRows,
+  toCloudView,
   toSheetActions,
   toSheetData,
   toStorageGateView,
@@ -691,5 +693,162 @@ describe('toStorageGateView', () => {
     // Absent, not `undefined` under a present key: `exactOptionalPropertyTypes` is on, and the
     // dialog's prop is optional.
     expect('estimate' in toStorageGateView(await gateWith(false, false))).toBe(false);
+  });
+});
+
+describe('toCloudView', () => {
+  /** What each test opened: flushed, then disposed, before the wipe, so no autosave outlives it. */
+  let libraries: CharacterLibraryBO[] = [];
+  let sheets: CharacterSheetBO[] = [];
+  beforeEach(wipe);
+  afterEach(async () => {
+    await Promise.all(libraries.map((library) => library.flush()));
+    for (const sheet of sheets) sheet.dispose();
+    libraries = [];
+    sheets = [];
+    await wipe();
+  });
+
+  // jsdom's `Blob` does not implement `.stream()`, which `encodePayload`/`decodePayload` (real
+  // code these tests deliberately run, not a stub) both call. Node's own `Blob` does, and is
+  // otherwise identical, so it stands in for jsdom's only where these tests need the real
+  // gzip round trip — restored after, so no other test in this jsdom file is affected.
+  let realBlob: typeof Blob;
+  beforeAll(async () => {
+    realBlob = globalThis.Blob;
+    globalThis.Blob = (await import('node:buffer')).Blob as unknown as typeof Blob;
+  });
+  afterAll(() => {
+    globalThis.Blob = realBlob;
+  });
+
+  const USER = { uid: 'u1', name: 'Ja', email: 'ja@example.com' };
+
+  const newLibrary = () => {
+    const library = new CharacterLibraryBO({
+      storageGate: new StorageGate({ port: null }),
+      autosave: { debounceMs: 0, target: null },
+    });
+    libraries.push(library);
+    return library;
+  };
+  const create = async (library: CharacterLibraryBO, name: string) => {
+    const sheet = await library.create(name);
+    sheets.push(sheet);
+    return sheet;
+  };
+
+  interface FakeVersion {
+    sheet: Uint8Array<ArrayBuffer>;
+    portrait: string | null;
+  }
+
+  /**
+   * Just enough of `CloudRepository` to drive a real `CloudBackup` through `upload` and
+   * `refresh`, rather than asserting `toCloudView` against a hand-built `CloudView` — which is
+   * what left this mapping untested: every `CloudScreen` test starts from a literal view, so
+   * nothing failed if the "newest readable version" lookup were replaced by `versions[0]`, or
+   * `problem`/`usedBytes`/`limitBytes` stopped passing through.
+   */
+  function fakeCloud() {
+    let doc: { layoutVersion: 2; characters: Record<string, Record<string, FakeVersion>> } = {
+      layoutVersion: 2,
+      characters: {},
+    };
+    const write = (characterId: string, uploadedAt: string, version: FakeVersion) => {
+      doc = {
+        ...doc,
+        characters: {
+          ...doc.characters,
+          [characterId]: { ...(doc.characters[characterId] ?? {}), [uploadedAt]: version },
+        },
+      };
+    };
+    const repository = {
+      currentUser: async () => USER,
+      signIn: async () => USER,
+      signOut: async () => {},
+      load: async () => ({ ok: true as const, doc }),
+      // No portrait is ever attached in these tests, so `version.portrait` is always `null` —
+      // the one case where `NewVersion`'s shape and the stored `CloudVersionData`'s coincide.
+      upload: async (
+        _uid: string,
+        characterId: string,
+        uploadedAt: string,
+        version: { sheet: Uint8Array },
+      ) =>
+        // The real `sheet` is always a plain `ArrayBuffer`-backed view (never a
+        // `SharedArrayBuffer`, which is all this narrows out); `encodePayload` builds it from a
+        // `Response#arrayBuffer()`.
+        write(characterId, uploadedAt, {
+          sheet: version.sheet as Uint8Array<ArrayBuffer>,
+          portrait: null,
+        }),
+      deleteVersions: async () => ({ ok: true as const, doc }),
+    };
+    return {
+      repository,
+      /** Writes a version's raw bytes directly, bypassing `upload` — a corrupt one, here. */
+      plant: (characterId: string, uploadedAt: string, sheet: Uint8Array<ArrayBuffer>) =>
+        write(characterId, uploadedAt, { sheet, portrait: null }),
+    };
+  }
+
+  it('names the card by the newest readable version, and flags the unreadable one with its reason', async () => {
+    const library = newLibrary();
+    const sheet = await create(library, 'Sable');
+    sheet.classes.add({ name: 'Rogue', level: 5 });
+    await library.flush();
+    const cloud = fakeCloud();
+    const backup = new CloudBackup(library, {
+      load: async () => cloud.repository,
+      now: clock(),
+    });
+
+    const uploaded = await backup.upload(sheet.id);
+    if (!uploaded.ok) throw new Error(uploaded.message);
+    // Later than the upload, so it sorts first: the newest version is the unreadable one.
+    cloud.plant(sheet.id, '2026-09-25T00:00:00.000Z', new Uint8Array([1, 2, 3]));
+    await backup.refresh();
+
+    const character = toCloudView(backup).characters[0]!;
+    expect(character.name).toBe('Sable');
+    expect(character.level).toBe(5);
+    const [newest, older] = character.versions;
+    expect(newest).toMatchObject({ name: null, level: null, sheetUpdatedAt: null });
+    expect(newest?.problem).toMatch(/damaged/);
+    expect(older).toMatchObject({ name: 'Sable', level: 5, problem: null });
+    expect(older?.sheetUpdatedAt).not.toBeNull();
+  });
+
+  it('leaves the card unreadable when no version can be read', async () => {
+    const cloud = fakeCloud();
+    cloud.plant('c1', '2026-09-25T00:00:00.000Z', new Uint8Array([1, 2, 3]));
+    const backup = new CloudBackup(newLibrary(), { load: async () => cloud.repository });
+
+    await backup.refresh();
+
+    const character = toCloudView(backup).characters[0]!;
+    expect(character.name).toBeNull();
+    expect(character.level).toBeNull();
+  });
+
+  it('passes usage and the limit straight through from the CloudBackup', async () => {
+    const library = newLibrary();
+    const sheet = await create(library, 'Sable');
+    await library.flush();
+    const cloud = fakeCloud();
+    const backup = new CloudBackup(library, {
+      load: async () => cloud.repository,
+      now: clock(),
+    });
+
+    const uploaded = await backup.upload(sheet.id);
+    if (!uploaded.ok) throw new Error(uploaded.message);
+    await backup.refresh();
+
+    const view = toCloudView(backup);
+    expect(view.usedBytes).toBe(backup.usedBytes);
+    expect(view.limitBytes).toBe(1_048_576);
   });
 });

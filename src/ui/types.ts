@@ -344,19 +344,20 @@ export type InstallView =
 /** One upload of a character, as the cloud screen shows it. Times are ISO strings. */
 export interface CloudVersionView {
   uploadedAt: string;
-  sheetUpdatedAt: string;
-  name: string;
-  level: number;
+  /** `null` when the sheet cannot be read: `problem` then says why, and Restore is disabled. */
+  sheetUpdatedAt: string | null;
+  name: string | null;
+  level: number | null;
   bytes: number;
-  /** Written by a newer app than this one: restoring it will be refused, so it says so. */
   fromNewerApp: boolean;
+  problem: string | null;
 }
 
 export interface CloudCharacterView {
   characterId: string;
-  /** The newest version's name and level. */
-  name: string;
-  level: number;
+  /** The newest readable version's; `null` when none is readable. */
+  name: string | null;
+  level: number | null;
   versions: CloudVersionView[];
 }
 
@@ -364,7 +365,8 @@ export interface CloudView {
   status: 'unknown' | 'signedOut' | 'signingIn' | 'signedIn' | 'unavailable';
   user: { name: string | null; email: string | null } | null;
   characters: CloudCharacterView[];
-  totalBytes: number;
+  usedBytes: number;
+  limitBytes: number;
   busy: boolean;
 }
 
