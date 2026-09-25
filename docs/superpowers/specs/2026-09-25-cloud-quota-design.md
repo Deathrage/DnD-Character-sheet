@@ -338,3 +338,55 @@ Every test proven to bite, as AGENTS.md requires.
 2. Merge. CI runs `test:rules`, then deploys hosting, rules and indexes.
 3. **By hand, once, after the deploy:** in the console, delete the `users` collection (layout 1).
    Old builds already get `permission-denied` from the new rules, so the order is safe.
+
+## 13. Deviations found while building
+
+1. **"Full" is a sentence, not a code.** `describeFull` (§5) returns the finished sentence
+   directly; there is no `CloudError('FULL')`. Nothing branches on "full" as a kind of failure —
+   the caller only ever wants the message — so a code would have been a value nothing reads.
+2. **Delete all versions now also removes versions uploaded elsewhere since the list was read.**
+   `deleteCharacter` passes `uploadedAts: null` through to `withoutVersions`, which reads the
+   document inside the same transaction rather than acting on the caller's stale listing, so it
+   takes every version actually stored, not just the ones this browser knew about. This retires
+   cloud-backup §10's fourth risk outright, rather than carrying it forward as still-accepted: the
+   one-document layout made the whole-document read-modify-write the natural shape, where the old
+   per-character index made the stale-listing risk the cheaper option.
+3. **§9's "a delete transaction racing an upload" is tested deterministically**, as "a delete
+   decides from what it reads, not from what the caller last listed"
+   (`cloudStore.emulator.test.ts`, "a delete decides from what it reads..."): another client
+   uploads a version between this one's last read and its delete, and the delete still keeps that
+   version's portrait. A real race — two clients committing at the same instant — cannot be forced
+   from a test, so this is the deterministic shape of the same guarantee. Firestore lite's retry on
+   a changed document was confirmed separately, by a probe outside the test suite: forcing the
+   transaction's document to change between its read and its commit made the transaction body run
+   twice, the second time seeing the change.
+4. **The usage line is stacked**, the value then "of 1.0 MB" beneath it, with no literal "Using" —
+   matching the account row's existing value-over-caption layout on the same screen, rather than
+   inventing a new one-line sentence just for this number. §11's "Using 312.4 KB of 1 MB" wording
+   is superseded by this; `CloudScreen.tsx` renders `usedBytes` and `limitBytes` as two stacked
+   spans, and `CloudScreen.test.tsx` asserts the "of 1.0 MB" text rather than a full sentence.
+5. **Sign-out while a listing is still loading loses that listing, not the other way round.**
+   `CloudBackup.#apply` compares the uid it is about to apply against the currently signed-in uid
+   and drops its result if they differ, and `restore` refuses outright once signed out — so nothing
+   of a signed-out account can be restored, even from a listing that was already in flight when
+   sign-out happened. Known residual: another tab signing out does not clear this tab's list from
+   the screen until this tab signs out itself (restore still refuses regardless, so nothing unsafe
+   follows from the stale display).
+6. **`scripts/seedEmulator.mjs` reads its emulator hosts from the environment**
+   (`FIRESTORE_EMULATOR_HOST`, `FIREBASE_AUTH_EMULATOR_HOST`) rather than hardcoding
+   `dev:cloud`'s 8080/9099, falling back to those only when the variables are absent. `firebase
+   emulators:exec` sets them for its child process, so the same script runs unmodified against a
+   scratch emulator on other ports — which is what let `test:rules`'s port-8181 emulator and
+   `dev:cloud`'s stay independent without a second copy of the script.
+7. **Emulator tests assert against what is actually stored**, not just a call's return value:
+   `store.load()` after a delete, so a return value computed locally by `withoutVersions` can never
+   paper over a store that failed to apply it. This caught two things a return-value-only test
+   would have missed: a partial delete whose field path (an ISO timestamp) contains dots, which a
+   `'.'`-joined path string would silently split and miss; and a newer-layout document, seeded
+   through the emulator's admin REST API, proven byte-for-byte untouched by a delete this build
+   cannot parse.
+8. **The layout-version import fence was extended to `src/data/schema/` too.** `src/data/schema/`
+   already had its own carve-out from the *schema*-version fence (it is the one place allowed to
+   reach into `schema/v1/`), so it needed a separate, explicit exclusion to stay barred from
+   reaching into `remote/layout/v2.ts` — the two isolations are unrelated and neither implies the
+   other.

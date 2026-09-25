@@ -67,3 +67,5 @@ commit or PR that shipped it, rather than deleting it.
   sign-in, dated versions in Firestore — upload, list, restore and delete. Design and the storage
   decision (Firestore only, Cloud Storage is not on the Spark plan) are in
   `docs/superpowers/specs/2026-09-24-cloud-backup-design.md`.
+- **Cloud quota and portrait deduplication.** 1 MiB per player, one versioned document —
+  `docs/superpowers/specs/2026-09-25-cloud-quota-design.md`.
