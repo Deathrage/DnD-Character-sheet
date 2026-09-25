@@ -13,6 +13,7 @@
  * instead of `void`; see `NameResult`.
  */
 
+import type { Crop } from './portrait.js';
 import type { AbilityKey, CoinKey, SkillKey, SpellLevel } from './reference.js';
 
 /**
@@ -66,8 +67,8 @@ export interface VitalsActions {
   setTotalHitPoints(value: number): void;
   setTemporaryHitPoints(value: number): void;
   setArmorClass(value: number): void;
-  /** Compresses the picked image and stores it; the message when it could not be used. */
-  setPortrait(file: Blob): Promise<NameResult>;
+  /** Crops and compresses the picked image and stores it; the message when it could not be used. */
+  setPortrait(file: Blob, crop: Crop): Promise<NameResult>;
   removePortrait(): void;
   addClass(name: string): NameResult;
   renameClass(id: string, name: string): NameResult;

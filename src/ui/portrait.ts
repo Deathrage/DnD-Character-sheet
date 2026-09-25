@@ -8,35 +8,31 @@ const EDGE = 384;
  */
 const TARGET = 24_000;
 
+/** The square of the source image to keep, in the image's own pixels. */
+export interface Crop {
+  x: number;
+  y: number;
+  side: number;
+}
+
 /**
- * Turns a picked image file into a small square JPEG data URL: centre-cropped, scaled to 384px,
- * stepping the quality down until it fits the target.
+ * Turns a picked image file into a small square JPEG data URL: cropped to the square the player
+ * chose, scaled to 384px, stepping the quality down until it fits the target.
  *
  * JPEG rather than WebP because every browser's canvas encodes it — Safari's cannot encode WebP —
  * so a portrait is the same format whichever browser made it.
  *
  * @throws when the file is not an image the browser can decode.
  */
-export async function compressPortrait(file: Blob): Promise<string> {
+export async function compressPortrait(file: Blob, { x, y, side }: Crop): Promise<string> {
   const bitmap = await createImageBitmap(file);
-  const side = Math.min(bitmap.width, bitmap.height);
   const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = Math.min(EDGE, side);
+  canvas.width = canvas.height = Math.max(1, Math.round(Math.min(EDGE, side)));
   const context = canvas.getContext('2d')!;
   // JPEG has no alpha: without this, a transparent PNG's background would encode as black.
   context.fillStyle = '#ffffff';
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(
-    bitmap,
-    (bitmap.width - side) / 2,
-    (bitmap.height - side) / 2,
-    side,
-    side,
-    0,
-    0,
-    canvas.width,
-    canvas.height,
-  );
+  context.drawImage(bitmap, x, y, side, side, 0, 0, canvas.width, canvas.height);
   bitmap.close();
 
   let url = '';

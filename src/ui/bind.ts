@@ -325,9 +325,9 @@ function vitalsActions(sheet: CharacterSheetBO): VitalsActions {
     setArmorClass: (value) => sheet.setArmorClass(value),
     // Any failure is the file's — undecodable, or somehow still too large — so it is told to
     // the player rather than thrown out of an event handler as an unhandled rejection.
-    setPortrait: async (file) => {
+    setPortrait: async (file, crop) => {
       try {
-        sheet.setPortrait(await compressPortrait(file));
+        sheet.setPortrait(await compressPortrait(file, crop));
         return null;
       } catch {
         return 'That file could not be used as a portrait. Try a JPEG or PNG.';

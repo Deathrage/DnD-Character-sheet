@@ -1554,6 +1554,45 @@ body {
   justify-content: center;
   margin: 4px 0 12px;
 }
+/* The crop window: the square is what is stored, the ring is the round header token. */
+.cropper {
+  position: relative;
+  width: min(100%, 288px);
+  aspect-ratio: 1;
+  margin: 4px auto 8px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--line);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.cropper:active {
+  cursor: grabbing;
+}
+.cropper:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.cropper img {
+  position: absolute;
+  max-width: none;
+  height: auto;
+  pointer-events: none;
+}
+.cropper::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: 0 0 0 999px rgb(0 0 0 / 0.25);
+  pointer-events: none;
+}
+.zoom {
+  display: block;
+  width: min(100%, 288px);
+  margin: 0 auto 12px;
+}
 .portraitview .portrait {
   width: min(100%, 288px);
   height: auto;

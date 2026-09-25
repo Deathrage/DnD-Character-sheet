@@ -3,8 +3,10 @@ import { AddByName } from '../components/AddByName.js';
 import { NameField } from '../components/NameField.js';
 import { NumberField } from '../components/NumberField.js';
 import { Portrait } from '../components/Portrait.js';
+import { PortraitCropper } from '../components/PortraitCropper.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
+import type { Crop } from '../portrait.js';
 import type { CharacterView, VitalsActions } from '../types.js';
 
 interface Props {
@@ -134,46 +136,92 @@ export function VitalsHeader({ character, actions, onBack }: Props) {
 function PortraitDialog({ open, onClose, character, actions }: DialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // The file being cropped, and the object URL the cropper shows it through.
+  const [picked, setPicked] = useState<{ file: File; url: string } | null>(null);
+  const [crop, setCrop] = useState<Crop | null>(null);
   const picker = useRef<HTMLInputElement>(null);
   const hasPortrait = character.portrait !== null;
+
+  const stopCropping = () => {
+    if (picked !== null) URL.revokeObjectURL(picked.url);
+    setPicked(null);
+    setCrop(null);
+  };
 
   return (
     <ResponsiveDialog
       title="Portrait"
       open={open}
       onClose={() => {
+        stopCropping();
         setError(null);
         onClose();
       }}
       footer={
-        <>
-          {hasPortrait && (
-            <ConfirmDelete
-              className="secondary"
-              what="The portrait"
-              onConfirm={() => {
-                setError(null);
-                actions.removePortrait();
+        picked !== null ? (
+          <>
+            <button type="button" className="secondary" disabled={busy} onClick={stopCropping}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="primary"
+              disabled={busy || crop === null}
+              onClick={() => {
+                if (crop === null) return;
+                setBusy(true);
+                void actions.setPortrait(picked.file, crop).then((message) => {
+                  setError(message);
+                  setBusy(false);
+                  stopCropping();
+                });
               }}
             >
-              Remove
-            </ConfirmDelete>
-          )}
-          <button
-            type="button"
-            className="primary"
-            disabled={busy}
-            onClick={() => picker.current?.click()}
-          >
-            {hasPortrait ? 'Change image' : 'Choose image'}
-          </button>
-        </>
+              Use image
+            </button>
+          </>
+        ) : (
+          <>
+            {hasPortrait && (
+              <ConfirmDelete
+                className="secondary"
+                what="The portrait"
+                onConfirm={() => {
+                  setError(null);
+                  actions.removePortrait();
+                }}
+              >
+                Remove
+              </ConfirmDelete>
+            )}
+            <button
+              type="button"
+              className="primary"
+              disabled={busy}
+              onClick={() => picker.current?.click()}
+            >
+              {hasPortrait ? 'Change image' : 'Choose image'}
+            </button>
+          </>
+        )
       }
     >
-      <div className="portraitview">
-        <Portrait src={character.portrait} name={character.name} />
-      </div>
-      {!hasPortrait && (
+      {picked !== null ? (
+        <PortraitCropper
+          key={picked.url}
+          src={picked.url}
+          onChange={setCrop}
+          onError={() => {
+            stopCropping();
+            setError('That file could not be used as a portrait. Try a JPEG or PNG.');
+          }}
+        />
+      ) : (
+        <div className="portraitview">
+          <Portrait src={character.portrait} name={character.name} />
+        </div>
+      )}
+      {!hasPortrait && picked === null && (
         <div className="hint">
           Pick a picture of {character.name}. It is stored with the character.
         </div>
@@ -193,11 +241,8 @@ function PortraitDialog({ open, onClose, character, actions }: DialogProps) {
           // Cleared first, so picking the same file again still fires `change`.
           event.currentTarget.value = '';
           if (picked === undefined) return;
-          setBusy(true);
-          void actions.setPortrait(picked).then((message) => {
-            setError(message);
-            setBusy(false);
-          });
+          setError(null);
+          setPicked({ file: picked, url: URL.createObjectURL(picked) });
         }}
       />
     </ResponsiveDialog>

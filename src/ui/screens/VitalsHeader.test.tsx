@@ -37,6 +37,34 @@ describe('VitalsHeader portrait', () => {
     expect(removePortrait).toHaveBeenCalledOnce();
   });
 
+  it('crops a picked image before storing it', async () => {
+    const setPortrait = vi.fn(() => Promise.resolve(null));
+    URL.createObjectURL = () => 'blob:picked';
+    URL.revokeObjectURL = () => {};
+    render(
+      <VitalsHeader
+        character={{ ...sable, portrait: null }}
+        actions={{ ...noVitalsActions, setPortrait }}
+        onBack={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Add portrait' }));
+    const file = new File(['x'], 'face.png', { type: 'image/png' });
+    fireEvent.change(document.querySelector('input[type=file]')!, { target: { files: [file] } });
+
+    const use = screen.getByRole('button', { name: 'Use image' }) as HTMLButtonElement;
+    expect(use.disabled).toBe(true);
+    const image = document.querySelector('.cropper img')!;
+    Object.defineProperty(image, 'naturalWidth', { value: 400 });
+    Object.defineProperty(image, 'naturalHeight', { value: 200 });
+    fireEvent.load(image);
+    fireEvent.change(screen.getByRole('slider', { name: 'Zoom' }), { target: { value: '2' } });
+    fireEvent.click(use);
+
+    expect(setPortrait).toHaveBeenCalledWith(file, { x: 150, y: 50, side: 100 });
+    expect(await screen.findByRole('button', { name: 'Choose image' })).toBeTruthy();
+  });
+
   it('offers only Choose image when there is no portrait', () => {
     header(null);
     fireEvent.click(screen.getByRole('button', { name: 'Add portrait' }));
