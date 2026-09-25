@@ -697,8 +697,17 @@ describe('toStorageGateView', () => {
 });
 
 describe('toCloudView', () => {
+  /** What each test opened: flushed, then disposed, before the wipe, so no autosave outlives it. */
+  let libraries: CharacterLibraryBO[] = [];
+  let sheets: CharacterSheetBO[] = [];
   beforeEach(wipe);
-  afterEach(wipe);
+  afterEach(async () => {
+    await Promise.all(libraries.map((library) => library.flush()));
+    for (const sheet of sheets) sheet.dispose();
+    libraries = [];
+    sheets = [];
+    await wipe();
+  });
 
   // jsdom's `Blob` does not implement `.stream()`, which `encodePayload`/`decodePayload` (real
   // code these tests deliberately run, not a stub) both call. Node's own `Blob` does, and is
@@ -715,11 +724,19 @@ describe('toCloudView', () => {
 
   const USER = { uid: 'u1', name: 'Ja', email: 'ja@example.com' };
 
-  const newLibrary = () =>
-    new CharacterLibraryBO({
+  const newLibrary = () => {
+    const library = new CharacterLibraryBO({
       storageGate: new StorageGate({ port: null }),
       autosave: { debounceMs: 0, target: null },
     });
+    libraries.push(library);
+    return library;
+  };
+  const create = async (library: CharacterLibraryBO, name: string) => {
+    const sheet = await library.create(name);
+    sheets.push(sheet);
+    return sheet;
+  };
 
   /** One millisecond later each call, so two uploads never share an `uploadedAt`. */
   const clock = (start: string) => {
@@ -785,7 +802,7 @@ describe('toCloudView', () => {
 
   it('names the card by the newest readable version, and flags the unreadable one with its reason', async () => {
     const library = newLibrary();
-    const sheet = await library.create('Sable');
+    const sheet = await create(library, 'Sable');
     sheet.classes.add({ name: 'Rogue', level: 5 });
     await library.flush();
     const cloud = fakeCloud();
@@ -824,7 +841,7 @@ describe('toCloudView', () => {
 
   it('passes usage and the limit straight through from the CloudBackup', async () => {
     const library = newLibrary();
-    const sheet = await library.create('Sable');
+    const sheet = await create(library, 'Sable');
     await library.flush();
     const cloud = fakeCloud();
     const backup = new CloudBackup(library, {
