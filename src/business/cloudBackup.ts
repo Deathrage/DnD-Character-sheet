@@ -19,7 +19,8 @@ import './mobxConfig.js';
 
 export type { CloudCharacter, CloudUser, CloudVersion };
 
-export type CloudStatus = 'signedOut' | 'signingIn' | 'signedIn' | 'unavailable';
+/** `unknown` until the first check (`checkSignIn`, `refresh`, or any cloud action) loads Firebase. */
+export type CloudStatus = 'unknown' | 'signedOut' | 'signingIn' | 'signedIn' | 'unavailable';
 export type UploadResult = { ok: true; uploadedAt: string } | { ok: false; message: string };
 export type RestoreChoice = 'replace' | 'keepBoth';
 export type RestoreResult =
@@ -34,18 +35,12 @@ export type RestoreResult =
       cloudUpdatedAt: string;
     };
 
-type Session = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-
 export interface CloudBackupOptions {
   /** Defaults to a dynamic import, so Firebase is never executed before a cloud action. */
   load?: () => Promise<CloudRepository>;
-  /** Where a pending upload survives the sign-in redirect. `null` turns that off. */
-  session?: Session | null;
   now?: () => Date;
 }
 
-/** The character id whose upload a redirect sign-in interrupted. */
-const PENDING_KEY = 'dnd-character-sheet.cloud-pending-upload';
 const BUSY = 'Wait for the current cloud action to finish.';
 const UNAVAILABLE = 'Cloud backup could not be loaded. Check your connection and try again.';
 
@@ -54,14 +49,6 @@ const loadFirestore = async (): Promise<CloudRepository> =>
 
 /** Marks a restore refused on content — its message is already the sentence to show. */
 const RESTORE_REFUSED = Symbol('restore refused');
-
-function defaultSession(): Session | null {
-  try {
-    return globalThis.sessionStorage;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Optional cloud backup: dated versions of a character in Firestore, behind Google sign-in.
@@ -78,7 +65,6 @@ export class CloudBackup {
 
   readonly #library: CharacterLibraryBO;
   readonly #load: () => Promise<CloudRepository>;
-  readonly #session: Session | null;
   readonly #now: () => Date;
   #repository: Promise<CloudRepository> | null = null;
   /**
@@ -86,11 +72,9 @@ export class CloudBackup {
    * or `null`. Reset by every `#signedInUser()`, so only the caller right after it sees it.
    */
   #signInFailure: string | null = null;
-  /** The startup `resume()`, which `refresh()` waits out so its `busy` cannot refuse the upload. */
-  #resuming: Promise<void> = Promise.resolve();
   readonly #state = observable(
     {
-      status: 'signedOut' as CloudStatus,
+      status: 'unknown' as CloudStatus,
       user: null as CloudUser | null,
       characters: [] as CloudCharacter[],
       busy: false,
@@ -103,7 +87,6 @@ export class CloudBackup {
   constructor(library: CharacterLibraryBO, options: CloudBackupOptions = {}) {
     this.#library = library;
     this.#load = options.load ?? loadFirestore;
-    this.#session = options.session === undefined ? defaultSession() : options.session;
     this.#now = options.now ?? (() => new Date());
   }
 
@@ -125,42 +108,24 @@ export class CloudBackup {
       .flatMap((character) => character.versions)
       .reduce((total, version) => total + version.bytes, 0);
   }
-  /** The last upload's outcome, for the sheet that asked for it — including a resumed one. */
+  /** The last upload's outcome, for the sheet that asked for it. */
   get lastUpload(): { characterId: string; result: UploadResult } | null {
     return this.#state.lastUpload;
   }
 
   /**
-   * Called once at startup. Loads nothing unless a redirect sign-in is coming back with an upload
-   * it interrupted. The marker is cleared before anything can fail, so a reload after a failed
-   * resume does not upload again: the player sees the failure and presses Upload themselves.
+   * Settles `status` without listing anything, so a sheet can tell whether Upload is possible. It
+   * loads Firebase — the first time only, and never at launch: a sheet calls it when it opens. A
+   * status already known is left alone; an `unavailable` one is retried.
    */
-  resume(): Promise<void> {
-    this.#resuming = this.#resume();
-    return this.#resuming;
-  }
-
-  async #resume(): Promise<void> {
-    const pending = this.#read(PENDING_KEY);
-    if (pending === null) return;
-    this.#write(PENDING_KEY, null);
-    if ((await this.#signedInUser()) !== null) await this.upload(pending);
-    else {
-      // The redirect came back failed, or with nobody signed in: tell the sheet why its upload
-      // did not happen, rather than dropping it silently.
-      const message =
-        this.#signInFailure !== null
-          ? this.#takeSignInFailure()
-          : describeCloudError(new CloudError('SIGNED_OUT'));
-      this.#state.lastUpload = { characterId: pending, result: { ok: false, message } };
+  async checkSignIn(): Promise<void> {
+    if (this.#state.status === 'unknown' || this.#state.status === 'unavailable') {
+      await this.#signedInUser();
     }
   }
 
   /** Signed in: re-reads the index. Signed out: only settles `status`. */
   async refresh(): Promise<string | null> {
-    // Mounting the cloud screen at launch races the resumed upload: without this, `#run` would
-    // hold `busy` and the upload, its marker already cleared, would be refused and lost.
-    await this.#resuming;
     const user = await this.#signedInUser();
     if (user === null) {
       if (this.#signInFailure !== null) return this.#takeSignInFailure();
@@ -203,8 +168,8 @@ export class CloudBackup {
 
   /**
    * Uploads what is stored for this character as a new version, flushing autosave first so the
-   * last half second of typing is in it. Signed out, it signs in first; with a redirect, the
-   * upload is resumed by `resume()` on the load after.
+   * last half second of typing is in it. Signed out, it refuses with a sentence: signing in is the
+   * cloud screen's, and the sheet's button is disabled until then.
    */
   async upload(characterId: string): Promise<UploadResult> {
     if (this.#state.busy) return { ok: false, message: BUSY };
@@ -220,18 +185,14 @@ export class CloudBackup {
   }
 
   async #upload(characterId: string): Promise<UploadResult> {
-    let user = await this.#signedInUser();
+    const user = await this.#signedInUser();
     if (user === null) {
-      if (this.#state.status === 'unavailable') {
-        return { ok: false, message: this.#signInFailure ?? UNAVAILABLE };
-      }
-      // Stored before a redirect sign-in navigates away, taking unsaved typing with it.
-      await this.#library.flush();
-      this.#write(PENDING_KEY, characterId);
-      const failed = await this.#signInOnly();
-      this.#write(PENDING_KEY, null);
-      if (failed !== null) return { ok: false, message: failed };
-      user = this.#state.user;
+      const message =
+        this.#signInFailure ??
+        (this.#state.status === 'unavailable'
+          ? UNAVAILABLE
+          : describeCloudError(new CloudError('SIGNED_OUT')));
+      return { ok: false, message };
     }
     const repository = await this.#repo();
     if (repository === null || user === null) return { ok: false, message: UNAVAILABLE };
@@ -371,21 +332,6 @@ export class CloudBackup {
     }
   }
 
-  /** `signIn` without its trailing `refresh`, which `#run` would refuse while an upload is busy. */
-  async #signInOnly(): Promise<string | null> {
-    const repository = await this.#repo();
-    if (repository === null) return UNAVAILABLE;
-    this.#state.status = 'signingIn';
-    try {
-      this.#state.user = await repository.signIn();
-      this.#state.status = 'signedIn';
-      return null;
-    } catch (caught) {
-      this.#state.status = 'signedOut';
-      return describeCloudError(toCloudError(caught));
-    }
-  }
-
   #describe(caught: unknown): string {
     if (caught instanceof Error && caught.cause === RESTORE_REFUSED) return caught.message;
     if (caught instanceof StorageError) return describeStorageFailure(caught.detail);
@@ -439,22 +385,5 @@ export class CloudBackup {
       { characterId, versions: [version, ...(existing?.versions ?? [])] },
       ...others,
     ];
-  }
-
-  #read(key: string): string | null {
-    try {
-      return this.#session?.getItem(key) ?? null;
-    } catch {
-      return null;
-    }
-  }
-
-  #write(key: string, value: string | null): void {
-    try {
-      if (value === null) this.#session?.removeItem(key);
-      else this.#session?.setItem(key, value);
-    } catch {
-      /* a browser that will not remember the marker just does not resume; nothing is lost */
-    }
   }
 }

@@ -291,6 +291,9 @@ function Character({
  * Split out because `useSheet` is a hook and therefore cannot be called only once a sheet happens
  * to have finished opening.
  */
+/** Signing in is the cloud screen's, reached from the character list's Cloud button. */
+const SIGN_IN_TO_UPLOAD = 'Sign in with your Google account on the Cloud screen to upload.';
+
 function Sheet({
   sheet,
   cloud,
@@ -303,6 +306,13 @@ function Sheet({
   const { data, actions } = useSheet(sheet);
   const id = data.character.id;
   const notice = useUploadNotice(cloud, id);
+  const { status } = useCloud(cloud);
+
+  // Upload is only possible signed in, and the status is `unknown` until something asks — so the
+  // sheet asks when it opens. It loads Firebase then, never at launch.
+  useEffect(() => {
+    void cloud.checkSignIn();
+  }, [cloud]);
 
   return (
     <CharacterHub
@@ -314,6 +324,8 @@ function Sheet({
       onExport={() => download(CharacterFile.of(sheet, new Date()))}
       onOpenRawJson={() => navigate({ name: 'raw', id })}
       onUpload={() => void cloud.upload(id)}
+      uploadDisabled={status !== 'signedIn'}
+      uploadHint={status === 'unknown' || status === 'signingIn' ? null : SIGN_IN_TO_UPLOAD}
       uploadNotice={
         notice === null
           ? null

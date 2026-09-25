@@ -365,7 +365,7 @@ export interface CloudCharacterView {
 }
 
 export interface CloudView {
-  status: 'signedOut' | 'signingIn' | 'signedIn' | 'unavailable';
+  status: 'unknown' | 'signedOut' | 'signingIn' | 'signedIn' | 'unavailable';
   user: { name: string | null; email: string | null } | null;
   characters: CloudCharacterView[];
   totalBytes: number;

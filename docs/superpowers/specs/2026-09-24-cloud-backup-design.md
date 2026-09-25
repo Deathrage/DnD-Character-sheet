@@ -177,9 +177,9 @@ Cloud failures stay out of `StorageGate`, whose banner is about this device's st
 ## 7. Screens
 
 - **Sheet: Upload to cloud**, beside Export.
-  - Signed out, it signs in first. The redirect reloads the page, so the pending upload's
-    character id is kept in `sessionStorage` and resumed once. Autosave has already flushed on
-    `pagehide`.
+  - Disabled until signed in, with a tooltip and a visible line (a phone has no hover): "Sign in
+    with your Google account on the Cloud screen to upload." Signing in happens only on the cloud
+    screen (§12.8).
   - Result shown inline: "Uploaded 24 Sep 18:03", or the error sentence.
 - **List: Cloud**, next to Import, opens `#/cloud`.
 - **`#/cloud`.**
@@ -272,5 +272,13 @@ Decided during the build, not anticipated by the plan:
 4. **A failed redirect sign-in is surfaced.** `currentUser()` rejects once with it, and the player
    sees its sentence — it is no longer swallowed.
 5. **`auth/redirect-cancelled-by-user` maps to `CANCELLED`.**
-6. **`refresh()` waits for a running `resume()`,** so a resumed upload is not refused as busy.
+6. ~~**`refresh()` waits for a running `resume()`**~~ — removed with `resume()` itself, see 8.
 7. **`restore`'s local read is guarded, so it never rejects.**
+
+Changed after merge (2026-09-25, user's request):
+
+8. **Upload no longer signs in.** The sheet's Upload to cloud is disabled until signed in, and says
+   so; sign-in lives only on the cloud screen. That removed the pending-upload marker and
+   `resume()` (the upload a redirect sign-in interrupted), which was the most fragile path here.
+   The status starts `unknown`, and a sheet calls `checkSignIn()` when it opens so a signed-in
+   player's button is enabled — which loads Firebase on opening a sheet, still never at launch.

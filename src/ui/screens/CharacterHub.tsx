@@ -71,6 +71,8 @@ interface Props {
   onUpload?(): void;
   /** The last upload's line: "Uploaded 24 Sep, 18:03" or the reason it failed. */
   uploadNotice?: string | null;
+  uploadDisabled?: boolean;
+  uploadHint?: string | null;
 }
 
 /**
@@ -92,6 +94,8 @@ export function CharacterHub({
   wiredSections,
   onUpload,
   uploadNotice,
+  uploadDisabled,
+  uploadHint,
 }: Props) {
   const close = () => onSectionChange(null);
 
@@ -106,6 +110,8 @@ export function CharacterHub({
           {...(wiredSections ? { wired: wiredSections } : {})}
           {...(onUpload ? { onUpload } : {})}
           uploadNotice={uploadNotice ?? null}
+          uploadDisabled={uploadDisabled ?? false}
+          uploadHint={uploadHint ?? null}
         />
       ) : (
         <Section section={section} data={data} actions={actions} onClose={close} />

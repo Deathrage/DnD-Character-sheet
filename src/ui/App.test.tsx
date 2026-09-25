@@ -23,17 +23,34 @@ const port = (overrides: Partial<PersistencePort> = {}): PersistencePort => ({
   ...overrides,
 });
 
-function renderApp(gatePort: PersistencePort = port()) {
+/** `CloudBackup`'s injectable loader, named through the class: `src/ui` may not import `src/data`. */
+type CloudLoad = NonNullable<NonNullable<ConstructorParameters<typeof CloudBackup>[1]>['load']>;
+
+/**
+ * Only the sign-in check, which is all a sheet asks of the cloud before a press. Any other call
+ * would be a bug in the test, so the rest of the interface is left out and cast.
+ */
+const cloudWith =
+  (signedIn: boolean): CloudLoad =>
+  () =>
+    Promise.resolve({
+      currentUser: () =>
+        Promise.resolve(signedIn ? { uid: 'u1', name: 'Ja', email: 'ja@example.com' } : null),
+    } as unknown as Awaited<ReturnType<CloudLoad>>);
+
+function renderApp(
+  gatePort: PersistencePort = port(),
+  load: CloudLoad = () => Promise.reject(new Error('no cloud in the shell tests')),
+) {
   const library = new CharacterLibraryBO({
     storageGate: new StorageGate({ port: gatePort }),
     autosave: { debounceMs: 0, target: null },
   });
-  const cloud = new CloudBackup(library, {
-    load: () => Promise.reject(new Error('no cloud in the shell tests')),
-    session: null,
-  });
+  const cloud = new CloudBackup(library, { load });
   return { library, ...render(<App library={library} cloud={cloud} />) };
 }
+
+const HINT = 'Sign in with your Google account on the Cloud screen to upload.';
 
 beforeAll(stubDialogElement);
 
@@ -69,6 +86,22 @@ describe('App', () => {
     });
     expect(id).not.toBe('');
   });
+
+  it.each([
+    { signedIn: false, disabled: true },
+    { signedIn: true, disabled: false },
+  ])(
+    'an open sheet checks sign-in, and Upload is disabled only when signed out ($signedIn)',
+    async ({ signedIn, disabled }) => {
+      renderApp(port(), cloudWith(signedIn));
+      await screen.findByText('No characters yet. Tap + to make one.');
+      fireEvent.click(screen.getByLabelText('New character'));
+
+      const upload = await screen.findByRole('button', { name: 'Upload to cloud' });
+      await waitFor(() => expect(screen.queryByText(HINT) !== null).toBe(disabled));
+      expect((upload as HTMLButtonElement).disabled).toBe(disabled);
+    },
+  );
 
   it('routes into a section and back out again', async () => {
     renderApp();
