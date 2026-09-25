@@ -45,7 +45,6 @@ function renderScreen(view: CloudView, overrides: Partial<Parameters<typeof Clou
     conflict: null,
     onBack: vi.fn(),
     onSignIn: vi.fn(),
-    onSignOut: vi.fn(),
     onRestore: vi.fn(),
     onDeleteVersion: vi.fn(),
     onDeleteCharacter: vi.fn(),
@@ -67,7 +66,15 @@ describe('CloudScreen', () => {
   it('shows the account and the usage', () => {
     renderScreen(signedIn);
     expect(screen.getByText(/ja@example\.com/)).toBeTruthy();
-    expect(screen.getByText(/Using 3\.4 MB/)).toBeTruthy();
+    expect(screen.getByText('3.4 MB')).toBeTruthy();
+    expect(screen.getByText('ID: c1')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Sign out' })).toBeNull();
+  });
+
+  it('goes back to the characters', () => {
+    const props = renderScreen(signedIn);
+    fireEvent.click(screen.getByRole('button', { name: 'Back to characters' }));
+    expect(props.onBack).toHaveBeenCalledOnce();
   });
 
   it('restores the version whose button was pressed', () => {
@@ -83,7 +90,7 @@ describe('CloudScreen', () => {
 
   it('deletes a version only after confirming', () => {
     const props = renderScreen(signedIn);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0]!);
+    fireEvent.click(screen.getAllByRole('button', { name: /^Delete version/ })[0]!);
     expect(props.onDeleteVersion).not.toHaveBeenCalled();
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
     expect(props.onDeleteVersion).toHaveBeenCalledWith('c1', '2026-09-30T20:11:05.002Z');

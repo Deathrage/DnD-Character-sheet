@@ -9,7 +9,6 @@ const meta = {
     conflict: null,
     onBack: () => {},
     onSignIn: () => {},
-    onSignOut: () => {},
     onRestore: () => {},
     onDeleteVersion: () => {},
     onDeleteCharacter: () => {},
@@ -21,7 +20,7 @@ const meta = {
       busy: false,
       characters: [
         {
-          characterId: 'c1',
+          characterId: '3f2a9c1e-7b4d-4e8a-9c2f-5d1b6a7e8f90',
           name: 'Zahir ibn Talaar',
           level: 5,
           versions: [

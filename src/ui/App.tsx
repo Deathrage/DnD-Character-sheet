@@ -406,7 +406,6 @@ function Cloud({ cloud }: { cloud: CloudBackup }) {
       conflict={asking?.conflict ?? null}
       onBack={() => navigate({ name: 'list' })}
       onSignIn={() => void cloud.signIn().then(setMessage)}
-      onSignOut={() => void cloud.signOut().then(setMessage)}
       onRestore={(characterId, uploadedAt) => void restore(characterId, uploadedAt)}
       onDeleteVersion={(characterId, uploadedAt) =>
         void cloud.deleteVersion(characterId, uploadedAt).then(setMessage)

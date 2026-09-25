@@ -1,7 +1,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import { Portrait } from '../components/Portrait.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
-import { formatWhen } from '../format.js';
+import { formatWhen, initialOf } from '../format.js';
 import type { CharacterRow, ClassSummaryView, CloudView, InstallView } from '../types.js';
 
 interface Props {
@@ -329,10 +329,6 @@ function MenuItem({
       </button>
     </li>
   );
-}
-
-function initialOf(name: string | null | undefined): string {
-  return name?.trim().charAt(0).toUpperCase() || '?';
 }
 
 const CONFIRM = {
