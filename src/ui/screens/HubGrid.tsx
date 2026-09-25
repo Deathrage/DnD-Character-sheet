@@ -10,6 +10,13 @@ interface Props {
   onUpload?(): void;
   /** The last upload's line: "Uploaded 24 Sep, 18:03" or the reason it failed. */
   uploadNotice?: string | null;
+  /** Signed out, or the sign-in check still running: the button is shown but cannot be pressed. */
+  uploadDisabled?: boolean;
+  /**
+   * Why it is disabled, when there is something to say. Both a tooltip and a visible line: a
+   * phone has no hover, so a tooltip alone would never be seen there.
+   */
+  uploadHint?: string | null;
 }
 
 export function HubGrid({
@@ -18,6 +25,8 @@ export function HubGrid({
   onOpenRawJson,
   wired = WIRED_SECTIONS,
   onUpload,
+  uploadDisabled = false,
+  uploadHint = null,
   uploadNotice,
 }: Props) {
   return (
@@ -50,18 +59,25 @@ export function HubGrid({
         })}
       </ul>
       <div className="sv" style={{ paddingTop: 0 }}>
+        {onUpload !== undefined && (
+          <button
+            type="button"
+            className="newcat"
+            disabled={uploadDisabled}
+            {...(uploadDisabled && uploadHint !== null ? { title: uploadHint } : {})}
+            onClick={onUpload}
+          >
+            Upload to cloud
+          </button>
+        )}
+        {uploadDisabled && uploadHint !== null && <p className="hint btnhint">{uploadHint}</p>}
+        {uploadNotice != null && <p className="hint">{uploadNotice}</p>}
         <button type="button" className="newcat" onClick={onExport}>
           Export this character as .json
         </button>
         <button type="button" className="newcat" onClick={onOpenRawJson}>
           Open raw JSON
         </button>
-        {onUpload !== undefined && (
-          <button type="button" className="newcat" onClick={onUpload}>
-            Upload to cloud
-          </button>
-        )}
-        {uploadNotice != null && <p className="hint">{uploadNotice}</p>}
       </div>
     </div>
   );

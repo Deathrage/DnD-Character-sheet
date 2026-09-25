@@ -5,13 +5,12 @@ import { summarize } from './summarize.js';
 const base = () => docFor(ID_A, 'Sable Nightwind');
 
 describe('summarize', () => {
-  it('carries identity and hit points across', () => {
+  it('carries identity and the last edit across', () => {
     const doc = base();
-    doc.hitPoints = { current: 38, total: 45, temporary: 5 };
     const summary = summarize(doc, null);
     expect(summary.id).toBe(doc.id);
     expect(summary.name).toBe('Sable Nightwind');
-    expect(summary.hitPoints).toEqual({ current: 38, total: 45, temporary: 5 });
+    expect(summary.updatedAt).toBe(doc.updatedAt);
   });
 
   it('sums class levels into totalLevel', () => {
@@ -49,17 +48,13 @@ describe('summarize', () => {
   it('returns copies, so editing a summary cannot reach back into the document', () => {
     // The test above only proves summarize() does not mutate while it runs. A summary that
     // shared structure with the document would still let a caller — a list row bound to an
-    // editable field, say — write through to the stored document later. Replacing either
+    // editable field, say — write through to the stored document later. Replacing the
     // defensive copy in summarize.ts with a direct reference leaves every other test green.
     const doc = base();
-    doc.hitPoints = { current: 38, total: 45, temporary: 5 };
     doc.classes = [{ id: ID_A, name: 'Rogue', level: 5 }];
     const before = JSON.stringify(doc);
 
     const summary = summarize(doc, null);
-    summary.hitPoints.current = 1;
-    summary.hitPoints.total = 2;
-    summary.hitPoints.temporary = 3;
     summary.classes[0]!.name = 'Bard';
     summary.classes[0]!.level = 99;
     summary.classes.push({ name: 'Cleric', level: 1 });
@@ -67,7 +62,6 @@ describe('summarize', () => {
     summary.id = 'not-a-uuid';
 
     expect(JSON.stringify(doc)).toBe(before);
-    expect(doc.hitPoints).toEqual({ current: 38, total: 45, temporary: 5 });
     expect(doc.classes).toEqual([{ id: ID_A, name: 'Rogue', level: 5 }]);
   });
 });

@@ -43,27 +43,8 @@ describe('CharacterFile.read', () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    const imported = documentOf(result.file);
-    const original = sheet.toDocument();
-    expect(imported).toEqual({ ...original, id: imported.id });
-  });
-
-  it('reassigns the document id and keeps every item id', () => {
-    const sheet = filled();
-    const original = sheet.toDocument();
-    const result = CharacterFile.read(CharacterFile.of(sheet, EXPORTED_AT).text);
-
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const imported = documentOf(result.file);
-    // A document id is the store key, so two characters sharing one would collide.
-    expect(imported.id).not.toBe(original.id);
-    // Item ids are scoped within their document, so a collision across two is meaningless —
-    // and keeping them is what makes a re-import recognisable as the same character (spec §9).
-    expect(imported.classes[0]?.id).toBe(original.classes[0]?.id);
-    expect(imported.featsAndTraits.uncategorized[0]?.id).toBe(
-      original.featsAndTraits.uncategorized[0]?.id,
-    );
+    // The document id included: it is what lets `library.add` recognise a character already here.
+    expect(documentOf(result.file)).toEqual(sheet.toDocument());
   });
 
   it('explains text that is not JSON', () => {

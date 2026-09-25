@@ -17,9 +17,8 @@ if (root === null) {
 
 const library = new CharacterLibraryBO();
 
-/** Loads nothing unless a sign-in redirect is returning with an upload to finish. */
+/** Loads nothing at launch: Firebase is first loaded by opening a sheet or the cloud screen. */
 const cloud = new CloudBackup(library);
-void cloud.resume();
 
 /**
  * `import.meta.env.DEV` is replaced by Vite with a literal `false` in a production build, so this

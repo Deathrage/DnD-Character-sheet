@@ -23,17 +23,34 @@ const port = (overrides: Partial<PersistencePort> = {}): PersistencePort => ({
   ...overrides,
 });
 
-function renderApp(gatePort: PersistencePort = port()) {
+/** `CloudBackup`'s injectable loader, named through the class: `src/ui` may not import `src/data`. */
+type CloudLoad = NonNullable<NonNullable<ConstructorParameters<typeof CloudBackup>[1]>['load']>;
+
+/**
+ * Only the sign-in check, which is all a sheet asks of the cloud before a press. Any other call
+ * would be a bug in the test, so the rest of the interface is left out and cast.
+ */
+const cloudWith =
+  (signedIn: boolean): CloudLoad =>
+  () =>
+    Promise.resolve({
+      currentUser: () =>
+        Promise.resolve(signedIn ? { uid: 'u1', name: 'Ja', email: 'ja@example.com' } : null),
+    } as unknown as Awaited<ReturnType<CloudLoad>>);
+
+function renderApp(
+  gatePort: PersistencePort = port(),
+  load: CloudLoad = () => Promise.reject(new Error('no cloud in the shell tests')),
+) {
   const library = new CharacterLibraryBO({
     storageGate: new StorageGate({ port: gatePort }),
     autosave: { debounceMs: 0, target: null },
   });
-  const cloud = new CloudBackup(library, {
-    load: () => Promise.reject(new Error('no cloud in the shell tests')),
-    session: null,
-  });
+  const cloud = new CloudBackup(library, { load });
   return { library, ...render(<App library={library} cloud={cloud} />) };
 }
+
+const HINT = 'Sign in with your Google account from the Characters menu to upload.';
 
 beforeAll(stubDialogElement);
 
@@ -68,6 +85,41 @@ describe('App', () => {
       if (opened?.ok === true) opened.sheet.dispose();
     });
     expect(id).not.toBe('');
+  });
+
+  it.each([
+    { signedIn: false, disabled: true },
+    { signedIn: true, disabled: false },
+  ])(
+    'an open sheet checks sign-in, and Upload is disabled only when signed out ($signedIn)',
+    async ({ signedIn, disabled }) => {
+      renderApp(port(), cloudWith(signedIn));
+      await screen.findByText('No characters yet. Tap + to make one.');
+      fireEvent.click(screen.getByLabelText('New character'));
+
+      const upload = await screen.findByRole('button', { name: 'Upload to cloud' });
+      await waitFor(() => expect(screen.queryByText(HINT) !== null).toBe(disabled));
+      expect((upload as HTMLButtonElement).disabled).toBe(disabled);
+    },
+  );
+
+  it('asks before importing a character that is already here, and Keep both adds "(restored)"', async () => {
+    await putRaw(ID_A, docFor(ID_A, 'Sable'));
+    const { library, container } = renderApp();
+    await screen.findByText('Sable');
+
+    const picker = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const file = new File([JSON.stringify(docFor(ID_A, 'Sable'))], 'sable.json');
+    Object.defineProperty(picker, 'files', { value: [file], configurable: true });
+    fireEvent.change(picker);
+
+    expect(await screen.findByText(/Sable is already in this app/)).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Keep both' }));
+
+    // Listed, not opened: the player stays on the list.
+    expect(await screen.findByText('Sable (restored)')).toBeDefined();
+    expect(library.entries.map((entry) => entry.name)).toEqual(['Sable', 'Sable (restored)']);
+    expect(globalThis.location.hash).toBe('');
   });
 
   it('routes into a section and back out again', async () => {

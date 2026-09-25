@@ -1,5 +1,6 @@
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
-import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
+import { ConflictDialog } from '../components/ConflictDialog.js';
+import { formatWhen } from '../format.js';
 import type { CloudView, ConflictView } from '../types.js';
 
 interface Props {
@@ -15,16 +16,6 @@ interface Props {
   onDeleteCharacter(characterId: string): void;
   /** `null` is Cancel. */
   onResolveConflict(choice: 'replace' | 'keepBoth' | null): void;
-}
-
-/** "24 Sep, 18:03", in the player's own locale and timezone. */
-export function formatWhen(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 export function formatBytes(bytes: number): string {
@@ -81,8 +72,12 @@ export function CloudScreen({
       )}
 
       {!signedIn ? (
-        <div className="empty">
-          <p>Back up characters to your Google account, and restore them on any device.</p>
+        // `.sv`, the sheet's own button pad — not `.empty`, whose placeholder opacity would grey
+        // out the button inside it and whose 2px inset put it at the screen edge.
+        <div className="sv">
+          <p className="hint">
+            Back up characters to your Google account, and restore them on any device.
+          </p>
           <button
             type="button"
             className="newcat"
@@ -110,7 +105,7 @@ export function CloudScreen({
               </div>
               <ul>
                 {character.versions.map((version) => (
-                  <li key={version.uploadedAt} className="sv">
+                  <li key={version.uploadedAt} className="cver">
                     <span>
                       Uploaded {formatWhen(version.uploadedAt)} {'·'} edited{' '}
                       {formatWhen(version.sheetUpdatedAt)} {'·'} {formatBytes(version.bytes)}
@@ -146,43 +141,11 @@ export function CloudScreen({
       )}
 
       {conflict !== null && (
-        <ResponsiveDialog
-          title="Already in this browser"
-          open
-          onClose={() => onResolveConflict(null)}
-          footer={
-            <>
-              <button type="button" className="secondary" onClick={() => onResolveConflict(null)}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="secondary"
-                onClick={() => onResolveConflict('keepBoth')}
-              >
-                Keep both
-              </button>
-              <button type="button" className="del" onClick={() => onResolveConflict('replace')}>
-                Replace
-              </button>
-            </>
-          }
-        >
-          <p className="hint" style={{ marginTop: 0 }}>
-            {conflict.name} is already in this browser.
-          </p>
-          <p className="hint">
-            This browser's copy:{' '}
-            {conflict.localUpdatedAt === null
-              ? 'damaged'
-              : `edited ${formatWhen(conflict.localUpdatedAt)}`}
-            . Cloud version: edited {formatWhen(conflict.cloudUpdatedAt)}.
-          </p>
-          {conflict.localUpdatedAt !== null &&
-            conflict.cloudUpdatedAt < conflict.localUpdatedAt && (
-              <p className="hint">The cloud version is older than this browser's copy.</p>
-            )}
-        </ResponsiveDialog>
+        <ConflictDialog
+          conflict={conflict}
+          incoming="The cloud version"
+          onResolve={onResolveConflict}
+        />
       )}
     </div>
   );

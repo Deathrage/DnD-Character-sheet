@@ -95,7 +95,8 @@ export type CharacterRow =
       name: string;
       level: number;
       classes: ClassSummaryView[];
-      hitPoints: HitPointsView;
+      /** When it was last edited, as an ISO timestamp. */
+      updatedAt: string;
       portrait: string | null;
     }
   /**
@@ -365,7 +366,7 @@ export interface CloudCharacterView {
 }
 
 export interface CloudView {
-  status: 'signedOut' | 'signingIn' | 'signedIn' | 'unavailable';
+  status: 'unknown' | 'signedOut' | 'signingIn' | 'signedIn' | 'unavailable';
   user: { name: string | null; email: string | null } | null;
   characters: CloudCharacterView[];
   totalBytes: number;
@@ -376,5 +377,6 @@ export interface CloudView {
 export interface ConflictView {
   name: string;
   localUpdatedAt: string | null;
-  cloudUpdatedAt: string;
+  /** The file's or the cloud version's. */
+  incomingUpdatedAt: string;
 }

@@ -16,7 +16,7 @@ export type ParseFileResult =
   | { ok: false; kind: 'file'; issues: SchemaIssue[] };
 
 export interface FromJsonTextOptions {
-  /** The id the imported character will take. Import always creates (spec §5). */
+  /** The id the character will take. */
   assignId: string;
 }
 
@@ -34,12 +34,12 @@ function parseJson(text: string): Parsed {
   }
 }
 
-function readDocument(raw: unknown, assignId: string): ParseTextResult {
+function readDocument(raw: unknown, assignId: string | undefined): ParseTextResult {
   const parsed = parseCharacter(raw);
   if (!parsed.ok) {
     return { ok: false, kind: 'document', error: parsed.error, raw: parsed.raw };
   }
-  return { ok: true, doc: { ...parsed.doc, id: assignId } };
+  return { ok: true, doc: assignId === undefined ? parsed.doc : { ...parsed.doc, id: assignId } };
 }
 
 /**
@@ -62,8 +62,14 @@ const fileSchema = z.object({ sheet: z.unknown(), portrait: portraitSchema.nulla
  * Reads an exported file: the `{ sheet, portrait }` envelope, or a bare document — every file
  * exported before portraits existed. The two cannot be confused: a document is strict and has
  * no `sheet` key, so the key's presence alone says which shape this is.
+ *
+ * Without `assignId` the file's own id is kept, so a character this browser already has is
+ * recognised as the same one on import, and the player is asked whether to replace it.
  */
-export function fromFileText(text: string, { assignId }: FromJsonTextOptions): ParseFileResult {
+export function fromFileText(
+  text: string,
+  { assignId }: Partial<FromJsonTextOptions> = {},
+): ParseFileResult {
   const parsed = parseJson(text);
   if (!parsed.ok) return parsed;
 

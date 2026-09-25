@@ -9,9 +9,31 @@ import { CharacterSheetBO } from './characterSheet.js';
 import { CharacterFile, documentOf, parseInto, portraitOf } from './characterFile.js';
 import { createId } from './createId.js';
 import { describeLoadError } from '../data/migration/errors.js';
-import { trimmedName } from './guards.js';
+import { describeStorageFailure } from './errors.js';
+import { MAX_SHORT_NAME, trimmedName } from './guards.js';
 import './mobxConfig.js';
 import { StorageGate } from './storageGate.js';
+
+/** How a character already in this browser is settled, on import and on cloud restore alike. */
+export type RestoreChoice = 'replace' | 'keepBoth';
+export type RestoreResult =
+  | { ok: true; id: string }
+  | { ok: false; kind: 'failed'; message: string }
+  | {
+      ok: false;
+      kind: 'conflict';
+      name: string;
+      /** `null` when the local copy is damaged and has no readable `updatedAt`. */
+      localUpdatedAt: string | null;
+      /** The file's or the cloud version's `updatedAt`. */
+      incomingUpdatedAt: string;
+    };
+
+/** `name (suffix)`, the name shortened first so the whole still fits the name limit. */
+function suffixed(name: string, suffix: string): string {
+  const tail = ` (${suffix})`;
+  return trimmedName(`${name.slice(0, MAX_SHORT_NAME - tail.length).trimEnd()}${tail}`);
+}
 
 export interface CharacterLibraryOptions {
   /**
@@ -81,9 +103,12 @@ export class CharacterLibraryBO {
     return this.#adopt(doc, null);
   }
 
-  /** Import. Identical to `create` after the document exists, which is why both end in `#adopt`. */
-  async add(file: CharacterFile): Promise<CharacterSheetBO> {
-    return this.#adopt(documentOf(file), portraitOf(file));
+  /**
+   * Import. The same path as a cloud restore: a file keeps its character's id, so one this browser
+   * already has comes back as a conflict, and the player settles it with the same two choices.
+   */
+  add(file: CharacterFile, choice?: RestoreChoice): Promise<RestoreResult> {
+    return this.restore(documentOf(file), portraitOf(file), choice);
   }
 
   /**
@@ -180,21 +205,54 @@ export class CharacterLibraryBO {
   }
 
   /**
-   * Internal, for `CloudBackup`: stores a restored character under its own id. A row that is
-   * already there — healthy or damaged — is refreshed in place rather than replaced, for the
-   * same identity reason as `#refreshRow`; one that is not is added.
+   * Internal, for `add` and `CloudBackup`: stores a character that came from outside this browser
+   * under its own id. When one is already stored there, and no `choice` was made, it answers a
+   * conflict for the player to settle instead: `replace` keeps the id and overwrites, `keepBoth`
+   * stores a copy under a new id, named "… (restored)".
    *
-   * Throws while that character's sheet is open: its autosave would write the old copy straight
-   * back over the restored one. `CloudBackup` checks first; this is the backstop.
+   * Decided from storage, not from `entries`: a list that failed to load, or a character another
+   * tab stored since, would otherwise be overwritten with no dialog.
+   *
+   * A replaced row — healthy or damaged — is refreshed in place rather than re-listed, for the
+   * same identity reason as `#refreshRow`. Replace is refused while that character's sheet is
+   * open: its autosave would write the old copy straight back over the restored one.
    */
-  async restore(doc: CharacterDocument, portrait: string | null): Promise<void> {
-    if (this.isOpen(doc.id)) {
-      throw new Error(`character ${doc.id} is open; close it before replacing it`);
+  async restore(
+    doc: CharacterDocument,
+    portrait: string | null,
+    choice?: RestoreChoice,
+  ): Promise<RestoreResult> {
+    const failed = (message: string): RestoreResult => ({ ok: false, kind: 'failed', message });
+    try {
+      const stored = await this.#repository.get(doc.id);
+      if (stored !== null && choice === undefined) {
+        const entry = this.#entries.find((candidate) => candidate.id === doc.id);
+        return {
+          ok: false,
+          kind: 'conflict',
+          name: entry?.name ?? (stored.ok ? stored.doc.name : 'Unreadable character'),
+          localUpdatedAt: stored.ok ? stored.doc.updatedAt : null,
+          incomingUpdatedAt: doc.updatedAt,
+        };
+      }
+      if (stored !== null && choice === 'keepBoth') {
+        const id = createId();
+        await this.store({ ...doc, id, name: suffixed(doc.name, 'restored') }, portrait);
+        return { ok: true, id };
+      }
+      if (this.isOpen(doc.id)) return failed("Close this character's sheet before replacing it.");
+      const entry = this.#entries.find((candidate) => candidate.id === doc.id);
+      if (entry === undefined) {
+        await this.store(doc, portrait);
+      } else {
+        await this.#repository.save(doc, portrait);
+        entry.refresh({ ok: true, summary: summarize(doc, portrait) });
+      }
+      return { ok: true, id: doc.id };
+    } catch (caught) {
+      if (caught instanceof StorageError) return failed(describeStorageFailure(caught.detail));
+      throw caught;
     }
-    const entry = this.#entries.find((candidate) => candidate.id === doc.id);
-    if (entry === undefined) return this.store(doc, portrait);
-    await this.#repository.save(doc, portrait);
-    entry.refresh({ ok: true, summary: summarize(doc, portrait) });
   }
 
   /** Internal, for `CharacterEntryBO.remove()`. */
@@ -256,10 +314,9 @@ export class CharacterEntryBO {
     return this.#state.row.ok ? this.#state.row.summary.classes : [];
   }
 
-  get hitPoints(): { current: number; total: number; temporary: number } {
-    return this.#state.row.ok
-      ? this.#state.row.summary.hitPoints
-      : { current: 0, total: 0, temporary: 0 };
+  /** `null` for a damaged row, which has no readable `updatedAt`. */
+  get updatedAt(): string | null {
+    return this.#state.row.ok ? this.#state.row.summary.updatedAt : null;
   }
 
   get portrait(): string | null {
@@ -285,7 +342,7 @@ export class CharacterEntryBO {
   async open(): Promise<{ ok: true; sheet: CharacterSheetBO } | { ok: false; message: string }> {
     const result = await this.#library.repository.get(this.id);
     if (result === null) {
-      return { ok: false, message: 'This character is no longer in this browser.' };
+      return { ok: false, message: 'This character is no longer in this app.' };
     }
     if (!result.ok) return { ok: false, message: describeLoadError(result.error) };
 
@@ -346,16 +403,14 @@ export class CharacterEntryBO {
    */
   async clone(): Promise<string | null> {
     const result = await this.#library.repository.get(this.id);
-    if (result === null) return 'This character is no longer in this browser.';
+    if (result === null) return 'This character is no longer in this app.';
     if (!result.ok) return describeLoadError(result.error);
 
-    // 73 + " (copy)" is the 80-character name limit.
-    const name = trimmedName(`${result.doc.name.slice(0, 73).trimEnd()} (copy)`);
     await this.#library.store(
       {
         ...structuredClone(result.doc),
         id: createId(),
-        name,
+        name: suffixed(result.doc.name, 'copy'),
         updatedAt: new Date().toISOString(),
       },
       await this.#library.repository.getPortrait(this.id),

@@ -42,7 +42,12 @@ export {
 // `CharacterRepository`, which is a `src/data/` type that must not reach a UI signature.
 // `documentOf` is absent for the sharper version of the same reason: it exists to hand the
 // document out, which is the one thing `CharacterFile` is opaque to prevent.
-export { CharacterLibraryBO, CharacterEntryBO } from './characterLibrary.js';
+export {
+  CharacterLibraryBO,
+  CharacterEntryBO,
+  type RestoreChoice,
+  type RestoreResult,
+} from './characterLibrary.js';
 export { CharacterFile } from './characterFile.js';
 export {
   StorageGate,
@@ -65,7 +70,5 @@ export {
   type CloudStatus,
   type CloudUser,
   type CloudVersion,
-  type RestoreChoice,
-  type RestoreResult,
   type UploadResult,
 } from './cloudBackup.js';

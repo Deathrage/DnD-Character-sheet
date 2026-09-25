@@ -607,6 +607,146 @@ body {
 .newcat:active {
   background: var(--accent-soft);
 }
+/* Disabled drops the accent — in this palette the accent is what says "press me" — and the dashed
+   outline, which reads as "a place to add something". No opacity fade: a faded accent label on a
+   full-width button still looks pressable. */
+.newcat:disabled {
+  color: var(--ink-2);
+  background: var(--fill-2);
+  border-style: solid;
+  border-color: var(--fill);
+  cursor: default;
+}
+.newcat:disabled:active {
+  background: var(--fill-2);
+}
+/* ---------- the character list's menu ---------- */
+/* Borderless like a card's icons, but ink rather than grey: it is the header's only control. */
+.cicon.mbtn {
+  margin: 0 -8px 0 auto;
+  color: var(--ink);
+}
+.cicon.mbtn svg {
+  width: 22px;
+  height: 22px;
+}
+/* One section per group, as a phone's settings list: the groups' edges are the separators, and
+   rows inside one group are split by a hairline that starts past the icon. */
+.mgroup {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.mgroup > li + li {
+  position: relative;
+}
+.mgroup > li + li::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 58px; /* the row's padding, icon and gap */
+  right: 0;
+  border-top: 1px solid var(--line);
+}
+.mitem,
+.macct {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 14px;
+}
+.mitem {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mitem:hover,
+.mitem:active {
+  background: var(--fill-2);
+}
+.mitem:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 13px;
+}
+.mico,
+.mavatar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.mico svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* The person, not a feature: round where the feature icons are squared off. */
+.mavatar {
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+}
+.mtext {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mlabel {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.mdesc {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.mitem .chev {
+  font-size: 22px;
+  line-height: 1;
+}
+.mitem:disabled {
+  cursor: default;
+}
+.mitem:disabled:hover,
+.mitem:disabled:active {
+  background: transparent;
+}
+.mitem:disabled .mico {
+  background: var(--fill-2);
+  color: var(--ink-2);
+}
+.mitem:disabled .mlabel {
+  color: var(--ink-2);
+}
+.fieldError.mmsg {
+  margin: -6px 0 14px;
+}
+/* The reason under a disabled button: closer to it than the next button is, so it reads as that
+   button's caption rather than a paragraph of its own. */
+.hint.btnhint {
+  margin: 6px 2px 0;
+}
 
 /* ---------- fields ---------- */
 .num {
@@ -1380,17 +1520,17 @@ body {
   outline-offset: 6px;
 }
 /* ---------- cloud screen ---------- */
-/* `.sv` and `.llist` are reused from elsewhere (a section's content pad, the character list) per
-   the plan; both need a little more here than their original one use taught them. A version's
-   `<ul>` has no class of its own, so left unstyled it would show default list bullets. */
+/* `.llist` is reused from the character list. A version's `<ul>` has no class of its own, so
+   left unstyled it would show default list bullets. */
 .cloud .llist ul {
   list-style: none;
   margin: 4px 0 10px;
   padding: 0;
 }
-/* One version, as a row: without this, `.sv`'s block padding leaves the label, Restore and
-   Delete to flow as plain inline content, wrapping into each other instead of lining up. */
-.cloud .sv {
+/* One version, as a row, so the label, Restore and Delete line up instead of wrapping into each
+   other as plain inline content. Its own class, not `.sv`: that is the sheet's button pad, which
+   the signed-out block uses as-is. */
+.cloud .cver {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -1398,10 +1538,10 @@ body {
   padding: 9px 2px;
   border-top: 1px solid var(--fill);
 }
-.cloud .sv:first-child {
+.cloud .cver:first-child {
   border-top: none;
 }
-.cloud .sv > span {
+.cloud .cver > span {
   flex: 1 1 220px;
   min-width: 0;
   font-size: 12.5px;

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CloudError } from '../data/remote/cloudError.js';
 import { decodePayload, type Payload } from '../data/remote/codec.js';
 import { createIndexedDbRepository } from '../data/repository/indexedDbRepository.js';
@@ -100,15 +100,6 @@ function clock(start = Date.parse('2026-09-24T18:00:00.000Z')) {
   return () => new Date(now++);
 }
 
-function memorySession() {
-  const values = new Map<string, string>();
-  return {
-    getItem: (k: string) => values.get(k) ?? null,
-    setItem: (k: string, v: string) => void values.set(k, v),
-    removeItem: (k: string) => void values.delete(k),
-  };
-}
-
 describe('CloudBackup', () => {
   let repository: CharacterRepository;
   let library: CharacterLibraryBO;
@@ -127,29 +118,43 @@ describe('CloudBackup', () => {
   });
   afterEach(wipe);
 
-  function backup(cloud = fakeCloud(), session = memorySession()) {
+  function backup(cloud = fakeCloud()) {
     return {
       cloud,
-      session,
-      backup: new CloudBackup(library, {
-        load: async () => cloud.repository,
-        session,
-        now: clock(),
-      }),
+      backup: new CloudBackup(library, { load: async () => cloud.repository, now: clock() }),
     };
   }
 
-  it('loads nothing on construction or on a resume with nothing pending', async () => {
+  it('loads nothing on construction, and its status is unknown until something checks', () => {
     let loads = 0;
     const cloudBackup = new CloudBackup(library, {
       load: async () => {
         loads += 1;
         return fakeCloud().repository;
       },
-      session: memorySession(),
     });
-    await cloudBackup.resume();
     expect(loads).toBe(0);
+    expect(cloudBackup.status).toBe('unknown');
+  });
+
+  it('checkSignIn settles the status, and does not ask again once it is known', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    let checks = 0;
+    const { currentUser } = cloud.repository;
+    cloud.repository.currentUser = () => {
+      checks += 1;
+      return currentUser();
+    };
+
+    await cloudBackup.checkSignIn();
+    expect(cloudBackup.status).toBe('signedIn');
+    await cloudBackup.checkSignIn();
+    expect(checks).toBe(1);
+  });
+
+  it('checkSignIn reports a signed-out player as signed out', async () => {
+    const { backup: cloudBackup } = backup(fakeCloud(false));
+    await cloudBackup.checkSignIn();
     expect(cloudBackup.status).toBe('signedOut');
   });
 
@@ -186,25 +191,6 @@ describe('CloudBackup', () => {
     opened.sheet.dispose();
   });
 
-  it('stores the last edit before a redirect sign-in navigates away', async () => {
-    const opened = await library.entries[0]!.open();
-    if (!opened.ok) throw new Error(opened.message);
-    opened.sheet.setName('Sable Nightwind'); // inside the 60 s debounce: not yet stored
-    const cloud = fakeCloud(false);
-    const storedAtSignIn: (string | false)[] = [];
-    // A redirect: the page navigates away inside `signIn`, which never settles.
-    cloud.repository.signIn = async () => {
-      const stored = await repository.get(ID_A);
-      storedAtSignIn.push(stored?.ok === true && stored.doc.name);
-      return new Promise<never>(() => {});
-    };
-    const { backup: cloudBackup } = backup(cloud);
-
-    void cloudBackup.upload(ID_A);
-    await vi.waitFor(() => expect(storedAtSignIn).toEqual(['Sable Nightwind']));
-    opened.sheet.dispose();
-  });
-
   it('uploads once when Upload is pressed twice quickly', async () => {
     const { backup: cloudBackup, cloud } = backup();
 
@@ -223,83 +209,20 @@ describe('CloudBackup', () => {
     expect(cloud.state.uploads).toBe(0);
   });
 
-  it('signs in first when signed out, then uploads, and clears the pending marker', async () => {
-    const { backup: cloudBackup, cloud, session } = backup(fakeCloud(false));
+  it('refuses to upload when signed out, and never starts a sign-in itself', async () => {
+    const { backup: cloudBackup, cloud } = backup(fakeCloud(false));
 
-    const result = await cloudBackup.upload(ID_A);
-
-    expect(cloud.state.signIns).toBe(1);
-    expect(result.ok).toBe(true);
-    expect(cloudBackup.status).toBe('signedIn');
-    expect(session.getItem('dnd-character-sheet.cloud-pending-upload')).toBeNull();
-  });
-
-  it('resumes an upload that a redirect sign-in interrupted, exactly once', async () => {
-    const cloud = fakeCloud(true); // the redirect came back signed in
-    const session = memorySession();
-    session.setItem('dnd-character-sheet.cloud-pending-upload', ID_A);
-    cloud.state.failNext = new CloudError('OFFLINE');
-    // The marker must already be gone while the upload runs: a tab closed mid-upload never
-    // reaches a line after it, and would upload again on every reload.
-    const markerDuringUpload: (string | null)[] = [];
-    const upload = cloud.repository.upload;
-    cloud.repository.upload = (...args) => {
-      markerDuringUpload.push(session.getItem('dnd-character-sheet.cloud-pending-upload'));
-      return upload(...args);
-    };
-    const first = new CloudBackup(library, {
-      load: async () => cloud.repository,
-      session,
-      now: clock(),
+    expect(await cloudBackup.upload(ID_A)).toEqual({
+      ok: false,
+      message: 'Sign in with Google to use cloud backup.',
     });
-
-    await first.resume();
-    expect(first.lastUpload?.result.ok).toBe(false); // it tried, and failed, once
-    expect(markerDuringUpload).toEqual([null]);
-
-    const second = new CloudBackup(library, {
-      load: async () => cloud.repository,
-      session,
-      now: clock(),
-    });
-    await second.resume(); // a reload after the failure
+    expect(cloud.state.signIns).toBe(0);
     expect(cloud.state.uploads).toBe(0);
-    expect(second.lastUpload).toBeNull();
-  });
-
-  it('lets a startup resume finish its upload when refresh() runs at the same time', async () => {
-    const cloud = fakeCloud(true);
-    const session = memorySession();
-    session.setItem('dnd-character-sheet.cloud-pending-upload', ID_A);
-    // Real timings: the resume's sign-in check settles a moment late, and the list read is slow,
-    // so an unguarded refresh() takes `busy` first and holds it while the upload asks for it.
-    const later = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-    const { currentUser, listCharacters } = cloud.repository;
-    let checks = 0;
-    cloud.repository.currentUser = async () => {
-      if (checks++ === 0) await later(5);
-      return currentUser();
-    };
-    cloud.repository.listCharacters = async () => {
-      await later(20);
-      return listCharacters();
-    };
-    const cloudBackup = new CloudBackup(library, {
-      load: async () => cloud.repository,
-      session,
-      now: clock(),
-    });
-
-    await Promise.all([cloudBackup.resume(), cloudBackup.refresh()]);
-
-    expect(cloud.state.uploads).toBe(1);
-    expect(cloudBackup.lastUpload?.result.ok).toBe(true);
   });
 
   it('reports a Firebase that will not load as unavailable, without rejecting', async () => {
     const cloudBackup = new CloudBackup(library, {
       load: () => Promise.reject(new TypeError('Failed to fetch dynamically imported module')),
-      session: memorySession(),
     });
 
     await expect(cloudBackup.refresh()).resolves.toBe(
@@ -316,46 +239,6 @@ describe('CloudBackup', () => {
     await expect(cloudBackup.refresh()).resolves.toBe('Sign-in was cancelled.');
     expect(cloudBackup.status).toBe('signedOut');
     await expect(cloudBackup.refresh()).resolves.toBeNull();
-  });
-
-  it('records why a resumed upload did not happen when the redirect sign-in failed', async () => {
-    const cloud = fakeCloud(false);
-    const session = memorySession();
-    session.setItem('dnd-character-sheet.cloud-pending-upload', ID_A);
-    cloud.state.redirectFailure = new CloudError('CANCELLED');
-    const cloudBackup = new CloudBackup(library, {
-      load: async () => cloud.repository,
-      session,
-      now: clock(),
-    });
-
-    await cloudBackup.resume();
-
-    expect(cloudBackup.lastUpload).toEqual({
-      characterId: ID_A,
-      result: { ok: false, message: 'Sign-in was cancelled.' },
-    });
-    expect(cloud.state.uploads).toBe(0);
-    expect(cloud.state.signIns).toBe(0);
-  });
-
-  it('records why a resumed upload did not happen when the redirect came back signed out', async () => {
-    const cloud = fakeCloud(false); // no failure to report: nobody is signed in
-    const session = memorySession();
-    session.setItem('dnd-character-sheet.cloud-pending-upload', ID_A);
-    const cloudBackup = new CloudBackup(library, {
-      load: async () => cloud.repository,
-      session,
-      now: clock(),
-    });
-
-    await cloudBackup.resume();
-
-    expect(cloudBackup.lastUpload).toEqual({
-      characterId: ID_A,
-      result: { ok: false, message: 'Sign in with Google to use cloud backup.' },
-    });
-    expect(cloud.state.uploads).toBe(0);
   });
 
   it('turns a quota failure into a sentence', async () => {
@@ -387,7 +270,7 @@ describe('CloudBackup', () => {
       kind: 'conflict',
       name: 'Sable',
       localUpdatedAt: '2026-07-25T09:41:00.000Z',
-      cloudUpdatedAt: '2026-07-25T09:41:00.000Z',
+      incomingUpdatedAt: '2026-07-25T09:41:00.000Z',
     });
 
     expect(await cloudBackup.restore(ID_A, uploadedAt, 'replace')).toEqual({ ok: true, id: ID_A });
@@ -439,7 +322,6 @@ describe('CloudBackup', () => {
     });
     const cloudBackup = new CloudBackup(unloaded, {
       load: async () => fakeCloud().repository,
-      session: memorySession(),
       now: clock(),
     });
     const { uploadedAt } = (await cloudBackup.upload(ID_A)) as { uploadedAt: string };
@@ -466,7 +348,6 @@ describe('CloudBackup', () => {
     await broken.load();
     const brokenBackup = new CloudBackup(broken, {
       load: async () => cloud.repository,
-      session: memorySession(),
       now: clock(),
     });
     await brokenBackup.refresh();
@@ -534,7 +415,6 @@ describe('CloudBackup', () => {
     const { uploadedAt } = (await here.upload(ID_A)) as { uploadedAt: string };
     const elsewhere = new CloudBackup(library, {
       load: async () => cloud.repository,
-      session: memorySession(),
       now: clock(Date.parse('2026-09-25T18:00:00.000Z')),
     });
     const other = (await elsewhere.upload(ID_A)) as { uploadedAt: string };

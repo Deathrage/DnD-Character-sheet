@@ -94,19 +94,42 @@ describe('CloudScreen', () => {
       conflict: {
         name: 'Zahir',
         localUpdatedAt: '2026-09-30T20:10:00.000Z',
-        cloudUpdatedAt: '2026-09-24T17:58:40.120Z',
+        incomingUpdatedAt: '2026-09-24T17:58:40.120Z',
       },
     });
-    expect(screen.getByText(/Zahir is already in this browser/)).toBeTruthy();
+    expect(screen.getByText(/Zahir is already in this app/)).toBeTruthy();
     expect(screen.getByText(/The cloud version is older/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Keep both' }));
     expect(props.onResolveConflict).toHaveBeenCalledWith('keepBoth');
   });
 
+  it('asks again before Replace, and Back returns to the question', () => {
+    const props = renderScreen(signedIn, {
+      conflict: {
+        name: 'Zahir',
+        localUpdatedAt: null,
+        incomingUpdatedAt: '2026-09-24T17:58:40.120Z',
+      },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Replace' }));
+    expect(props.onResolveConflict).not.toHaveBeenCalled();
+    expect(screen.getByText(/copy of Zahir will be overwritten/)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Replace' }));
+    expect(props.onResolveConflict).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Replace' }));
+    expect(props.onResolveConflict).toHaveBeenCalledWith('replace');
+  });
+
   it('calls a damaged local copy damaged', () => {
     renderScreen(signedIn, {
-      conflict: { name: 'Zahir', localUpdatedAt: null, cloudUpdatedAt: '2026-09-24T17:58:40.120Z' },
+      conflict: {
+        name: 'Zahir',
+        localUpdatedAt: null,
+        incomingUpdatedAt: '2026-09-24T17:58:40.120Z',
+      },
     });
-    expect(screen.getByText(/This browser's copy: damaged/)).toBeTruthy();
+    expect(screen.getByText(/This app's copy: damaged/)).toBeTruthy();
   });
 });
