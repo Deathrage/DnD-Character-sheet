@@ -20,7 +20,9 @@ import { useInstall } from './install.js';
 import { navigate, useRoute } from './route.js';
 import { CharacterHub } from './screens/CharacterHub.js';
 import { CharacterList } from './screens/CharacterList.js';
-import { CloudScreen, formatWhen } from './screens/CloudScreen.js';
+import { ConflictDialog } from './components/ConflictDialog.js';
+import { formatWhen } from './format.js';
+import { CloudScreen } from './screens/CloudScreen.js';
 import { RawJsonEditor } from './screens/RawJsonEditor.js';
 import { StorageGateDialog } from './screens/StorageGateDialog.js';
 import type { ConflictView, SectionKey } from './types.js';
@@ -38,6 +40,7 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
   const rows = useCharacterRows(library);
   const gate = useStorageGate(library.storageGate);
   const failure = useStorageFailure(library.storageGate);
+  const account = useCloud(cloud);
   // Installing is what moves `persist()` in Chromium and Safari, so it is asked again straight away.
   const install = useInstall(
     useCallback(() => void library.storageGate.requestPersist(), [library]),
@@ -45,6 +48,11 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
 
   const [ready, setReady] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  /** An imported file whose character is already here, waiting on Replace / Keep both. */
+  const [importing, setImporting] = useState<{
+    file: CharacterFile;
+    conflict: ConflictView;
+  } | null>(null);
   const filePicker = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -71,6 +79,17 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
     });
   }, [library]);
 
+  const addFile = useCallback(
+    async (file: CharacterFile, choice?: RestoreChoice) => {
+      const result = await library.add(file, choice);
+      // Success needs nothing here: the row appears in the list, which is already on screen.
+      if (result.ok) return;
+      if (result.kind === 'conflict') setImporting({ file, conflict: result });
+      else setProblem(result.message);
+    },
+    [library],
+  );
+
   const importPicked = useCallback(
     async (input: HTMLInputElement) => {
       const picked = input.files?.[0];
@@ -82,10 +101,9 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
         setProblem(read.message);
         return;
       }
-      const sheet = await library.add(read.file);
-      navigate({ name: 'character', id: sheet.id, section: null });
+      await addFile(read.file);
     },
-    [library],
+    [addFile],
   );
 
   // Both the list and the gate are meaningless until `load()` has answered: the list would flash
@@ -134,6 +152,11 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
             onOpenRawJson={(id) => navigate({ name: 'raw', id })}
             onCreate={createCharacter}
             onImport={() => filePicker.current?.click()}
+            account={account}
+            // Loads Firebase the first time — on opening the menu, never at launch.
+            onOpenMenu={() => void cloud.checkSignIn()}
+            onSignIn={() => cloud.signIn()}
+            onSignOut={() => cloud.signOut()}
             onOpenCloud={() => navigate({ name: 'cloud' })}
             onClone={(id) => {
               const entry = library.entries.find((candidate) => candidate.id === id);
@@ -147,6 +170,16 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
             <div className="fieldError" role="alert">
               {problem}
             </div>
+          )}
+          {importing !== null && (
+            <ConflictDialog
+              conflict={importing.conflict}
+              incoming="The file"
+              onResolve={(choice) => {
+                setImporting(null);
+                if (choice !== null) void addFile(importing.file, choice);
+              }}
+            />
           )}
           {/* Only on the list, and only in dev: reseeding deletes every character, which would
               pull the document out from under an open sheet. */}
@@ -291,8 +324,8 @@ function Character({
  * Split out because `useSheet` is a hook and therefore cannot be called only once a sheet happens
  * to have finished opening.
  */
-/** Signing in is the cloud screen's, reached from the character list's Cloud button. */
-const SIGN_IN_TO_UPLOAD = 'Sign in with your Google account on the Cloud screen to upload.';
+/** Signing in is the character list's menu. */
+const SIGN_IN_TO_UPLOAD = 'Sign in with your Google account from the Characters menu to upload.';
 
 function Sheet({
   sheet,
@@ -413,7 +446,7 @@ function RawJson({ library, id }: { library: CharacterLibraryBO; id: string }) {
     };
   }, [entry]);
 
-  if (entry === undefined) return <Notice>This character is no longer in this browser.</Notice>;
+  if (entry === undefined) return <Notice>This character is no longer in this app.</Notice>;
   if (text === null) return <Notice>Loading{'…'}</Notice>;
 
   return (

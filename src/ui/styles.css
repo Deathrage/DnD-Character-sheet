@@ -620,6 +620,128 @@ body {
 .newcat:disabled:active {
   background: var(--fill-2);
 }
+/* ---------- the character list's menu ---------- */
+/* Borderless like a card's icons, but ink rather than grey: it is the header's only control. */
+.cicon.mbtn {
+  margin: 0 -8px 0 auto;
+  color: var(--ink);
+}
+.cicon.mbtn svg {
+  width: 22px;
+  height: 22px;
+}
+/* One section per group, as a phone's settings list: the groups' edges are the separators, and
+   rows inside one group are split by a hairline that starts past the icon. */
+.mgroup {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.mgroup > li + li {
+  position: relative;
+}
+.mgroup > li + li::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 58px; /* the row's padding, icon and gap */
+  right: 0;
+  border-top: 1px solid var(--line);
+}
+.mitem,
+.macct {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 14px;
+}
+.mitem {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.mitem:hover,
+.mitem:active {
+  background: var(--fill-2);
+}
+.mitem:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 13px;
+}
+.mico,
+.mavatar {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.mico svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* The person, not a feature: round where the feature icons are squared off. */
+.mavatar {
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: 700;
+}
+.mtext {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mlabel {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.mdesc {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.mitem .chev {
+  font-size: 22px;
+  line-height: 1;
+}
+.mitem:disabled {
+  cursor: default;
+}
+.mitem:disabled:hover,
+.mitem:disabled:active {
+  background: transparent;
+}
+.mitem:disabled .mico {
+  background: var(--fill-2);
+  color: var(--ink-2);
+}
+.mitem:disabled .mlabel {
+  color: var(--ink-2);
+}
+.fieldError.mmsg {
+  margin: -6px 0 14px;
+}
 /* The reason under a disabled button: closer to it than the next button is, so it reads as that
    button's caption rather than a paragraph of its own. */
 .hint.btnhint {

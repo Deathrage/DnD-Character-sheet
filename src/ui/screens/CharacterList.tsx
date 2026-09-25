@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { Portrait } from '../components/Portrait.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
-import type { CharacterRow, ClassSummaryView, HitPointsView, InstallView } from '../types.js';
+import { formatWhen } from '../format.js';
+import type { CharacterRow, ClassSummaryView, CloudView, InstallView } from '../types.js';
 
 interface Props {
   rows: CharacterRow[];
@@ -13,11 +14,17 @@ interface Props {
   /** Both are called only once the player has confirmed; a delete has no undo (spec §6). */
   onClone(id: string): void;
   onDelete(id: string): void;
-  /** Absent, `installed` or `unavailable` hides the Install button. */
+  /** Absent, `installed` or `unavailable` hides the menu's Install item. */
   install?: InstallView;
   /** Starts the browser's own prompt; only called when `install` is `prompt`. */
   onInstall?(): void;
-  /** Absent hides the button — the stories and any screen without a cloud. */
+  /** Absent hides the menu's account panel and Manage cloud — the stories, and any app without a cloud. */
+  account?: Pick<CloudView, 'status' | 'user'>;
+  /** The menu is opening: the moment to settle `account.status`, which is `unknown` until asked. */
+  onOpenMenu?(): void;
+  /** Both resolve to a sentence to show in the menu, or null. */
+  onSignIn?(): Promise<string | null>;
+  onSignOut?(): Promise<string | null>;
   onOpenCloud?(): void;
 }
 
@@ -31,6 +38,10 @@ export function CharacterList({
   onImport,
   onClone,
   onDelete,
+  account,
+  onOpenMenu,
+  onSignIn,
+  onSignOut,
   onOpenCloud,
 }: Props) {
   const [confirming, setConfirming] = useState<{
@@ -38,31 +49,37 @@ export function CharacterList({
     row: CharacterRow;
   } | null>(null);
   const [showingSteps, setShowingSteps] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuMessage, setMenuMessage] = useState<string | null>(null);
+  const signedIn = account?.status === 'signedIn';
+
+  /** Every item but the account panel leaves the menu: what it opens replaces or covers it. */
+  const fromMenu = (action: () => void) => () => {
+    setMenuOpen(false);
+    action();
+  };
 
   return (
     <div className="app">
       <div className="lhead">
         <div className="vtop">
           <h1>Characters</h1>
-          <span style={{ marginLeft: 'auto', display: 'flex', gap: 12 }}>
-            {(install?.kind === 'prompt' || install?.kind === 'steps') && (
-              <button
-                type="button"
-                className="txtbtn"
-                onClick={() => (install.kind === 'prompt' ? onInstall?.() : setShowingSteps(true))}
-              >
-                Install
-              </button>
-            )}
-            {onOpenCloud !== undefined && (
-              <button type="button" className="txtbtn" onClick={onOpenCloud}>
-                Cloud
-              </button>
-            )}
-            <button type="button" className="txtbtn" onClick={onImport}>
-              Import .json
-            </button>
-          </span>
+          {/* The same quiet icon button as a card's clone and delete, not an outlined circle. */}
+          <button
+            type="button"
+            className="cicon mbtn"
+            aria-label="Menu"
+            title="Menu"
+            onClick={() => {
+              setMenuMessage(null);
+              setMenuOpen(true);
+              onOpenMenu?.();
+            }}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
         </div>
         <div className="sub">{rows.length === 1 ? '1 saved' : `${rows.length} saved`}</div>
       </div>
@@ -78,7 +95,7 @@ export function CharacterList({
                 <span className="cc">
                   {summariseClasses(row.classes)} {'·'} Level {row.level}
                 </span>
-                <span className="chp">{summariseHitPoints(row.hitPoints)}</span>
+                <span className="chp">Edited {formatWhen(row.updatedAt)}</span>
               </button>
             ) : (
               <button type="button" className="ccard damaged" onClick={() => onOpenRawJson(row.id)}>
@@ -123,6 +140,85 @@ export function CharacterList({
         +
       </button>
 
+      {menuOpen && (
+        <ResponsiveDialog title="Menu" open onClose={() => setMenuOpen(false)}>
+          {/* Each group is one section; the groups' own edges are the separators. */}
+          {account !== undefined && (
+            <>
+              <ul className="mgroup">
+                {signedIn ? (
+                  <li className="macct">
+                    <span className="mavatar" aria-hidden="true">
+                      {initialOf(account.user?.name ?? account.user?.email)}
+                    </span>
+                    <span className="mtext">
+                      <span className="mlabel">{account.user?.name ?? account.user?.email}</span>
+                      {account.user?.name != null && account.user.email !== null && (
+                        <span className="mdesc">{account.user.email}</span>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      className="txtbtn"
+                      onClick={() => void onSignOut?.().then(setMenuMessage)}
+                    >
+                      Sign out
+                    </button>
+                  </li>
+                ) : (
+                  <MenuItem
+                    icon={ICONS.account}
+                    label="Sign in with Google"
+                    description={
+                      account.status === 'signingIn'
+                        ? 'Waiting for Google…'
+                        : 'Back up characters and restore them on any device.'
+                    }
+                    disabled={account.status === 'signingIn'}
+                    onClick={() => void onSignIn?.().then(setMenuMessage)}
+                  />
+                )}
+                <MenuItem
+                  icon={ICONS.cloud}
+                  label="Manage cloud"
+                  description={
+                    signedIn ? 'Restore or delete backed-up versions.' : 'Sign in first.'
+                  }
+                  disabled={!signedIn}
+                  chevron
+                  onClick={fromMenu(() => onOpenCloud?.())}
+                />
+              </ul>
+              {menuMessage !== null && (
+                <div className="fieldError mmsg" role="alert">
+                  {menuMessage}
+                </div>
+              )}
+            </>
+          )}
+          <ul className="mgroup">
+            <MenuItem
+              icon={ICONS.import}
+              label="Import from .json"
+              description="Add a character from an exported file."
+              onClick={fromMenu(onImport)}
+            />
+          </ul>
+          {(install?.kind === 'prompt' || install?.kind === 'steps') && (
+            <ul className="mgroup">
+              <MenuItem
+                icon={ICONS.install}
+                label="Install to phone"
+                description="Starts offline, and keeps your characters safer."
+                onClick={fromMenu(() =>
+                  install.kind === 'prompt' ? onInstall?.() : setShowingSteps(true),
+                )}
+              />
+            </ul>
+          )}
+        </ResponsiveDialog>
+      )}
+
       {showingSteps && install?.kind === 'steps' && (
         <ResponsiveDialog
           title="Install the app"
@@ -159,6 +255,86 @@ export function CharacterList({
   );
 }
 
+const ICONS = {
+  account: (
+    <svg viewBox="0 0 24 24">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </svg>
+  ),
+  cloud: (
+    <svg viewBox="0 0 24 24">
+      <path d="M7 19a5 5 0 0 1-.6-9.96A6 6 0 0 1 18 10a4.5 4.5 0 0 1-.5 9z" />
+    </svg>
+  ),
+  import: (
+    <svg viewBox="0 0 24 24">
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M12 11v6M9 14l3 3 3-3" />
+    </svg>
+  ),
+  install: (
+    <svg viewBox="0 0 24 24">
+      <rect x="7" y="2" width="10" height="20" rx="2" />
+      <path d="M12 7v6M9.5 10.5 12 13l2.5-2.5M11 18h2" />
+    </svg>
+  ),
+};
+
+/**
+ * One row of the list menu. Named by its label alone; the line under it is the description, so a
+ * screen reader reads "Manage cloud, dimmed, Sign in first." rather than one run-on name.
+ */
+function MenuItem({
+  icon,
+  label,
+  description,
+  disabled = false,
+  chevron = false,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  description: string;
+  disabled?: boolean;
+  chevron?: boolean;
+  onClick(): void;
+}) {
+  const id = useId();
+  return (
+    <li>
+      <button
+        type="button"
+        className="mitem"
+        disabled={disabled}
+        aria-labelledby={`${id}l`}
+        aria-describedby={`${id}d`}
+        onClick={onClick}
+      >
+        <span className="mico" aria-hidden="true">
+          {icon}
+        </span>
+        <span className="mtext">
+          <span className="mlabel" id={`${id}l`}>
+            {label}
+          </span>
+          <span className="mdesc" id={`${id}d`}>
+            {description}
+          </span>
+        </span>
+        {chevron && (
+          <span className="chev" aria-hidden="true">
+            {'›'}
+          </span>
+        )}
+      </button>
+    </li>
+  );
+}
+
+function initialOf(name: string | null | undefined): string {
+  return name?.trim().charAt(0).toUpperCase() || '?';
+}
+
 const CONFIRM = {
   clone: {
     title: 'Clone character',
@@ -171,7 +347,7 @@ const CONFIRM = {
     button: 'Delete',
     className: 'del',
     body: (name: string) =>
-      `${name} will be removed from this browser. This cannot be undone — export it first if you might want it back.`,
+      `${name} will be removed from this app. This cannot be undone — export it first if you might want it back.`,
   },
 } as const;
 
@@ -213,9 +389,4 @@ function ConfirmDialog({
 export function summariseClasses(classes: ClassSummaryView[]): string {
   if (classes.length === 0) return 'No class';
   return classes.map((entry) => `${entry.name} ${entry.level}`).join(' / ');
-}
-
-export function summariseHitPoints({ current, total, temporary }: HitPointsView): string {
-  const temp = temporary > 0 ? ` (+${temporary} temp)` : '';
-  return `HP ${current} / ${total}${temp}`;
 }

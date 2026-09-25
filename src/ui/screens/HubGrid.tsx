@@ -59,12 +59,6 @@ export function HubGrid({
         })}
       </ul>
       <div className="sv" style={{ paddingTop: 0 }}>
-        <button type="button" className="newcat" onClick={onExport}>
-          Export this character as .json
-        </button>
-        <button type="button" className="newcat" onClick={onOpenRawJson}>
-          Open raw JSON
-        </button>
         {onUpload !== undefined && (
           <button
             type="button"
@@ -78,6 +72,12 @@ export function HubGrid({
         )}
         {uploadDisabled && uploadHint !== null && <p className="hint btnhint">{uploadHint}</p>}
         {uploadNotice != null && <p className="hint">{uploadNotice}</p>}
+        <button type="button" className="newcat" onClick={onExport}>
+          Export this character as .json
+        </button>
+        <button type="button" className="newcat" onClick={onOpenRawJson}>
+          Open raw JSON
+        </button>
       </div>
     </div>
   );

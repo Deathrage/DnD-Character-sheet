@@ -270,7 +270,7 @@ describe('CloudBackup', () => {
       kind: 'conflict',
       name: 'Sable',
       localUpdatedAt: '2026-07-25T09:41:00.000Z',
-      cloudUpdatedAt: '2026-07-25T09:41:00.000Z',
+      incomingUpdatedAt: '2026-07-25T09:41:00.000Z',
     });
 
     expect(await cloudBackup.restore(ID_A, uploadedAt, 'replace')).toEqual({ ok: true, id: ID_A });

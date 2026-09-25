@@ -65,7 +65,7 @@ export const characterRows: CharacterRow[] = [
     name: sable.name,
     level: sable.level,
     classes: sable.classes.map(({ name, level }) => ({ name, level })),
-    hitPoints: sable.hitPoints,
+    updatedAt: '2026-09-24T19:12:00.000Z',
     portrait: null,
   },
   {
@@ -74,7 +74,7 @@ export const characterRows: CharacterRow[] = [
     name: 'Thorne Ironfell',
     level: 8,
     classes: [{ name: 'Fighter (Battle Master)', level: 8 }],
-    hitPoints: { current: 71, total: 71, temporary: 0 },
+    updatedAt: '2026-09-20T21:40:00.000Z',
     portrait: null,
   },
   {
@@ -83,7 +83,7 @@ export const characterRows: CharacterRow[] = [
     name: 'Wren Duskwhisper',
     level: 4,
     classes: [{ name: 'Druid (Circle of the Moon)', level: 4 }],
-    hitPoints: { current: 27, total: 27, temporary: 0 },
+    updatedAt: '2026-08-02T17:05:00.000Z',
     portrait: null,
   },
 ];

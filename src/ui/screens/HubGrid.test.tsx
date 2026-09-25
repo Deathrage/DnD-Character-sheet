@@ -2,7 +2,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { HubGrid } from './HubGrid.js';
 
-const HINT = 'Sign in with your Google account on the Cloud screen to upload.';
+const HINT = 'Sign in with your Google account from the Characters menu to upload.';
 
 function grid(props: Partial<Parameters<typeof HubGrid>[0]> = {}) {
   const onUpload = vi.fn();

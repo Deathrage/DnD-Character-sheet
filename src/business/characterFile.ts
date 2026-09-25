@@ -7,7 +7,6 @@ import {
 } from '../data/serialization/importCharacter.js';
 import type { CharacterDocument } from '../data/schema/index.js';
 import type { CharacterSheetBO } from './characterSheet.js';
-import { createId } from './createId.js';
 
 /**
  * The document behind each file, held module-privately rather than in a field or behind a static
@@ -105,12 +104,12 @@ export class CharacterFile {
    * Takes both shapes a file has had: the `{ sheet, portrait }` envelope, and a bare document,
    * which is every file exported before portraits existed.
    *
-   * The document id is reassigned and the item ids are not (spec §9): item ids are scoped within
-   * their document, so a collision across two characters is meaningless, while two characters
-   * sharing a document id would collide in the one place it matters, the store key.
+   * Every id is kept, the document's included — a departure from spec §9, which reassigned it.
+   * Keeping it is what lets `library.add` recognise a character this browser already has and ask
+   * Replace or Keep both, exactly as a cloud restore does; Keep both is where a new id is made.
    */
   static read(text: string): { ok: true; file: CharacterFile } | { ok: false; message: string } {
-    const parsed = fromFileText(text, { assignId: createId() });
+    const parsed = fromFileText(text);
     if (!parsed.ok) return { ok: false, message: describeFailure(parsed) };
     return {
       ok: true,

@@ -10,7 +10,7 @@ export function summarize(doc: CharacterDocument, portrait: string | null): Char
     name: doc.name,
     totalLevel: classes.reduce((total, entry) => total + entry.level, 0),
     classes,
-    hitPoints: { ...doc.hitPoints },
+    updatedAt: doc.updatedAt,
     portrait,
   };
 }

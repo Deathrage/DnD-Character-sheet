@@ -589,7 +589,8 @@ describe('toCharacterRows', () => {
         name: 'Sable',
         level: 5,
         classes: [{ name: 'Rogue', level: 5 }],
-        hitPoints: { current: 38, total: 45, temporary: 0 },
+        // Stamped by autosave with the real clock, so only its shape is fixed.
+        updatedAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT/) as unknown as string,
         portrait: 'data:image/jpeg;base64,/9j/4AAQ',
       },
     ]);

@@ -71,7 +71,6 @@ describe('CharacterLibraryBO', () => {
       { id: '11111111-1111-4111-8111-111111111111', name: 'Rogue', level: 5 },
       { id: '22222222-2222-4222-8222-222222222222', name: 'Wizard', level: 2 },
     );
-    doc.hitPoints = { current: 38, total: 45, temporary: 5 };
     await repository.save(doc);
 
     const library = libraryOver(repository);
@@ -83,7 +82,7 @@ describe('CharacterLibraryBO', () => {
       { name: 'Rogue', level: 5 },
       { name: 'Wizard', level: 2 },
     ]);
-    expect(entry?.hitPoints).toEqual({ current: 38, total: 45, temporary: 5 });
+    expect(entry?.updatedAt).toBe(doc.updatedAt);
   });
 
   it('lists a damaged document, flagged and explained', async () => {
@@ -148,35 +147,64 @@ describe('CharacterLibraryBO', () => {
   });
 
   describe('add', () => {
-    it('imports a file as a second character rather than overwriting the first', async () => {
+    const fileOf = (name: string) => {
+      const read = CharacterFile.read(JSON.stringify(docFor(ID_A, name)));
+      if (!read.ok) throw new Error(read.message);
+      return read.file;
+    };
+
+    it("imports a character this browser does not have under the file's own id", async () => {
       const library = libraryOver(repository);
-      const original = await library.create('Sable');
-      original.classes.add({ name: 'Rogue', level: 5 });
 
-      const read = CharacterFile.read(CharacterFile.of(original, new Date()).text);
-      expect(read.ok).toBe(true);
-      if (!read.ok) return;
-      const copy = await library.add(read.file);
+      expect(await library.add(fileOf('Sable'))).toEqual({ ok: true, id: ID_A });
+      expect(library.entries.map((entry) => entry.name)).toEqual(['Sable']);
+    });
 
-      expect(copy.id).not.toBe(original.id);
-      expect(copy.classes.items.map((entry) => entry.name)).toEqual(['Rogue']);
-      expect(library.entries).toHaveLength(2);
+    it('asks when the character is already here, and stores nothing', async () => {
+      await repository.save(docFor(ID_A, 'Edited locally'));
+      const library = libraryOver(repository);
+      await library.load();
+
+      expect(await library.add(fileOf('Sable'))).toEqual({
+        ok: false,
+        kind: 'conflict',
+        name: 'Edited locally',
+        localUpdatedAt: '2026-07-25T09:41:00.000Z',
+        incomingUpdatedAt: '2026-07-25T09:41:00.000Z',
+      });
+      const stored = await repository.get(ID_A);
+      expect(stored?.ok && stored.doc.name).toBe('Edited locally');
+    });
+
+    it('Replace overwrites under the same id', async () => {
+      await repository.save(docFor(ID_A, 'Edited locally'));
+      const library = libraryOver(repository);
+      await library.load();
+
+      expect(await library.add(fileOf('Sable'), 'replace')).toEqual({ ok: true, id: ID_A });
+      expect(library.entries.map((entry) => entry.name)).toEqual(['Sable']);
+    });
+
+    it('Keep both stores a copy under a new id, named "(restored)"', async () => {
+      await repository.save(docFor(ID_A, 'Sable'));
+      const library = libraryOver(repository);
+      await library.load();
+
+      const result = await library.add(fileOf('Sable'), 'keepBoth');
+
+      expect(result.ok && result.id).not.toBe(ID_A);
+      expect(library.entries.map((entry) => entry.name)).toEqual(['Sable', 'Sable (restored)']);
       expect(await repository.list()).toHaveLength(2);
     });
 
-    it('autosaves edits to an imported sheet too', async () => {
+    it('keeps the restored name within the length limit', async () => {
+      await repository.save(docFor(ID_A, 'x'.repeat(80)));
       const library = libraryOver(repository);
-      const read = CharacterFile.read(
-        CharacterFile.of(await library.create('Sable'), new Date()).text,
-      );
-      if (!read.ok) return;
-      const copy = await library.add(read.file);
+      await library.load();
 
-      copy.hitPoints.setTotal(30);
-      await settle();
+      await library.add(fileOf('x'.repeat(80)), 'keepBoth');
 
-      const stored = await repository.get(copy.id);
-      expect(stored?.ok === true && stored.doc.hitPoints.total).toBe(30);
+      expect(library.entries[1]?.name).toBe(`${'x'.repeat(69)} (restored)`);
     });
   });
 
@@ -223,7 +251,7 @@ describe('CharacterLibraryBO', () => {
 
       expect(await library.entries[0]?.open()).toEqual({
         ok: false,
-        message: 'This character is no longer in this browser.',
+        message: 'This character is no longer in this app.',
       });
     });
   });
@@ -241,11 +269,12 @@ describe('CharacterLibraryBO', () => {
      * database — the version of these tests that did exactly that failed for that reason and not
      * for the one they are about.
      */
+    const SAVED_AT = '2030-01-01T12:00:00.000Z';
     const unhurried = () =>
       new CharacterLibraryBO({
         repository,
         storageGate: new StorageGate({ port: null }),
-        autosave: { debounceMs: 60_000, target: null },
+        autosave: { debounceMs: 60_000, target: null, now: () => new Date(SAVED_AT) },
       });
 
     it('re-summarises a row when the sheet it describes is saved', async () => {
@@ -254,14 +283,13 @@ describe('CharacterLibraryBO', () => {
       expect(library.entries[0]?.totalLevel).toBe(0);
 
       sheet.classes.add({ name: 'Rogue', level: 5 });
-      sheet.hitPoints.setTotal(45);
-      sheet.hitPoints.setCurrent(38);
       await library.flush();
 
       const entry = library.entries[0];
       expect(entry?.totalLevel).toBe(5);
       expect(entry?.classes).toEqual([{ name: 'Rogue', level: 5 }]);
-      expect(entry?.hitPoints).toEqual({ current: 38, total: 45, temporary: 0 });
+      // The card's "Edited …" line: a save moves it.
+      expect(entry?.updatedAt).toBe(SAVED_AT);
     });
 
     it('refreshes in place, so a caller holding the entry sees the new values', async () => {
@@ -271,11 +299,12 @@ describe('CharacterLibraryBO', () => {
       // identity, so a refresh must not swap the object out from under it.
       const held = library.entries[0];
 
-      sheet.hitPoints.setTotal(45);
+      sheet.classes.add({ name: 'Rogue', level: 5 });
       await library.flush();
 
       expect(held).toBe(library.entries[0]);
-      expect(held?.hitPoints.total).toBe(45);
+      expect(held?.totalLevel).toBe(5);
+      expect(held?.updatedAt).toBe(SAVED_AT);
     });
 
     it('leaves other rows alone', async () => {
@@ -283,11 +312,12 @@ describe('CharacterLibraryBO', () => {
       const sable = await library.create('Sable');
       await library.create('Thorne');
 
-      sable.hitPoints.setTotal(45);
+      sable.classes.add({ name: 'Rogue', level: 5 });
       await library.flush();
 
       const thorne = library.entries.find((entry) => entry.name === 'Thorne');
-      expect(thorne?.hitPoints.total).toBe(0);
+      expect(thorne?.totalLevel).toBe(0);
+      expect(thorne?.updatedAt).not.toBe(SAVED_AT);
     });
   });
 
@@ -520,11 +550,10 @@ describe('CharacterLibraryBO portraits', () => {
     sheet.dispose();
     if (!read.ok) throw new Error(read.message);
 
-    const imported = await libraryOver(repository).add(read.file);
+    const imported = await libraryOver(repository).add(read.file, 'keepBoth');
 
-    expect(imported.portrait).toBe(PORTRAIT);
+    if (!imported.ok) throw new Error('import failed');
     expect(await repository.getPortrait(imported.id)).toBe(PORTRAIT);
-    imported.dispose();
   });
 
   it('clones the portrait with the character', async () => {
@@ -590,7 +619,7 @@ describe('CharacterLibraryBO restore', () => {
     const entry = library.entries[0];
     expect(entry?.isDamaged).toBe(true);
 
-    await library.restore(docFor(ID_A, 'Sable'), null);
+    await library.restore(docFor(ID_A, 'Sable'), null, 'replace');
 
     // Same object: the raw-JSON screen keys an effect on entry identity.
     expect(library.entries).toHaveLength(1);
@@ -629,7 +658,13 @@ describe('CharacterLibraryBO restore', () => {
     const opened = await library.entries[0]!.open();
     if (!opened.ok) throw new Error(opened.message);
 
-    await expect(library.restore(docFor(ID_A, 'Restored'), null)).rejects.toThrow(/open/);
+    expect(await library.restore(docFor(ID_A, 'Restored'), null, 'replace')).toEqual({
+      ok: false,
+      kind: 'failed',
+      message: "Close this character's sheet before replacing it.",
+    });
+    const stored = await repository.get(ID_A);
+    expect(stored?.ok && stored.doc.name).toBe('Sable');
     opened.sheet.dispose();
   });
 });

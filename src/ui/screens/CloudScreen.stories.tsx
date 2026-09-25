@@ -60,7 +60,7 @@ export const Conflict: Story = {
     conflict: {
       name: 'Zahir ibn Talaar',
       localUpdatedAt: '2026-09-30T20:10:00.000Z',
-      cloudUpdatedAt: '2026-09-24T17:58:40.120Z',
+      incomingUpdatedAt: '2026-09-24T17:58:40.120Z',
     },
   },
 };

@@ -12,8 +12,7 @@ import type {
 import { StorageError } from '../data/repository/storageFailure.js';
 import { summarize } from '../data/repository/summarize.js';
 import { CURRENT } from '../data/schema/index.js';
-import type { CharacterLibraryBO } from './characterLibrary.js';
-import { createId } from './createId.js';
+import type { CharacterLibraryBO, RestoreChoice, RestoreResult } from './characterLibrary.js';
 import { describeStorageFailure } from './errors.js';
 import './mobxConfig.js';
 
@@ -22,18 +21,6 @@ export type { CloudCharacter, CloudUser, CloudVersion };
 /** `unknown` until the first check (`checkSignIn`, `refresh`, or any cloud action) loads Firebase. */
 export type CloudStatus = 'unknown' | 'signedOut' | 'signingIn' | 'signedIn' | 'unavailable';
 export type UploadResult = { ok: true; uploadedAt: string } | { ok: false; message: string };
-export type RestoreChoice = 'replace' | 'keepBoth';
-export type RestoreResult =
-  | { ok: true; id: string }
-  | { ok: false; kind: 'failed'; message: string }
-  | {
-      ok: false;
-      kind: 'conflict';
-      name: string;
-      /** `null` when the local copy is damaged and has no readable `updatedAt`. */
-      localUpdatedAt: string | null;
-      cloudUpdatedAt: string;
-    };
 
 export interface CloudBackupOptions {
   /** Defaults to a dynamic import, so Firebase is never executed before a cloud action. */
@@ -169,7 +156,7 @@ export class CloudBackup {
   /**
    * Uploads what is stored for this character as a new version, flushing autosave first so the
    * last half second of typing is in it. Signed out, it refuses with a sentence: signing in is the
-   * cloud screen's, and the sheet's button is disabled until then.
+   * character list's menu, and the sheet's button is disabled until then.
    */
   async upload(characterId: string): Promise<UploadResult> {
     if (this.#state.busy) return { ok: false, message: BUSY };
@@ -201,7 +188,7 @@ export class CloudBackup {
       await this.#library.flush();
       const stored = await this.#library.repository.get(characterId);
       if (stored === null)
-        return { ok: false, message: 'This character is no longer in this browser.' };
+        return { ok: false, message: 'This character is no longer in this app.' };
       if (!stored.ok) {
         return {
           ok: false,
@@ -229,8 +216,8 @@ export class CloudBackup {
   }
 
   /**
-   * Without `choice`, a character already in this browser comes back as a conflict for the player
-   * to settle. `replace` keeps the id and overwrites; `keepBoth` restores a copy under a new id.
+   * Settled by `library.restore`, the same path an imported file takes: without `choice`, a
+   * character already in this browser comes back as a conflict for the player to settle.
    */
   async restore(
     characterId: string,
@@ -243,36 +230,13 @@ export class CloudBackup {
       ?.versions.find((candidate) => candidate.uploadedAt === uploadedAt);
     if (version === undefined) return failed(describeCloudError(new CloudError('NOT_FOUND')));
 
-    // Decided from storage, not from `entries`: a list that failed to load, or a character another
-    // tab stored since, would otherwise be overwritten with no dialog.
-    let stored;
-    try {
-      stored = await this.#library.repository.get(characterId);
-    } catch (caught) {
-      return failed(this.#describe(caught));
-    }
-    if (stored !== null && choice === undefined) {
-      const entry = this.#library.entries.find((candidate) => candidate.id === characterId);
-      return {
-        ok: false,
-        kind: 'conflict',
-        name: entry?.name ?? (stored.ok ? stored.doc.name : 'Unreadable character'),
-        localUpdatedAt: stored.ok ? stored.doc.updatedAt : null,
-        cloudUpdatedAt: version.sheetUpdatedAt,
-      };
-    }
-    const keepId = stored === null || choice === 'replace';
-    if (keepId && this.#library.isOpen(characterId)) {
-      return failed("Close this character's sheet before replacing it.");
-    }
-
-    // Typed through `as`, not an annotation: an annotated `= null` narrows `id` to `null`,
+    // Typed through `as`, not an annotation: an annotated `= null` narrows `result` to `null`,
     // and TypeScript does not see the assignment inside the callback.
-    let id = null as string | null;
+    let result = null as RestoreResult | null;
     const message = await this.#run(async (repository) => {
       const payload = await repository.getPayload(characterId, uploadedAt);
       if (payload === null) throw new CloudError('NOT_FOUND');
-      const decoded = await decodePayload(payload, keepId ? characterId : createId());
+      const decoded = await decodePayload(payload, characterId);
       if (!decoded.ok) {
         throw new Error(
           decoded.kind === 'document'
@@ -281,10 +245,9 @@ export class CloudBackup {
           { cause: RESTORE_REFUSED },
         );
       }
-      await this.#library.restore(decoded.doc, decoded.portrait);
-      id = decoded.doc.id;
+      result = await this.#library.restore(decoded.doc, decoded.portrait, choice);
     });
-    return message === null && id !== null ? { ok: true, id } : failed(message ?? UNAVAILABLE);
+    return message === null && result !== null ? result : failed(message ?? UNAVAILABLE);
   }
 
   deleteVersion(characterId: string, uploadedAt: string): Promise<string | null> {

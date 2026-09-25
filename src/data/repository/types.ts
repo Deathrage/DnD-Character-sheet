@@ -9,7 +9,8 @@ export interface CharacterSummary {
   totalLevel: number;
   /** Flattened in creation order for display. */
   classes: { name: string; level: number }[];
-  hitPoints: { current: number; total: number; temporary: number };
+  /** The document's own `updatedAt`, which autosave stamps on every save. */
+  updatedAt: string;
   /**
    * A data URL, or null. Read from the portraits store alongside the document, so the list can
    * show it without a second round trip per row.

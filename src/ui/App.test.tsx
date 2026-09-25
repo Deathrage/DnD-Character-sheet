@@ -50,7 +50,7 @@ function renderApp(
   return { library, ...render(<App library={library} cloud={cloud} />) };
 }
 
-const HINT = 'Sign in with your Google account on the Cloud screen to upload.';
+const HINT = 'Sign in with your Google account from the Characters menu to upload.';
 
 beforeAll(stubDialogElement);
 
@@ -102,6 +102,25 @@ describe('App', () => {
       expect((upload as HTMLButtonElement).disabled).toBe(disabled);
     },
   );
+
+  it('asks before importing a character that is already here, and Keep both adds "(restored)"', async () => {
+    await putRaw(ID_A, docFor(ID_A, 'Sable'));
+    const { library, container } = renderApp();
+    await screen.findByText('Sable');
+
+    const picker = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+    const file = new File([JSON.stringify(docFor(ID_A, 'Sable'))], 'sable.json');
+    Object.defineProperty(picker, 'files', { value: [file], configurable: true });
+    fireEvent.change(picker);
+
+    expect(await screen.findByText(/Sable is already in this app/)).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'Keep both' }));
+
+    // Listed, not opened: the player stays on the list.
+    expect(await screen.findByText('Sable (restored)')).toBeDefined();
+    expect(library.entries.map((entry) => entry.name)).toEqual(['Sable', 'Sable (restored)']);
+    expect(globalThis.location.hash).toBe('');
+  });
 
   it('routes into a section and back out again', async () => {
     renderApp();

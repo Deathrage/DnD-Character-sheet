@@ -540,7 +540,7 @@ export function toCharacterRows(library: CharacterLibraryBO): CharacterRow[] {
           name: entry.name,
           level: entry.totalLevel,
           classes: entry.classes,
-          hitPoints: entry.hitPoints,
+          updatedAt: entry.updatedAt ?? '',
           portrait: entry.portrait,
         },
   );
