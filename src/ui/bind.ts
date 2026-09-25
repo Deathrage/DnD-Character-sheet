@@ -182,6 +182,7 @@ export function toCharacterView(sheet: CharacterSheetBO): CharacterView {
       total: die.total,
     })),
     armorClass: sheet.armorClass,
+    speed: sheet.abilitiesAndSkills.speed,
     portrait: sheet.portrait,
   };
 }
@@ -323,6 +324,7 @@ function vitalsActions(sheet: CharacterSheetBO): VitalsActions {
     setTotalHitPoints: (value) => sheet.hitPoints.setTotal(value),
     setTemporaryHitPoints: (value) => sheet.hitPoints.setTemporary(value),
     setArmorClass: (value) => sheet.setArmorClass(value),
+    setSpeed: (value) => sheet.abilitiesAndSkills.setSpeed(value),
     // Any failure is the file's — undecodable, or somehow still too large — so it is told to
     // the player rather than thrown out of an event handler as an unhandled rejection.
     setPortrait: async (file, crop) => {
@@ -539,7 +541,6 @@ export function toCharacterRows(library: CharacterLibraryBO): CharacterRow[] {
           id: entry.id,
           name: entry.name,
           level: entry.totalLevel,
-          classes: entry.classes,
           updatedAt: entry.updatedAt ?? '',
           portrait: entry.portrait,
         },

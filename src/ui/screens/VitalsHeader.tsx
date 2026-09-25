@@ -22,9 +22,12 @@ interface Props {
  */
 export function VitalsHeader({ character, actions, onBack }: Props) {
   const [dialog, setDialog] = useState<'classes' | 'hitDice' | 'portrait' | null>(null);
+  // Collapsed, the header gives its height back to the section below and keeps the numbers
+  // readable in one line. Per mount only: every sheet opens expanded.
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <div className="vitals">
+    <div className={collapsed ? 'vitals compact' : 'vitals'}>
       <div className="vident">
         <button type="button" className="back" onClick={onBack} aria-label="Back to characters">
           {'‹'}
@@ -46,70 +49,96 @@ export function VitalsHeader({ character, actions, onBack }: Props) {
               value={character.name}
               onCommit={actions.renameCharacter}
             />
-            {/* Derived on the facade, never stored — see spec §1's deliberate exception. */}
-            <span className="lvpill">Lvl {character.level}</span>
+            <button
+              type="button"
+              className="vtoggle"
+              aria-label={collapsed ? 'Expand vitals' : 'Collapse vitals'}
+              aria-expanded={!collapsed}
+              onClick={() => setCollapsed(!collapsed)}
+            >
+              {'›'}
+            </button>
           </div>
 
-          <button type="button" className="classbtn" onClick={() => setDialog('classes')}>
-            {character.classes.length === 0 ? (
-              <span className="clsum placeholder">Add class{'…'}</span>
-            ) : (
-              <span className="clsum">
-                {character.classes.map((entry) => `${entry.name} ${entry.level}`).join(' · ')}
-              </span>
-            )}
-            <span className="chev">{'›'}</span>
-          </button>
+          {collapsed ? (
+            <button type="button" className="vsum" onClick={() => setCollapsed(false)}>
+              {summariseVitals(character)}
+            </button>
+          ) : (
+            <button type="button" className="classbtn" onClick={() => setDialog('classes')}>
+              {/* Derived on the facade, never stored — see spec §1's deliberate exception.
+                  Each class's own level is in the dialog; the button has room for names only. */}
+              <span className="lvpill">Lvl {character.level}</span>
+              {character.classes.length === 0 ? (
+                <span className="clsum placeholder">Add class{'…'}</span>
+              ) : (
+                <span className="clsum">
+                  {character.classes.map((entry) => entry.name).join(' · ')}
+                </span>
+              )}
+              <span className="chev">{'›'}</span>
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="tiles">
-        <div className="tile hp">
-          <div>
-            <div className="tl">Hit Points</div>
-            <div className="hpwrap">
-              {/* Steppers go on the numbers that move during a fight — current HP and temp —
+      {!collapsed && (
+        <div className="tiles">
+          <div className="tile hp">
+            <div>
+              <div className="tl">Hit Points</div>
+              <div className="hpwrap">
+                {/* Steppers go on the numbers that move during a fight — current HP and temp —
                   and not on max HP or AC, which are set once a level and would only lose the
                   row the width. */}
+                <NumberField
+                  label="Current hit points"
+                  value={character.hitPoints.current}
+                  onChange={actions.setCurrentHitPoints}
+                  stepper
+                />
+                <span className="slash">/</span>
+                <NumberField
+                  label="Total hit points"
+                  value={character.hitPoints.total}
+                  onChange={actions.setTotalHitPoints}
+                />
+              </div>
+            </div>
+            <div className="tempbox">
+              <div className="tl">Temp</div>
               <NumberField
-                label="Current hit points"
-                value={character.hitPoints.current}
-                onChange={actions.setCurrentHitPoints}
+                label="Temporary hit points"
+                value={character.hitPoints.temporary}
+                onChange={actions.setTemporaryHitPoints}
                 stepper
-              />
-              <span className="slash">/</span>
-              <NumberField
-                label="Total hit points"
-                value={character.hitPoints.total}
-                onChange={actions.setTotalHitPoints}
               />
             </div>
           </div>
-          <div className="tempbox">
-            <div className="tl">Temp</div>
+
+          <button type="button" className="tile btn" onClick={() => setDialog('hitDice')}>
+            <span className="tl">Hit Dice</span>
+            <span className="tval hdtile">{summariseHitDice(character)}</span>
+          </button>
+
+          <div className="tile">
+            {/* "AC", not "Armor Class": at a quarter of the row the long form wraps. */}
+            <div className="tl">AC</div>
             <NumberField
-              label="Temporary hit points"
-              value={character.hitPoints.temporary}
-              onChange={actions.setTemporaryHitPoints}
-              stepper
+              label="Armor class"
+              value={character.armorClass}
+              onChange={actions.setArmorClass}
             />
           </div>
-        </div>
 
-        <button type="button" className="tile btn" onClick={() => setDialog('hitDice')}>
-          <span className="tl">Hit Dice</span>
-          <span className="tval hdtile">{summariseHitDice(character)}</span>
-        </button>
-
-        <div className="tile">
-          <div className="tl">Armor Class</div>
-          <NumberField
-            label="Armor class"
-            value={character.armorClass}
-            onChange={actions.setArmorClass}
-          />
+          {/* The other number read every turn of a fight. Stored with abilities and skills,
+              so this is a second door onto the same field, not a copy. */}
+          <div className="tile">
+            <div className="tl">Speed</div>
+            <NumberField label="Speed" value={character.speed} onChange={actions.setSpeed} />
+          </div>
         </div>
-      </div>
+      )}
 
       <ClassesDialog
         open={dialog === 'classes'}
@@ -252,6 +281,16 @@ function PortraitDialog({ open, onClose, character, actions }: DialogProps) {
 function summariseHitDice({ hitDices }: CharacterView): string {
   if (hitDices.length === 0) return 'Tap to set up';
   return hitDices.map((die) => `${die.current}/${die.total} d${die.size}`).join(' · ');
+}
+
+function summariseVitals({ level, hitPoints, hitDices, armorClass }: CharacterView): string {
+  const temp = hitPoints.temporary > 0 ? ` +${hitPoints.temporary}` : '';
+  return [
+    `Lvl ${level}`,
+    `HP ${hitPoints.current}/${hitPoints.total}${temp}`,
+    ...hitDices.map((die) => `${die.current}/${die.total} d${die.size}`),
+    `AC ${armorClass}`,
+  ].join(' · ');
 }
 
 interface DialogProps {

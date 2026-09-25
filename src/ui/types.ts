@@ -57,6 +57,8 @@ export interface CharacterView {
   hitPoints: HitPointsView;
   hitDices: HitDieView[];
   armorClass: number;
+  /** Stored under abilities and skills; the header shows it too, beside armor class. */
+  speed: number;
   /** A data URL, or `null` when none has been picked. */
   portrait: string | null;
 }
@@ -67,6 +69,7 @@ export interface VitalsActions {
   setTotalHitPoints(value: number): void;
   setTemporaryHitPoints(value: number): void;
   setArmorClass(value: number): void;
+  setSpeed(value: number): void;
   /** Crops and compresses the picked image and stores it; the message when it could not be used. */
   setPortrait(file: Blob, crop: Crop): Promise<NameResult>;
   removePortrait(): void;
@@ -80,14 +83,6 @@ export interface VitalsActions {
   removeHitDie(size: number): void;
 }
 
-/**
- * A list row shows classes by name and level and nothing else. Deliberately not `ClassView`: the
- * row is built from the repository's `CharacterSummary`, which drops the stored class ids because
- * a summary exists precisely to avoid opening the document. Asking for an id here would have made
- * the type unsatisfiable without inventing one.
- */
-export type ClassSummaryView = Pick<ClassView, 'name' | 'level'>;
-
 /** One row of the character list. Mirrors the repository's `ListEntry` (spec §5). */
 export type CharacterRow =
   | {
@@ -95,7 +90,6 @@ export type CharacterRow =
       id: string;
       name: string;
       level: number;
-      classes: ClassSummaryView[];
       /** When it was last edited, as an ISO timestamp. */
       updatedAt: string;
       portrait: string | null;

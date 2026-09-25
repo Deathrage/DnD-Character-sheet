@@ -2,7 +2,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { Portrait } from '../components/Portrait.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import { formatWhen, initialOf } from '../format.js';
-import type { CharacterRow, ClassSummaryView, CloudView, InstallView } from '../types.js';
+import type { CharacterRow, CloudView, InstallView } from '../types.js';
 
 interface Props {
   rows: CharacterRow[];
@@ -92,10 +92,10 @@ export function CharacterList({
               <button type="button" className="ccard" onClick={() => onOpen(row.id)}>
                 <Portrait src={row.portrait} name={row.name} />
                 <span className="cn">{row.name}</span>
+                <span className="cid">ID: {row.id}</span>
                 <span className="cc">
-                  {summariseClasses(row.classes)} {'·'} Level {row.level}
+                  Level {row.level} {'·'} Edited {formatWhen(row.updatedAt)}
                 </span>
-                <span className="chp">Edited {formatWhen(row.updatedAt)}</span>
               </button>
             ) : (
               <button type="button" className="ccard damaged" onClick={() => onOpenRawJson(row.id)}>
@@ -380,9 +380,4 @@ function ConfirmDialog({
       </p>
     </ResponsiveDialog>
   );
-}
-
-export function summariseClasses(classes: ClassSummaryView[]): string {
-  if (classes.length === 0) return 'No class';
-  return classes.map((entry) => `${entry.name} ${entry.level}`).join(' / ');
 }

@@ -72,3 +72,46 @@ describe('VitalsHeader portrait', () => {
     expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull();
   });
 });
+
+describe('VitalsHeader collapse', () => {
+  it('swaps the tiles for a one-line summary and back', () => {
+    header(null);
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse vitals' }));
+    expect(screen.queryByLabelText('Current hit points')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Rogue/ })).toBeNull();
+    expect(screen.getByText('Lvl 7 · HP 38/45 +5 · 2/2 d6 · 3/5 d8 · AC 15')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand vitals' }));
+    expect(screen.getByLabelText('Current hit points')).toBeTruthy();
+  });
+});
+
+describe('VitalsHeader speed', () => {
+  it('sits beside armor class and writes through setSpeed', () => {
+    const setSpeed = vi.fn();
+    render(
+      <VitalsHeader
+        character={sable}
+        actions={{ ...noVitalsActions, setSpeed }}
+        onBack={() => {}}
+      />,
+    );
+    const field = screen.getByLabelText('Speed') as HTMLInputElement;
+    expect(field.value).toBe('30');
+    fireEvent.change(field, { target: { value: '25' } });
+    expect(setSpeed).toHaveBeenCalledWith(25);
+  });
+});
+
+describe('VitalsHeader classes', () => {
+  it('shows the total level and class names, and the levels behind a tap', () => {
+    header(null);
+    const button = screen.getByRole('button', {
+      name: /^Lvl 7\s*Rogue \(Arcane Trickster\) · Wizard \(Evoker\)/,
+    });
+    fireEvent.click(button);
+    expect(
+      (screen.getByLabelText('Level of Rogue (Arcane Trickster)') as HTMLInputElement).value,
+    ).toBe('5');
+  });
+});

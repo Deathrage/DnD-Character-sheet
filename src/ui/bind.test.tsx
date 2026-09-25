@@ -84,6 +84,7 @@ describe('toSheetData', () => {
         { size: 8, current: 0, total: 5 },
       ],
       armorClass: 15,
+      speed: 30,
       portrait: 'data:image/jpeg;base64,/9j/4AAQ',
     });
 
@@ -269,6 +270,12 @@ describe('toSheetActions', () => {
       savingThrowProficient: true,
     });
     expect(doc.abilitiesAndSkills.skills.stealth.expertise).toBe(true);
+  });
+
+  it("sets speed from the header, into the abilities section's field", () => {
+    const sheet = newSheet();
+    toSheetActions(sheet).vitals.setSpeed(25);
+    expect(sheet.toDocument().abilitiesAndSkills.speed).toBe(25);
   });
 
   /**
@@ -588,7 +595,6 @@ describe('toCharacterRows', () => {
         id: sheet.id,
         name: 'Sable',
         level: 5,
-        classes: [{ name: 'Rogue', level: 5 }],
         // Stamped by autosave with the real clock, so only its shape is fixed.
         updatedAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT/) as unknown as string,
         portrait: 'data:image/jpeg;base64,/9j/4AAQ',
