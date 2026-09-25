@@ -200,14 +200,14 @@ back on the next load (criterion 14).
       - deleting one of them keeps the portrait, deleting the other removes it, and Delete all
         empties the cloud
       - a signed-out `#/cloud` lands on the character list
-      Another account's access is covered by `npm run test:rules`, against the real rules.
+        Another account's access is covered by `npm run test:rules`, against the real rules.
     - **A nearly full cloud is slow to open on a phone.** Measured 2026-09-25 with 50 versions
       (980 KB), from pressing Manage cloud to a full list, in the dev build:
       - desktop: about 0.3 s
       - 4× CPU throttle: 3.1–3.6 s
       - 6× CPU throttle: 7.3 s
-      With 2 versions the same steps take 0.3 s and 0.6 s, so decoding 48 sheets (gunzip, parse,
-      validate) costs about 3 s on a mid-range phone. Not optimised yet. Candidates:
+        With 2 versions the same steps take 0.3 s and 0.6 s, so decoding 48 sheets (gunzip, parse,
+        validate) costs about 3 s on a mid-range phone. Not optimised yet. Candidates:
       - decode in a Web Worker, which keeps the page responsive but no faster
       - render versions as they decode instead of all at once
       - summarise from the raw JSON and validate in full only on restore, which would change
