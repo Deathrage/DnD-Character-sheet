@@ -46,11 +46,20 @@ body {
 }
 
 /* The real page only (Storybook has no `#root`): a column, so the update strip above the app
-   takes its height from the app instead of pushing the page into a scroll. */
+   takes its height from the app instead of pushing the page into a scroll.
+
+   Padded by the safe-area insets because index.html asks for `viewport-fit=cover`, and Chrome on
+   Android honours it — in an installed app too — by extending the viewport, and so `100dvh`, under
+   the system navigation bar. Unpadded, the bottom of every screen sat beneath that bar, the list's
+   add button half hidden. The padding is paper so the strip under a translucent bar matches the
+   app; everywhere else the insets are 0 and this changes nothing. */
 #root {
   display: flex;
   flex-direction: column;
   height: 100dvh;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  background: var(--paper);
 }
 #root > .app {
   flex: 1 1 auto;
@@ -79,10 +88,13 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   }
   /* The frame's 24px of stage above and below is padding, so it shrinks to what the strip leaves
-     rather than to a fixed share of the window. The strip cancels the top padding to sit flush. */
+     rather than to a fixed share of the window. The strip cancels the 24px to sit flush under
+     whatever inset remains. The stage, not paper, shows around the frame. */
   #root {
     box-sizing: border-box;
-    padding-block: 24px;
+    padding-block: calc(24px + env(safe-area-inset-top, 0px))
+      calc(24px + env(safe-area-inset-bottom, 0px));
+    background: none;
   }
   #root > .updatePrompt {
     margin: -24px 0 24px;
@@ -901,6 +913,9 @@ body {
     overflow-y: auto;
     border-radius: 18px 18px 0 0;
     border-bottom: none;
+    /* The sheet reaches the viewport's bottom edge, which is under the navigation bar when the
+       page is edge-to-edge (see `#root`): its last row of buttons must stay above it. */
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     animation: sheet-up 180ms ease-out;
   }
 }
