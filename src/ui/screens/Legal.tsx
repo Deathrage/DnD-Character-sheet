@@ -141,7 +141,10 @@ const PAGES: Record<LegalPage, { title: string; body: ReactNode }> = {
             Backups: until you delete them on the Cloud screen, or ask me to delete your account.
           </li>
           <li>Your account: until you ask me to delete it. Signing out deletes nothing.</li>
-          <li>Hosting and sign-in logs: for the limited period Google keeps them.</li>
+          <li>
+            Hosting, sign-in and profile-picture request logs: for the limited period Google keeps
+            them.
+          </li>
           <li>
             Everything in the cloud is deleted if cloud backup is discontinued, after the notice the{' '}
             {termsLink} promise.
@@ -152,7 +155,8 @@ const PAGES: Record<LegalPage, { title: string; body: ReactNode }> = {
         <p>
           The app stores your characters and portraits in your browser&rsquo;s IndexedDB, keeps a
           few settings in its local and session storage, and caches itself so it works offline. When
-          you are signed in, Firebase keeps your sign-in session in browser storage. All of this is
+          you are signed in, Firebase keeps your sign-in session in browser storage, and your
+          browser may keep your Google profile picture in its ordinary cache. All of this is
           strictly necessary for the app you are using, so it needs no consent. The app uses no
           cookies or trackers for analytics or advertising.
         </p>
