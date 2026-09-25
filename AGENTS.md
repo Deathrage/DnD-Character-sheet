@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 805 tests across 57 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 810 tests across 58 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.

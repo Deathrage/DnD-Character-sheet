@@ -12,6 +12,8 @@ export interface CloudUser {
   uid: string;
   name: string | null;
   email: string | null;
+  /** Google's profile picture, an https URL on Google's servers; never copied into the app. */
+  photoUrl: string | null;
 }
 
 /**

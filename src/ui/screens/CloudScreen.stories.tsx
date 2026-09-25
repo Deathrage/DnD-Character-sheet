@@ -14,7 +14,7 @@ const meta = {
     onResolveConflict: () => {},
     view: {
       status: 'signedIn',
-      user: { name: 'Ja', email: 'ja@example.com' },
+      user: { name: 'Ja', email: 'ja@example.com', photoUrl: null },
       usedBytes: 78_000,
       limitBytes: 1_048_576,
       busy: false,
@@ -80,7 +80,7 @@ export const Damaged: Story = {
   args: {
     view: {
       status: 'signedIn',
-      user: { name: 'Ja', email: 'ja@example.com' },
+      user: { name: 'Ja', email: 'ja@example.com', photoUrl: null },
       usedBytes: 3_000,
       limitBytes: 1_048_576,
       busy: false,

@@ -73,7 +73,10 @@ describe('CharacterList menu: account and cloud', () => {
   it('signed in, names the account and opens the cloud', () => {
     const onOpenCloud = vi.fn();
     list({
-      account: { status: 'signedIn', user: { name: 'Dev', email: 'dev@example.com' } },
+      account: {
+        status: 'signedIn',
+        user: { name: 'Dev', email: 'dev@example.com', photoUrl: null },
+      },
       onOpenCloud,
     });
     expect(screen.getByText('Dev')).toBeTruthy();
@@ -118,7 +121,7 @@ describe('CharacterList menu: legal', () => {
   // Kept while signed in too: the terms cover using the backup, not only the moment of sign-in.
   it.each([
     { status: 'signedOut', user: null },
-    { status: 'signedIn', user: { name: 'Dev', email: 'dev@example.com' } },
+    { status: 'signedIn', user: { name: 'Dev', email: 'dev@example.com', photoUrl: null } },
   ] as const)('names the terms in the account group when $status', (account) => {
     list({ account });
     const note = screen.getByText(/By using cloud backup you accept/);

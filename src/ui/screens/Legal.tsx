@@ -99,8 +99,10 @@ const PAGES: Record<LegalPage, { title: string; body: ReactNode }> = {
             <strong>Your account.</strong> Google shares your name, email address and profile
             picture link with the app. Firebase Authentication, a Google service, stores them with
             an account ID and the times you created the account and last signed in. The app shows
-            your name and email address; it does not use your picture. During sign-in Google also
-            processes your IP address and browser details to prevent abuse.
+            your name, email address and picture. The picture is not copied into the app: your
+            browser loads it from Google each time, so Google receives your IP address then too.
+            During sign-in Google also processes your IP address and browser details to prevent
+            abuse.
           </li>
           <li>
             <strong>Your backups.</strong> Each upload stores a copy of the character sheet and its

@@ -1,6 +1,7 @@
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import { ConflictDialog } from '../components/ConflictDialog.js';
-import { formatWhen, initialOf } from '../format.js';
+import { Avatar } from '../components/Avatar.js';
+import { formatWhen } from '../format.js';
 import { formatBytes } from '../../shared/formatBytes.js';
 import type { CloudView, ConflictView } from '../types.js';
 
@@ -58,9 +59,7 @@ export function CloudScreen({
             {/* The list menu's account panel, so the account looks the same wherever it shows. */}
             <div className="mgroup">
               <div className="macct">
-                <span className="mavatar" aria-hidden="true">
-                  {initialOf(who)}
-                </span>
+                <Avatar name={who} photoUrl={view.user?.photoUrl ?? null} />
                 <span className="mtext">
                   <span className="mlabel">{who}</span>
                   {view.user?.name != null && view.user.email !== null && (

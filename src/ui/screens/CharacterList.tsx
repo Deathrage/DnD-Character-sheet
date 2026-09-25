@@ -1,7 +1,8 @@
 import { useId, useState, type ReactNode } from 'react';
 import { Portrait } from '../components/Portrait.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
-import { formatWhen, initialOf } from '../format.js';
+import { Avatar } from '../components/Avatar.js';
+import { formatWhen } from '../format.js';
 import type { LegalPage } from '../route.js';
 import type { CharacterRow, CloudView, InstallView } from '../types.js';
 import { CloudTerms } from './Legal.js';
@@ -152,9 +153,10 @@ export function CharacterList({
               <ul className="mgroup">
                 {signedIn ? (
                   <li className="macct">
-                    <span className="mavatar" aria-hidden="true">
-                      {initialOf(account.user?.name ?? account.user?.email)}
-                    </span>
+                    <Avatar
+                      name={account.user?.name ?? account.user?.email}
+                      photoUrl={account.user?.photoUrl ?? null}
+                    />
                     <span className="mtext">
                       <span className="mlabel">{account.user?.name ?? account.user?.email}</span>
                       {account.user?.name != null && account.user.email !== null && (

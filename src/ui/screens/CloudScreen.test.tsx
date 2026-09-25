@@ -8,7 +8,7 @@ beforeAll(stubDialogElement);
 
 const signedIn: CloudView = {
   status: 'signedIn',
-  user: { name: 'Ja', email: 'ja@example.com' },
+  user: { name: 'Ja', email: 'ja@example.com', photoUrl: null },
   usedBytes: 312_400,
   limitBytes: 1_048_576,
   busy: false,
