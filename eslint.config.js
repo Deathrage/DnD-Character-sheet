@@ -108,7 +108,11 @@ export default tseslint.config(
   }),
   // src/data/schema/ is the one place allowed to reach into a version directory, so it is
   // split out of the `data` boundary above instead of inheriting the schema-version pattern.
-  boundary('data/schema', ['business', 'ui'], { extra: [FIREBASE_PATTERN] }),
+  // It still may not reach into the cloud layout's version files — that isolation is unrelated
+  // to schema versions being internal to this directory.
+  boundary('data/schema', ['business', 'ui'], {
+    extra: [FIREBASE_PATTERN, LAYOUT_VERSION_PATTERN],
+  }),
   // src/data/remote/ is the one place allowed to import firebase — split out for the same
   // reason. Its own layout/ subdirectory is carved out below so it, alone, may import a layout
   // version file.
