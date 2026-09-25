@@ -492,7 +492,13 @@ live in `docs/BACKLOG.md` — add new ones there, not here:
   as `NamedItemBO.moveTo` with a different target type if moving a weapon to "other" is ever
   wanted.
 - The screens are the wireframe's. They have never been reviewed on a real phone, only in
-  Storybook's viewport toolbar.
+  Storybook's viewport toolbar — except once, which is how this was found: `viewport-fit=cover`
+  lets Chrome on Android draw the installed app under the system navigation bar, so `100dvh`
+  reaches under it and the list's add button was half hidden. Seen on a phone with three-button
+  navigation, and only after a reload (pull-to-refresh, or Reload in the update strip) — a fresh
+  launch was fine. `#root` and the bottom sheet pad by
+  `env(safe-area-inset-*)`; anything else anchored to the bottom edge must too. Chromium can
+  simulate it: CDP `Emulation.setSafeAreaInsetsOverride` with `{ insets: { bottom: 48 } }`.
 - **The character list has no order.** `repository.list()` walks an IndexedDB cursor, which is
   key order — and the key is a uuid, so the list is effectively shuffled. Sorting by `updatedAt`
   descending ("most recently played first") is the obvious fix and belongs in `list()` or in
