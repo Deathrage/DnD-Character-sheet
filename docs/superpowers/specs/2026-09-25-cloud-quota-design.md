@@ -83,8 +83,14 @@ largest accepted document:
 
 - For every value type, the formula lands on exactly 1,048,576 bytes, with one exception: empty
   maps and arrays measure one byte more. Production is assumed to agree.
-- A **single field** is capped earlier, at 1,048,487 bytes. That limit is separate, and cannot
-  bind here, because the largest field is one sheet.
+- A **single field** is capped earlier, at 1,048,487 bytes. That limit is separate, but it never
+  binds here. The largest field is `characters`, nearly the whole document, and what the document
+  must spend outside that value is at least 89 bytes: the name of `cloud/{uid}` with a one-character
+  uid, `("cloud" 5 + 1) + (1 + 1) + 16` = 24; `layoutVersion: 2`, `(13 + 1) + 8` = 22; the key
+  `characters`, `10 + 1` = 11; and the document's own 32 — with `portraits` absent, which is the
+  smallest case. So `characters` is at most 1,048,576 − 89 = 1,048,487 bytes, exactly the cap:
+  any document within the limit has every field within it too. (A real uid is 28 characters,
+  which leaves 27 bytes more headroom.)
 
 Used for three things: the usage line, each version's size on the cloud screen (its version map,
 so a shared portrait is counted only in the total), and the quota message (§5). It is only ever

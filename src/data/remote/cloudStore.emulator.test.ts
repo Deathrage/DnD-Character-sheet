@@ -243,7 +243,9 @@ describe('cloudStore against the emulator and the real rules', () => {
   });
 
   it('refuses a write exactly where size.ts puts the limit', async () => {
-    // Four versions, so no single field comes near Firestore's separate 1,048,487-byte field cap.
+    // All four versions sit inside `characters`, so that one field nears Firestore's separate
+    // 1,048,487-byte field cap. It cannot pass it: the rest of any `cloud/{uid}` document is at
+    // least 89 bytes (spec §3). So what refuses `over` below is the document limit.
     async function fill(uid: string, extra: number) {
       const store = storeAs(uid);
       for (const [index, at] of [T1, T2, '2026-09-25T12:00:00.000Z'].entries()) {
