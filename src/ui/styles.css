@@ -48,11 +48,10 @@ body {
 /* The real page only (Storybook has no `#root`): a column, so the update strip above the app
    takes its height from the app instead of pushing the page into a scroll.
 
-   Padded by the safe-area insets because index.html asks for `viewport-fit=cover`, and Chrome on
-   Android honours it — in an installed app too — by extending the viewport, and so `100dvh`, under
-   the system navigation bar. Unpadded, the bottom of every screen sat beneath that bar, the list's
-   add button half hidden. The padding is paper so the strip under a translucent bar matches the
-   app; everywhere else the insets are 0 and this changes nothing. */
+   Padded by the safe-area insets in case the page is ever drawn under a system bar. index.html
+   no longer asks for `viewport-fit=cover` (see there for why), so today they are 0 and this
+   changes nothing; it is kept so that re-adding `cover` does not bring the hidden bottom back.
+   The padding is paper so a strip under a translucent bar would match the app. */
 #root {
   display: flex;
   flex-direction: column;
