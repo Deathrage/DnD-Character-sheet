@@ -35,7 +35,9 @@ const cloudWith =
   () =>
     Promise.resolve({
       currentUser: () =>
-        Promise.resolve(signedIn ? { uid: 'u1', name: 'Ja', email: 'ja@example.com' } : null),
+        Promise.resolve(
+          signedIn ? { uid: 'u1', name: 'Ja', email: 'ja@example.com', photoUrl: null } : null,
+        ),
     } as unknown as Awaited<ReturnType<CloudLoad>>);
 
 function renderApp(

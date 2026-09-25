@@ -44,6 +44,7 @@ export function createFirestoreRepository(): CloudRepository {
     uid: user.uid,
     name: user.displayName,
     email: user.email,
+    photoUrl: user.photoURL,
   });
   const store = createCloudStore(db);
   /** Signed out, nothing is sent. Signed in as someone else, the rules refuse the caller's uid. */

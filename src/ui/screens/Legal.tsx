@@ -99,8 +99,10 @@ const PAGES: Record<LegalPage, { title: string; body: ReactNode }> = {
             <strong>Your account.</strong> Google shares your name, email address and profile
             picture link with the app. Firebase Authentication, a Google service, stores them with
             an account ID and the times you created the account and last signed in. The app shows
-            your name and email address; it does not use your picture. During sign-in Google also
-            processes your IP address and browser details to prevent abuse.
+            your name, email address and picture. The picture is not copied into the app: your
+            browser loads it from Google each time, so Google receives your IP address then too.
+            During sign-in Google also processes your IP address and browser details to prevent
+            abuse.
           </li>
           <li>
             <strong>Your backups.</strong> Each upload stores a copy of the character sheet and its
@@ -139,7 +141,10 @@ const PAGES: Record<LegalPage, { title: string; body: ReactNode }> = {
             Backups: until you delete them on the Cloud screen, or ask me to delete your account.
           </li>
           <li>Your account: until you ask me to delete it. Signing out deletes nothing.</li>
-          <li>Hosting and sign-in logs: for the limited period Google keeps them.</li>
+          <li>
+            Hosting, sign-in and profile-picture request logs: for the limited period Google keeps
+            them.
+          </li>
           <li>
             Everything in the cloud is deleted if cloud backup is discontinued, after the notice the{' '}
             {termsLink} promise.
@@ -150,7 +155,8 @@ const PAGES: Record<LegalPage, { title: string; body: ReactNode }> = {
         <p>
           The app stores your characters and portraits in your browser&rsquo;s IndexedDB, keeps a
           few settings in its local and session storage, and caches itself so it works offline. When
-          you are signed in, Firebase keeps your sign-in session in browser storage. All of this is
+          you are signed in, Firebase keeps your sign-in session in browser storage, and your
+          browser may keep your Google profile picture in its ordinary cache. All of this is
           strictly necessary for the app you are using, so it needs no consent. The app uses no
           cookies or trackers for analytics or advertising.
         </p>

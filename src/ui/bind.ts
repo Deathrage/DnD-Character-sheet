@@ -627,7 +627,11 @@ export function useStorageFailure(gate: StorageGate): StorageFailure | null {
 export function toCloudView(cloud: CloudBackup): CloudView {
   return {
     status: cloud.status,
-    user: cloud.user && { name: cloud.user.name, email: cloud.user.email },
+    user: cloud.user && {
+      name: cloud.user.name,
+      email: cloud.user.email,
+      photoUrl: cloud.user.photoUrl,
+    },
     characters: cloud.characters.flatMap(({ characterId, versions }) => {
       if (versions.length === 0) return [];
       const newest = versions.find((version) => version.sheet !== null);

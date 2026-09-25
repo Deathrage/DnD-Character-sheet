@@ -722,7 +722,12 @@ describe('toCloudView', () => {
     globalThis.Blob = realBlob;
   });
 
-  const USER = { uid: 'u1', name: 'Ja', email: 'ja@example.com' };
+  const USER = {
+    uid: 'u1',
+    name: 'Ja',
+    email: 'ja@example.com',
+    photoUrl: 'https://lh3.googleusercontent.com/a/ja',
+  };
 
   const newLibrary = () => {
     const library = new CharacterLibraryBO({
@@ -793,6 +798,18 @@ describe('toCloudView', () => {
         write(characterId, uploadedAt, { sheet, portrait: null }),
     };
   }
+
+  it("carries the account's name, email and picture into the view", async () => {
+    const backup = new CloudBackup(newLibrary(), { load: async () => fakeCloud().repository });
+
+    await backup.refresh();
+
+    expect(toCloudView(backup).user).toEqual({
+      name: 'Ja',
+      email: 'ja@example.com',
+      photoUrl: 'https://lh3.googleusercontent.com/a/ja',
+    });
+  });
 
   it('names the card by the newest readable version, and flags the unreadable one with its reason', async () => {
     const library = newLibrary();

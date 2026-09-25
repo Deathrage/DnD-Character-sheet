@@ -18,9 +18,9 @@ import { CharacterLibraryBO } from './characterLibrary.js';
 import { CloudBackup } from './cloudBackup.js';
 import { StorageGate } from './storageGate.js';
 
-const USER: CloudUser = { uid: 'u1', name: 'Ja', email: 'ja@example.com' };
+const USER: CloudUser = { uid: 'u1', name: 'Ja', email: 'ja@example.com', photoUrl: null };
 
-const OTHER: CloudUser = { uid: 'u2', name: 'Other', email: 'other@example.com' };
+const OTHER: CloudUser = { uid: 'u2', name: 'Other', email: 'other@example.com', photoUrl: null };
 
 /** The only top-level fields `firestore.rules` accepts. */
 const RULES_KEYS = ['layoutVersion', 'portraits', 'characters'];
