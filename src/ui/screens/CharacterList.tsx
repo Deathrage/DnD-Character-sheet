@@ -60,7 +60,7 @@ export function CharacterList({
               </button>
             )}
             <button type="button" className="txtbtn" onClick={onImport}>
-              Import
+              Import .json
             </button>
           </span>
         </div>
