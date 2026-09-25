@@ -16,7 +16,8 @@ const meta = {
     view: {
       status: 'signedIn',
       user: { name: 'Ja', email: 'ja@example.com' },
-      totalBytes: 78_000,
+      usedBytes: 78_000,
+      limitBytes: 1_048_576,
       busy: false,
       characters: [
         {
@@ -31,6 +32,7 @@ const meta = {
               level: 5,
               bytes: 40_000,
               fromNewerApp: false,
+              problem: null,
             },
             {
               uploadedAt: '2026-09-24T18:03:12.345Z',
@@ -39,6 +41,7 @@ const meta = {
               level: 4,
               bytes: 38_000,
               fromNewerApp: false,
+              problem: null,
             },
           ],
         },
@@ -52,7 +55,16 @@ type Story = StoryObj<typeof meta>;
 
 export const SignedIn: Story = {};
 export const SignedOut: Story = {
-  args: { view: { status: 'signedOut', user: null, characters: [], totalBytes: 0, busy: false } },
+  args: {
+    view: {
+      status: 'signedOut',
+      user: null,
+      characters: [],
+      usedBytes: 0,
+      limitBytes: 1_048_576,
+      busy: false,
+    },
+  },
 };
 export const Conflict: Story = {
   args: {
@@ -60,6 +72,35 @@ export const Conflict: Story = {
       name: 'Zahir ibn Talaar',
       localUpdatedAt: '2026-09-30T20:10:00.000Z',
       incomingUpdatedAt: '2026-09-24T17:58:40.120Z',
+    },
+  },
+};
+export const Damaged: Story = {
+  args: {
+    view: {
+      status: 'signedIn',
+      user: { name: 'Ja', email: 'ja@example.com' },
+      usedBytes: 3_000,
+      limitBytes: 1_048_576,
+      busy: false,
+      characters: [
+        {
+          characterId: '3f2a9c1e-7b4d-4e8a-9c2f-5d1b6a7e8f90',
+          name: null,
+          level: null,
+          versions: [
+            {
+              uploadedAt: '2026-09-30T20:11:05.002Z',
+              sheetUpdatedAt: null,
+              name: null,
+              level: null,
+              bytes: 3_000,
+              fromNewerApp: false,
+              problem: 'This cloud version is damaged. incorrect header check',
+            },
+          ],
+        },
+      ],
     },
   },
 };

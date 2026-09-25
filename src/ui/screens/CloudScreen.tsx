@@ -94,8 +94,8 @@ export function CloudScreen({
                   )}
                 </span>
                 <span className="cusage">
-                  <span className="cusagev">{formatBytes(view.totalBytes)}</span>
-                  <span className="mdesc">in the cloud</span>
+                  <span className="cusagev">{formatBytes(view.usedBytes)}</span>
+                  <span className="mdesc">of {formatBytes(view.limitBytes)}</span>
                 </span>
               </div>
             </div>
@@ -110,7 +110,7 @@ export function CloudScreen({
               <section key={character.characterId} className="cchar">
                 <div className="cchead">
                   <div className="cctitle">
-                    <h2 className="cn">{character.name}</h2>
+                    <h2 className="cn">{character.name ?? 'Unreadable character'}</h2>
                     <span className="cid">ID: {character.characterId}</span>
                   </div>
                   <span className="cc">
@@ -129,18 +129,26 @@ export function CloudScreen({
                         </span>
                         {/* Each part kept whole, so a wrap falls between them, never inside one. */}
                         <span className="cvmeta">
-                          <span>Level {version.level}</span> {'·'}{' '}
-                          <span>edited {formatWhen(version.sheetUpdatedAt)}</span> {'·'}{' '}
+                          {version.sheetUpdatedAt !== null && (
+                            <>
+                              <span>Level {version.level}</span> {'·'}{' '}
+                              <span>edited {formatWhen(version.sheetUpdatedAt)}</span> {'·'}{' '}
+                            </>
+                          )}
                           <span>{formatBytes(version.bytes)}</span>
                         </span>
-                        {version.fromNewerApp && (
+                        {version.fromNewerApp ? (
                           <span className="cvwarn">Made by a newer version of the app</span>
+                        ) : (
+                          version.problem !== null && (
+                            <span className="cvwarn">{version.problem}</span>
+                          )
                         )}
                       </span>
                       <button
                         type="button"
                         className="txtbtn"
-                        disabled={view.busy}
+                        disabled={view.busy || version.sheetUpdatedAt === null}
                         onClick={() => onRestore(character.characterId, version.uploadedAt)}
                       >
                         Restore
@@ -159,7 +167,7 @@ export function CloudScreen({
                   ))}
                 </ol>
                 <ConfirmDelete
-                  what={`Every cloud version of ${character.name}`}
+                  what={`Every cloud version of ${character.name ?? 'Unreadable character'}`}
                   onConfirm={() => onDeleteCharacter(character.characterId)}
                   className="cdelall"
                 >

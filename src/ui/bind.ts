@@ -629,25 +629,27 @@ export function toCloudView(cloud: CloudBackup): CloudView {
     status: cloud.status,
     user: cloud.user && { name: cloud.user.name, email: cloud.user.email },
     characters: cloud.characters.flatMap(({ characterId, versions }) => {
-      const newest = versions.find((version) => version.sheet !== null) ?? versions[0];
-      if (newest === undefined) return [];
+      if (versions.length === 0) return [];
+      const newest = versions.find((version) => version.sheet !== null);
       return [
         {
           characterId,
-          name: newest.sheet?.name ?? 'Unreadable character',
-          level: newest.sheet?.totalLevel ?? 0,
+          name: newest?.sheet?.name ?? null,
+          level: newest?.sheet?.totalLevel ?? null,
           versions: versions.map((version) => ({
             uploadedAt: version.uploadedAt,
-            sheetUpdatedAt: version.sheet?.sheetUpdatedAt ?? version.uploadedAt,
-            name: version.sheet?.name ?? 'Unreadable character',
-            level: version.sheet?.totalLevel ?? 0,
+            sheetUpdatedAt: version.sheet?.sheetUpdatedAt ?? null,
+            name: version.sheet?.name ?? null,
+            level: version.sheet?.totalLevel ?? null,
             bytes: version.bytes,
             fromNewerApp: version.fromNewerApp,
+            problem: version.problem,
           })),
         },
       ];
     }),
-    totalBytes: cloud.usedBytes,
+    usedBytes: cloud.usedBytes,
+    limitBytes: cloud.limitBytes,
     busy: cloud.busy,
   };
 }
