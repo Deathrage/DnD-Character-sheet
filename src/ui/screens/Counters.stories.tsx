@@ -5,7 +5,7 @@ import { Counters } from './Counters.js';
 const meta = {
   title: 'Screens/Counters',
   component: Counters,
-  args: { actions: noCountersActions, onClose: () => {} },
+  args: { characterId: 'story', actions: noCountersActions, onClose: () => {} },
 } satisfies Meta<typeof Counters>;
 
 export default meta;

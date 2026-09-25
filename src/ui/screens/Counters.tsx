@@ -11,6 +11,7 @@ import { CategorySelect, locate, type Located } from './categoryPicker.js';
 import type { CategoryView, CountersActions, CountersView, CounterView } from '../types.js';
 
 interface Props {
+  characterId: string;
   data: CountersView;
   actions: CountersActions;
   onClose(): void;
@@ -22,7 +23,7 @@ type Dialog =
   | { kind: 'slots' }
   | null;
 
-export function Counters({ data, actions, onClose }: Props) {
+export function Counters({ characterId, data, actions, onClose }: Props) {
   const [dialog, setDialog] = useState<Dialog>(null);
   const close = () => setDialog(null);
   const editing = dialog?.kind === 'edit' ? locate(data, dialog.id) : undefined;
@@ -34,6 +35,7 @@ export function Counters({ data, actions, onClose }: Props) {
   return (
     <>
       <CategorizedSection
+        characterId={characterId}
         title="Counters"
         data={data}
         actions={actions}

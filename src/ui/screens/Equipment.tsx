@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { Block } from '../components/CategorizedSection.js';
 import { pasteLists } from '../components/pasteLists.js';
 import { CheckRow } from '../components/CheckRow.js';
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import { ItemRow } from '../components/ItemRow.js';
 import { NameField } from '../components/NameField.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
+import { usePersistedState } from '../persistedState.js';
 import type {
   EquipmentActions,
   EquipmentItemView,
@@ -13,6 +15,7 @@ import type {
 } from '../types.js';
 
 interface Props {
+  characterId: string;
   data: EquipmentView;
   actions: EquipmentActions;
   onClose(): void;
@@ -20,8 +23,20 @@ interface Props {
 
 type Dialog = { kind: 'new'; slot: EquipmentSlot } | { kind: 'edit'; id: string } | null;
 
-export function Equipment({ data, actions, onClose }: Props) {
+type BlockKey = 'attuned' | 'equipped' | 'weapons' | 'other';
+
+export function Equipment({ characterId, data, actions, onClose }: Props) {
   const [dialog, setDialog] = useState<Dialog>(null);
+  // Per character, like the categories: whether Weapons deserves the space depends on who is
+  // carrying them. Every block starts open, and only a collapse is recorded.
+  const [collapsed, setCollapsed] = usePersistedState<Partial<Record<BlockKey, boolean>>>(
+    `ui:${characterId}:equipment`,
+    {},
+  );
+  const block = (key: BlockKey) => ({
+    collapsed: collapsed[key] === true,
+    onToggle: () => setCollapsed({ ...collapsed, [key]: collapsed[key] !== true }),
+  });
   const close = () => setDialog(null);
   const editing =
     dialog?.kind === 'edit'
@@ -49,35 +64,37 @@ export function Equipment({ data, actions, onClose }: Props) {
 
         {/* Attuned and Equipped are derived views over both lists, so they carry no add button:
             an item joins them by having its toggle set, not by being created in them. */}
-        <div className="sechead-row">
-          <span className="sechead static">Attuned Items</span>
-        </div>
-        {data.attuned.length === 0 ? (
-          <div className="empty">Nothing attuned</div>
-        ) : (
-          data.attuned.map(row)
-        )}
-
-        <div className="sechead-row">
-          <span className="sechead static">Equipped</span>
-        </div>
-        {data.equipped.length === 0 ? (
-          <div className="empty">Nothing equipped</div>
-        ) : (
-          data.equipped.map(row)
-        )}
-
-        <Slot
-          title="Weapons"
-          items={data.weapons}
-          row={row}
-          onAdd={() => setDialog({ kind: 'new', slot: 'weapons' })}
+        <Block
+          name="Attuned Items"
+          empty="Nothing attuned"
+          items={data.attuned}
+          renderRow={row}
+          count={String(data.attuned.length)}
+          {...block('attuned')}
         />
-        <Slot
-          title="Other Equipment"
+        <Block
+          name="Equipped"
+          empty="Nothing equipped"
+          items={data.equipped}
+          renderRow={row}
+          count={String(data.equipped.length)}
+          {...block('equipped')}
+        />
+        <Block
+          name="Weapons"
+          items={data.weapons}
+          renderRow={row}
+          count={String(data.weapons.length)}
+          onAdd={() => setDialog({ kind: 'new', slot: 'weapons' })}
+          {...block('weapons')}
+        />
+        <Block
+          name="Other Equipment"
           items={data.other}
-          row={row}
+          renderRow={row}
+          count={String(data.other.length)}
           onAdd={() => setDialog({ kind: 'new', slot: 'other' })}
+          {...block('other')}
         />
       </div>
 
@@ -86,30 +103,6 @@ export function Equipment({ data, actions, onClose }: Props) {
       )}
       {editing && <EditEquipmentDialog item={editing} actions={actions} onClose={close} />}
     </div>
-  );
-}
-
-function Slot({
-  title,
-  items,
-  row,
-  onAdd,
-}: {
-  title: string;
-  items: EquipmentItemView[];
-  row(item: EquipmentItemView): React.ReactNode;
-  onAdd(): void;
-}) {
-  return (
-    <>
-      <div className="sechead-row">
-        <span className="sechead static">{title}</span>
-        <button type="button" className="addmini" onClick={onAdd} aria-label={`Add to ${title}`}>
-          +
-        </button>
-      </div>
-      {items.length === 0 ? <div className="empty">Nothing here yet</div> : items.map(row)}
-    </>
   );
 }
 

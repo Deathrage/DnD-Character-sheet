@@ -5,7 +5,7 @@ import { FeatsAndTraits } from './FeatsAndTraits.js';
 const meta = {
   title: 'Screens/Feats & Traits',
   component: FeatsAndTraits,
-  args: { actions: noFeatsActions, onClose: () => {} },
+  args: { characterId: 'story', actions: noFeatsActions, onClose: () => {} },
 } satisfies Meta<typeof FeatsAndTraits>;
 
 export default meta;

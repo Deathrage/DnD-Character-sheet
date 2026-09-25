@@ -1826,3 +1826,44 @@ body {
   border-radius: 18px;
   font-size: 96px;
 }
+
+/* ---------- legal pages ---------- */
+.lbody {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 4px 18px 32px;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.lbody > * {
+  max-width: 68ch;
+}
+.lbody h2 {
+  margin: 22px 0 6px;
+  font-size: 16px;
+}
+.lbody p,
+.lbody ul {
+  margin: 0 0 10px;
+}
+.lbody ul {
+  padding-left: 20px;
+}
+.lbody li + li {
+  margin-top: 6px;
+}
+.lbody a,
+.legalnote a {
+  color: var(--accent);
+}
+/* The cloud terms, as the last row of the menu's account group: aligned with the text above it. */
+.mnote {
+  padding: 10px 14px 12px 58px;
+}
+.mnote .legalnote,
+.chero .legalnote {
+  margin: 0;
+}
+.chero .legalnote {
+  margin-top: 14px;
+}

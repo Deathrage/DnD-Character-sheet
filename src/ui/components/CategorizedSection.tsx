@@ -1,11 +1,14 @@
 import { Fragment, useState, type ReactNode } from 'react';
 import { AddByName } from './AddByName.js';
+import { usePersistedState } from '../persistedState.js';
 import { NameField } from './NameField.js';
 import { ResponsiveDialog } from './ResponsiveDialog.js';
 import { ConfirmDelete } from './ConfirmDelete.js';
 import type { CategoryActions, CategorizedView, CategoryView } from '../types.js';
 
 interface Props<T> {
+  /** Scopes the remembered open/closed state to this character. */
+  characterId: string;
   title: string;
   data: CategorizedView<T>;
   actions: CategoryActions;
@@ -30,6 +33,7 @@ interface Props<T> {
  * its edit dialog contains — which is exactly what `renderRow` and `onAdd` leave to the caller.
  */
 export function CategorizedSection<T extends { id: string }>({
+  characterId,
   title,
   data,
   actions,
@@ -40,10 +44,17 @@ export function CategorizedSection<T extends { id: string }>({
   count = (items) => String(items.length),
 }: Props<T>) {
   // Keyed by category id; categories start collapsed. Uncategorized is always open. Expansion is
-  // view state and is deliberately not persisted: which blocks you had open is not part of the
-  // character.
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const toggle = (key: string) => setExpanded((prev) => ({ ...prev, [key]: !prev[key] }));
+  // view state, so it is remembered in localStorage and never in the document: which blocks you
+  // had open is not part of the character. Scoped per character because category ids are only
+  // unique within one document — a clone keeps them. One key per character covers all three
+  // sections, since ids are unique across the whole document.
+  // ponytail: ids of deleted categories stay in the record, and a deleted character's key stays
+  // behind; a few bytes each. Prune on delete if it ever matters.
+  const [expanded, setExpanded] = usePersistedState<Record<string, boolean>>(
+    `ui:${characterId}:expanded`,
+    {},
+  );
+  const toggle = (key: string) => setExpanded({ ...expanded, [key]: expanded[key] !== true });
 
   const [dialog, setDialog] = useState<{ kind: 'edit'; id: string } | { kind: 'new' } | null>(null);
   const close = () => setDialog(null);
@@ -113,19 +124,27 @@ export function CategorizedSection<T extends { id: string }>({
 
 interface BlockProps<T> {
   name: string;
+  /** Shown in place of the rows when there are none. */
+  empty?: string;
   items: T[];
   renderRow(item: T): ReactNode;
   count: string;
   collapsed: boolean;
   /** Absent for Uncategorized, which is always open. */
   onToggle?: () => void;
-  onAdd(): void;
+  /** Absent for Equipment's Attuned and Equipped, which are derived and cannot be added to. */
+  onAdd?: () => void;
   /** Absent for Uncategorized, which is not a category and cannot be renamed or deleted. */
   onEditCategory?: () => void;
 }
 
-function Block<T extends { id: string }>({
+/**
+ * One collapsible block: a header with its caret, count and buttons, then its rows. Exported for
+ * Equipment, whose four fixed blocks look and behave exactly like a category.
+ */
+export function Block<T extends { id: string }>({
   name,
+  empty = 'Nothing here yet',
   items,
   renderRow,
   count,
@@ -162,19 +181,21 @@ function Block<T extends { id: string }>({
               {'✎'}
             </button>
           )}
-          <button
-            type="button"
-            className="addmini"
-            onClick={onAdd}
-            aria-label={`Add entry to ${name}`}
-          >
-            +
-          </button>
+          {onAdd && (
+            <button
+              type="button"
+              className="addmini"
+              onClick={onAdd}
+              aria-label={`Add entry to ${name}`}
+            >
+              +
+            </button>
+          )}
         </span>
       </div>
       {!collapsed &&
         (items.length === 0 ? (
-          <div className="empty">Nothing here yet</div>
+          <div className="empty">{empty}</div>
         ) : (
           items.map((item) => <Fragment key={item.id}>{renderRow(item)}</Fragment>)
         ))}

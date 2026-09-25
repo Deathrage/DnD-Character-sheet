@@ -2,7 +2,9 @@ import { useId, useState, type ReactNode } from 'react';
 import { Portrait } from '../components/Portrait.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import { formatWhen, initialOf } from '../format.js';
+import type { LegalPage } from '../route.js';
 import type { CharacterRow, CloudView, InstallView } from '../types.js';
+import { CloudTerms } from './Legal.js';
 
 interface Props {
   rows: CharacterRow[];
@@ -26,6 +28,7 @@ interface Props {
   onSignIn?(): Promise<string | null>;
   onSignOut?(): Promise<string | null>;
   onOpenCloud?(): void;
+  onOpenLegal?(page: LegalPage): void;
 }
 
 export function CharacterList({
@@ -43,6 +46,7 @@ export function CharacterList({
   onSignIn,
   onSignOut,
   onOpenCloud,
+  onOpenLegal,
 }: Props) {
   const [confirming, setConfirming] = useState<{
     action: 'clone' | 'delete';
@@ -188,6 +192,9 @@ export function CharacterList({
                   chevron
                   onClick={fromMenu(() => onOpenCloud?.())}
                 />
+                <li className="mnote">
+                  <CloudTerms />
+                </li>
               </ul>
               {menuMessage !== null && (
                 <div className="fieldError mmsg" role="alert">
@@ -216,6 +223,20 @@ export function CharacterList({
               />
             </ul>
           )}
+          <ul className="mgroup">
+            <MenuItem
+              icon={ICONS.privacy}
+              label="Privacy Policy"
+              description="What the app stores, and where."
+              onClick={fromMenu(() => onOpenLegal?.('privacy'))}
+            />
+            <MenuItem
+              icon={ICONS.terms}
+              label="Terms of Use"
+              description="The rules for using the app and cloud backup."
+              onClick={fromMenu(() => onOpenLegal?.('terms'))}
+            />
+          </ul>
         </ResponsiveDialog>
       )}
 
@@ -276,6 +297,16 @@ const ICONS = {
     <svg viewBox="0 0 24 24">
       <rect x="7" y="2" width="10" height="20" rx="2" />
       <path d="M12 7v6M9.5 10.5 12 13l2.5-2.5M11 18h2" />
+    </svg>
+  ),
+  privacy: (
+    <svg viewBox="0 0 24 24">
+      <path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z" />
+    </svg>
+  ),
+  terms: (
+    <svg viewBox="0 0 24 24">
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6" />
     </svg>
   ),
 };

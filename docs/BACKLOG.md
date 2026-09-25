@@ -19,6 +19,19 @@ commit or PR that shipped it, rather than deleting it.
   a paid subscription, behind user authentication. The local app stays complete and free without
   an account: signing out or lapsing must never lock a player out of characters on their device.
   Open: auth provider, billing, and what a lapsed subscriber's remote copies become.
+  Charging makes the operator a trader and players consumers, so the Terms of Use
+  (`src/ui/screens/Legal.tsx`) need a legal rewrite first: consumer-law protections, the 14-day
+  withdrawal right for digital services, trader identification, and a real acceptance record
+  rather than accept-by-using.
+- **"Legal documents changed" notice.** The Privacy Policy and Terms of Use
+  (`src/ui/screens/Legal.tsx`) promise that significant changes are announced in the app, and
+  the Terms promise 30 days' notice before cloud backup is discontinued. Nothing does that yet:
+  the promise is kept by shipping this together with the first such change, not before. Sketch:
+  a `LEGAL_UPDATED` date beside `UPDATED`, bumped only for significant edits; a dismissible strip
+  on the character list linking both pages; the dismissed date in `localStorage` (a per-device
+  convenience, not a record of acceptance). A first visit stores the date silently, since a new
+  player has no older version to be told about. The discontinuation notice is the same strip
+  with different text. It reaches players through the existing update prompt.
 - **Periodic update check.** The service worker only checks for a new version on launch or
   reload; a long-open tab never sees one.
 - **Undo.** Cheap against a single-document model. Out of scope by decision today (spec §6), so

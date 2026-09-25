@@ -5,6 +5,8 @@ import { noVitalsActions, sable } from '../fixtures.js';
 import { VitalsHeader } from './VitalsHeader.js';
 
 beforeAll(stubDialogElement);
+// The collapse is remembered app-wide, so one test's collapse would start the next one collapsed.
+beforeEach(() => localStorage.clear());
 
 const PORTRAIT = 'data:image/jpeg;base64,/9j/4AAQ';
 
@@ -83,6 +85,23 @@ describe('VitalsHeader collapse', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Expand vitals' }));
     expect(screen.getByLabelText('Current hit points')).toBeTruthy();
+  });
+
+  it('stays collapsed across a remount, whichever character opens next', () => {
+    const { unmount } = render(
+      <VitalsHeader character={sable} actions={noVitalsActions} onBack={() => {}} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse vitals' }));
+    unmount();
+
+    render(
+      <VitalsHeader
+        character={{ ...sable, id: 'another' }}
+        actions={noVitalsActions}
+        onBack={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Expand vitals' })).toBeTruthy();
   });
 });
 

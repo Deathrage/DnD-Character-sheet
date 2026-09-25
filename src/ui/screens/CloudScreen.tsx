@@ -2,6 +2,7 @@ import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import { ConflictDialog } from '../components/ConflictDialog.js';
 import { formatWhen, initialOf } from '../format.js';
 import type { CloudView, ConflictView } from '../types.js';
+import { CloudTerms } from './Legal.js';
 
 interface Props {
   view: CloudView;
@@ -81,6 +82,7 @@ export function CloudScreen({
               Sign in with Google
             </button>
             {view.status === 'signingIn' && <p className="hint">Waiting for Google{'…'}</p>}
+            <CloudTerms />
           </div>
         ) : (
           <>

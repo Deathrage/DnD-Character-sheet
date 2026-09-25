@@ -23,6 +23,7 @@ import { CharacterList } from './screens/CharacterList.js';
 import { ConflictDialog } from './components/ConflictDialog.js';
 import { formatWhen } from './format.js';
 import { CloudScreen } from './screens/CloudScreen.js';
+import { LegalScreen } from './screens/Legal.js';
 import { RawJsonEditor } from './screens/RawJsonEditor.js';
 import { StorageGateDialog } from './screens/StorageGateDialog.js';
 import type { ConflictView, SectionKey } from './types.js';
@@ -125,7 +126,9 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
         </div>
       )}
 
-      {route.name === 'cloud' ? (
+      {route.name === 'legal' ? (
+        <LegalScreen page={route.page} onBack={() => navigate({ name: 'list' })} />
+      ) : route.name === 'cloud' ? (
         <Cloud cloud={cloud} />
       ) : route.name === 'raw' ? (
         <RawJson library={library} id={route.id} />
@@ -158,6 +161,7 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
             onSignIn={() => cloud.signIn()}
             onSignOut={() => cloud.signOut()}
             onOpenCloud={() => navigate({ name: 'cloud' })}
+            onOpenLegal={(page) => navigate({ name: 'legal', page })}
             onClone={(id) => {
               const entry = library.entries.find((candidate) => candidate.id === id);
               void entry?.clone().then(setProblem);
@@ -196,8 +200,10 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
       />
 
       {/* Blocking, and rendered over whatever screen is up: storage that can be evicted is not a
-          thing to mention in small text on one screen and hope is read (criteria 13 and 14). */}
-      {gate.open && (
+          thing to mention in small text on one screen and hope is read (criteria 13 and 14).
+          Except over the legal pages: those are linked from Google's sign-in screen, and someone
+          who came to read the policy has not started keeping characters here yet. */}
+      {gate.open && route.name !== 'legal' && (
         <StorageGateDialog
           phase={gate.phase}
           {...(gate.estimate === undefined ? {} : { estimate: gate.estimate })}

@@ -145,17 +145,39 @@ function Section({
     case 'feats':
       return (
         <FeatsAndTraits
+          characterId={data.character.id}
           data={data.featsAndTraits}
           actions={actions.featsAndTraits}
           onClose={onClose}
         />
       );
     case 'equipment':
-      return <Equipment data={data.equipment} actions={actions.equipment} onClose={onClose} />;
+      return (
+        <Equipment
+          characterId={data.character.id}
+          data={data.equipment}
+          actions={actions.equipment}
+          onClose={onClose}
+        />
+      );
     case 'spells':
-      return <SpellList data={data.spellList} actions={actions.spellList} onClose={onClose} />;
+      return (
+        <SpellList
+          characterId={data.character.id}
+          data={data.spellList}
+          actions={actions.spellList}
+          onClose={onClose}
+        />
+      );
     case 'counters':
-      return <Counters data={data.counters} actions={actions.counters} onClose={onClose} />;
+      return (
+        <Counters
+          characterId={data.character.id}
+          data={data.counters}
+          actions={actions.counters}
+          onClose={onClose}
+        />
+      );
     case 'abilities':
       return (
         <AbilitiesAndSkills

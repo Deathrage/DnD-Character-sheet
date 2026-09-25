@@ -14,6 +14,7 @@ import type {
 } from '../types.js';
 
 interface Props {
+  characterId: string;
   data: FeatsAndTraitsView;
   actions: FeatsAndTraitsActions;
   onClose(): void;
@@ -21,7 +22,7 @@ interface Props {
 
 type Dialog = { kind: 'new'; categoryId: string | null } | { kind: 'edit'; id: string } | null;
 
-export function FeatsAndTraits({ data, actions, onClose }: Props) {
+export function FeatsAndTraits({ characterId, data, actions, onClose }: Props) {
   const [dialog, setDialog] = useState<Dialog>(null);
   const close = () => setDialog(null);
   const editing = dialog?.kind === 'edit' ? locate(data, dialog.id) : undefined;
@@ -29,6 +30,7 @@ export function FeatsAndTraits({ data, actions, onClose }: Props) {
   return (
     <>
       <CategorizedSection
+        characterId={characterId}
         title="Feats & Traits"
         data={data}
         actions={actions}

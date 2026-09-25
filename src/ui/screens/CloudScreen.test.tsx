@@ -63,6 +63,14 @@ describe('CloudScreen', () => {
     expect(screen.queryByRole('button', { name: /Restore/ })).toBeNull();
   });
 
+  it('signed out, names the terms beside the sign-in button', () => {
+    renderScreen({ ...signedIn, status: 'signedOut', user: null, characters: [] });
+    expect(screen.getByRole('link', { name: 'Terms of Use' }).getAttribute('href')).toBe('#/terms');
+    expect(screen.getByRole('link', { name: 'Privacy Policy' }).getAttribute('href')).toBe(
+      '#/privacy',
+    );
+  });
+
   it('shows the account and the usage', () => {
     renderScreen(signedIn);
     expect(screen.getByText(/ja@example\.com/)).toBeTruthy();

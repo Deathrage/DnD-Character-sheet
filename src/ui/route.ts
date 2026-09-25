@@ -21,7 +21,11 @@ export type Route =
   | { name: 'list' }
   | { name: 'character'; id: string; section: SectionKey | null }
   | { name: 'raw'; id: string }
-  | { name: 'cloud' };
+  | { name: 'cloud' }
+  | { name: 'legal'; page: LegalPage };
+
+/** The Privacy Policy and the Terms of Use: `#/privacy` and `#/terms`. */
+export type LegalPage = 'privacy' | 'terms';
 
 const SECTION_KEYS: readonly string[] = SECTIONS.map((section) => section.key);
 
@@ -38,6 +42,7 @@ export function parseRoute(hash: string): Route {
     .split('/')
     .filter((part) => part !== '');
   if (parts[0] === 'cloud') return { name: 'cloud' };
+  if (parts[0] === 'privacy' || parts[0] === 'terms') return { name: 'legal', page: parts[0] };
   const id = parts[1];
   if (parts[0] !== 'c' || id === undefined) return { name: 'list' };
 
@@ -53,6 +58,7 @@ export function parseRoute(hash: string): Route {
 export function routeHash(route: Route): string {
   if (route.name === 'list') return '#/';
   if (route.name === 'cloud') return '#/cloud';
+  if (route.name === 'legal') return `#/${route.page}`;
   const id = encodeURIComponent(route.id);
   if (route.name === 'raw') return `#/c/${id}/raw`;
   return route.section === null ? `#/c/${id}` : `#/c/${id}/${route.section}`;

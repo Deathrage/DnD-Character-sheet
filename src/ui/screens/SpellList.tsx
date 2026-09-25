@@ -17,6 +17,7 @@ import type {
 } from '../types.js';
 
 interface Props {
+  characterId: string;
   data: SpellListView;
   actions: SpellListActions;
   onClose(): void;
@@ -24,7 +25,7 @@ interface Props {
 
 type Dialog = { kind: 'new'; categoryId: string | null } | { kind: 'edit'; id: string } | null;
 
-export function SpellList({ data, actions, onClose }: Props) {
+export function SpellList({ characterId, data, actions, onClose }: Props) {
   const [dialog, setDialog] = useState<Dialog>(null);
   const close = () => setDialog(null);
   const editing = dialog?.kind === 'edit' ? locate(data, dialog.id) : undefined;
@@ -32,6 +33,7 @@ export function SpellList({ data, actions, onClose }: Props) {
   return (
     <>
       <CategorizedSection
+        characterId={characterId}
         title="Spell List"
         data={data}
         actions={actions}

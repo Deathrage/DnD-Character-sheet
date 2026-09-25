@@ -48,9 +48,9 @@ describe('CharacterList menu: install', () => {
     (install) => {
       withInstall(install);
       expect(screen.queryByRole('button', { name: 'Install to phone' })).toBeNull();
-      // Nor an empty section where it was: no account here, so the import group is the only one.
+      // Nor an empty section where it was: no account here, so only import and legal remain.
       const menu = screen.getByRole('dialog', { name: 'Menu' });
-      expect(within(menu).getAllByRole('list')).toHaveLength(1);
+      expect(within(menu).getAllByRole('list')).toHaveLength(2);
     },
   );
 });
@@ -99,5 +99,39 @@ describe('CharacterList menu: account and cloud', () => {
     expect(screen.queryByRole('button', { name: 'Manage cloud' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Import from .json' }));
     expect(onImport).toHaveBeenCalledOnce();
+  });
+});
+
+describe('CharacterList menu: legal', () => {
+  it('opens the Privacy Policy and the Terms of Use, with or without a cloud', () => {
+    const onOpenLegal = vi.fn();
+    list({ onOpenLegal });
+    fireEvent.click(screen.getByRole('button', { name: 'Privacy Policy' }));
+    expect(onOpenLegal).toHaveBeenLastCalledWith('privacy');
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Terms of Use' }));
+    expect(onOpenLegal).toHaveBeenLastCalledWith('terms');
+  });
+
+  // The sign-in is where the data is collected, so that is where the terms are named (GDPR Art. 13).
+  // A row of its own under Manage cloud, not a menu item: it is a sentence to read, not an action.
+  // Kept while signed in too: the terms cover using the backup, not only the moment of sign-in.
+  it.each([
+    { status: 'signedOut', user: null },
+    { status: 'signedIn', user: { name: 'Dev', email: 'dev@example.com' } },
+  ] as const)('names the terms in the account group when $status', (account) => {
+    list({ account });
+    const note = screen.getByText(/By using cloud backup you accept/);
+    expect(within(note).getByRole('link', { name: 'Terms of Use' }).getAttribute('href')).toBe(
+      '#/terms',
+    );
+    expect(within(note).getByRole('link', { name: 'Privacy Policy' }).getAttribute('href')).toBe(
+      '#/privacy',
+    );
+  });
+
+  it('has no cloud note without a cloud', () => {
+    list();
+    expect(screen.queryByText(/By using cloud backup you accept/)).toBeNull();
   });
 });

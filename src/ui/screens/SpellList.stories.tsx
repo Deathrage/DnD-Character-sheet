@@ -5,7 +5,7 @@ import { SpellList } from './SpellList.js';
 const meta = {
   title: 'Screens/Spell List',
   component: SpellList,
-  args: { actions: noSpellListActions, onClose: () => {} },
+  args: { characterId: 'story', actions: noSpellListActions, onClose: () => {} },
 } satisfies Meta<typeof SpellList>;
 
 export default meta;

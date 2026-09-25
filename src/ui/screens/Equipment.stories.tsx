@@ -5,7 +5,7 @@ import { Equipment } from './Equipment.js';
 const meta = {
   title: 'Screens/Equipment',
   component: Equipment,
-  args: { actions: noEquipmentActions, onClose: () => {} },
+  args: { characterId: 'story', actions: noEquipmentActions, onClose: () => {} },
 } satisfies Meta<typeof Equipment>;
 
 export default meta;

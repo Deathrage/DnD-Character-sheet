@@ -57,3 +57,14 @@ describe('the cloud route', () => {
     expect(routeHash({ name: 'cloud' })).toBe('#/cloud');
   });
 });
+
+describe('the legal routes', () => {
+  // Their URLs are handed to Google's OAuth branding and linked from outside the app, so they
+  // are pinned here, not only round-tripped.
+  it('reads and writes #/privacy and #/terms', () => {
+    for (const page of ['privacy', 'terms'] as const) {
+      expect(parseRoute(`#/${page}`)).toEqual({ name: 'legal', page });
+      expect(routeHash({ name: 'legal', page })).toBe(`#/${page}`);
+    }
+  });
+});

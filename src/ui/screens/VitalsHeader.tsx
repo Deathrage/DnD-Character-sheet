@@ -7,6 +7,7 @@ import { PortraitCropper } from '../components/PortraitCropper.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import type { Crop } from '../portrait.js';
+import { usePersistedState } from '../persistedState.js';
 import type { CharacterView, VitalsActions } from '../types.js';
 
 interface Props {
@@ -23,8 +24,9 @@ interface Props {
 export function VitalsHeader({ character, actions, onBack }: Props) {
   const [dialog, setDialog] = useState<'classes' | 'hitDice' | 'portrait' | null>(null);
   // Collapsed, the header gives its height back to the section below and keeps the numbers
-  // readable in one line. Per mount only: every sheet opens expanded.
-  const [collapsed, setCollapsed] = useState(false);
+  // readable in one line. One setting for the whole app, not per character: it is about screen
+  // space, so collapsing it on a phone should hold for every sheet.
+  const [collapsed, setCollapsed] = usePersistedState('ui:vitals-collapsed', false);
 
   return (
     <div className={collapsed ? 'vitals compact' : 'vitals'}>
