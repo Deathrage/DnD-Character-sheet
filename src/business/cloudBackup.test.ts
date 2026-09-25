@@ -1,9 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CloudError } from '../data/remote/cloudError.js';
-import { cloudDocumentSize, withoutVersions, withVersion } from '../data/remote/cloudDocument.js';
+import {
+  cloudDocumentPath,
+  cloudDocumentSize,
+  withoutVersions,
+  withVersion,
+} from '../data/remote/cloudDocument.js';
 import { decodePayload, encodePayload } from '../data/remote/codec.js';
 import { parseCloudDocument, type CloudDocument } from '../data/remote/layout/index.js';
-import { MAX_DOCUMENT_BYTES } from '../data/remote/size.js';
+import { documentSize, MAX_DOCUMENT_BYTES } from '../data/remote/size.js';
 import type { CloudLoad, CloudRepository, CloudUser } from '../data/remote/types.js';
 import { createIndexedDbRepository } from '../data/repository/indexedDbRepository.js';
 import type { CharacterRepository } from '../data/repository/types.js';
@@ -16,6 +21,21 @@ import { StorageGate } from './storageGate.js';
 const USER: CloudUser = { uid: 'u1', name: 'Ja', email: 'ja@example.com' };
 
 const OTHER: CloudUser = { uid: 'u2', name: 'Other', email: 'other@example.com' };
+
+/** The only top-level fields `firestore.rules` accepts. */
+const RULES_KEYS = ['layoutVersion', 'portraits', 'characters'];
+
+const isMap = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !(value instanceof Uint8Array);
+
+/** Firestore's `setDoc(…, { merge: true })`: maps merge key by key, anything else is replaced. */
+function merged(base: unknown, patch: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = isMap(base) ? { ...base } : {};
+  for (const [key, value] of Object.entries(patch)) {
+    out[key] = isMap(value) ? merged(out[key], value) : value;
+  }
+  return out;
+}
 
 /**
  * An in-memory cloud. It holds each account's raw document, as Firestore would, and parses it with
@@ -79,11 +99,20 @@ function fakeCloud(signedIn = true) {
     },
     upload: async (uid, characterId, uploadedAt, version) => {
       check(uid);
+      const stored = state.docs[uid] as Record<string, unknown> | undefined;
+      // The rules refuse a write over any other layout, such as a newer one.
+      if (stored !== undefined && stored.layoutVersion !== 2) {
+        throw new CloudError('PERMISSION_DENIED');
+      }
       const current = read(uid);
-      // The rules refuse a write over a newer layout.
-      if (!current.ok) throw new CloudError('PERMISSION_DENIED');
-      const after = withVersion(current.doc, characterId, uploadedAt, version);
-      if (cloudDocumentSize(uid, after) > MAX_DOCUMENT_BYTES) {
+      // A layout-2 document this build cannot parse is still merged into, as Firestore does.
+      const after = current.ok
+        ? withVersion(current.doc, characterId, uploadedAt, version)
+        : merged(stored, withVersion(null, characterId, uploadedAt, version));
+      if (!Object.keys(after).every((key) => RULES_KEYS.includes(key))) {
+        throw new CloudError('PERMISSION_DENIED');
+      }
+      if (documentSize(cloudDocumentPath(uid), after) > MAX_DOCUMENT_BYTES) {
         // What the emulator answers (spec §5); production's code may differ, which is the point.
         throw Object.assign(new Error('maximum entity size is 1048576 bytes'), {
           code: 'failed-precondition',
@@ -603,6 +632,21 @@ describe('CloudBackup', () => {
     expect(await cloudBackup.refresh()).toBe(sentence);
     expect(await cloudBackup.deleteCharacter(ID_A)).toBe(sentence);
     expect(cloud.state.stored).toEqual({ layoutVersion: 3 });
+  });
+
+  it('an upload into a layout-2 cloud this build cannot read still lands, as the rules allow', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    const damaged = { layoutVersion: 2, characters: { [ID_B]: 'not a version map' } };
+    cloud.state.stored = damaged;
+    expect(await cloudBackup.refresh()).toBe(
+      'Your cloud backups could not be read. Nothing in the cloud was changed.',
+    );
+
+    expect((await cloudBackup.upload(ID_A)).ok).toBe(true);
+
+    const stored = cloud.state.stored as { characters: Record<string, unknown> };
+    expect(stored.characters[ID_B]).toBe('not a version map');
+    expect(Object.keys(stored.characters[ID_A] as object)).toHaveLength(1);
   });
 
   it('stores a portrait once for two versions that share it', async () => {
