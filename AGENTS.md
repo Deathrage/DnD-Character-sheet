@@ -171,8 +171,6 @@ back on the next load (criterion 14).
       (Replace / Keep both, "cloud version is older"), Keep both, upload from a sheet, delete a
       version; and against the emulator's REST API, another user's read or write of Dev Player's
       path is 403 while their own path is 200.
-  - **Sign-in does not work on PR preview channels.** A preview's origin is neither `authDomain`
-    nor an authorized domain, so Firebase Auth refuses it. Test cloud features on localhost or live.
   - **The Firebase chunk is dynamic** (`import()`, never on launch): `firestoreRepository-*.js` is
     199.33 kB (59.50 kB gzip), split out of a main bundle of 441.22 kB (127.15 kB gzip) — from
     `npm run build`; re-run it if these drift.
@@ -418,7 +416,7 @@ live in `docs/BACKLOG.md` — add new ones there, not here:
   Updates are only checked for on launch or reload; there is no periodic check.
 - **Hosted on Firebase Hosting**, chosen over GitHub Pages and Azure for the backlog's online
   features: same-origin Auth, and Storage behind Security Rules with no backend of our own.
-  `.github/workflows/deploy.yml` deploys `main` live and each PR to a preview channel, to project
+  `.github/workflows/deploy.yml` checks each PR and deploys only `main`, live — no preview channels — to project
   `dnd-character-sheet-64a24` — so the origin is `dnd-character-sheet-64a24.web.app`. Re-running
   `firebase init hosting:github` writes two more workflows that would deploy twice; delete them.
   **The origin

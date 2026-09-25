@@ -1,4 +1,4 @@
-# Deploys to Firebase Hosting: `main` goes live, a pull request gets a preview channel.
+# Checks every pull request; deploys `main` to Firebase Hosting live. No preview channels.
 # The secret was created by `firebase init hosting:github`; the project is in `.firebaserc`.
 name: Deploy
 
@@ -9,13 +9,9 @@ on:
 
 jobs:
   deploy:
-    # A fork's pull request gets no secrets, so it could not deploy anyway.
-    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      checks: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,14 +22,13 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
-      - uses: FirebaseExtended/action-hosting-deploy@v0
+      - if: github.event_name == 'push'
+        uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DND_CHARACTER_SHEET_64A24 }}
           projectId: dnd-character-sheet-64a24
-          channelId: ${{ github.event_name == 'push' && 'live' || '' }}
-      # Rules are live-only: a preview channel has no rules of its own, so a pull request must not
-      # replace the live ones. Needs the deploy service account to hold "Firebase Rules Admin".
+          channelId: live
+      # Needs the deploy service account to hold "Firebase Rules Admin".
       - if: github.event_name == 'push'
         env:
           SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DND_CHARACTER_SHEET_64A24 }}
