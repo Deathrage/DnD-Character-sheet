@@ -1567,52 +1567,6 @@ body {
 .fieldError.cmsg {
   margin: 0 4px 12px;
 }
-/* Signed out: one thing to do, so it stands alone in the middle of the page. */
-.chero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 56px 18px 0;
-}
-.cheroico {
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent);
-  margin-bottom: 18px;
-}
-.cheroico svg {
-  width: 36px;
-  height: 36px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.chero h2 {
-  margin: 0;
-  font-size: 19px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-}
-.chero .hint {
-  font-size: 13px;
-  max-width: 34ch;
-  margin: 8px 0 22px;
-}
-.chero .primary {
-  width: 100%;
-  padding: 12px 16px;
-  font-size: 14px;
-}
-.chero .primary + .hint {
-  margin: 10px 0 0;
-}
 /* The account's usage: the number is what is read, so it leads. */
 .cusage {
   flex: 0 0 auto;
@@ -1860,10 +1814,6 @@ body {
 .mnote {
   padding: 10px 14px 12px 58px;
 }
-.mnote .legalnote,
-.chero .legalnote {
+.mnote .legalnote {
   margin: 0;
-}
-.chero .legalnote {
-  margin-top: 14px;
 }

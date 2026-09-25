@@ -394,6 +394,12 @@ function Cloud({ cloud }: { cloud: CloudBackup }) {
     void cloud.refresh().then(setMessage);
   }, [cloud]);
 
+  // Sign-in lives in the characters menu, so a signed-out player — arriving by URL, or signed out
+  // while here — is sent there instead of being shown a page with nothing on it.
+  useEffect(() => {
+    if (view.status === 'signedOut') navigate({ name: 'list' });
+  }, [view.status]);
+
   const restore = async (characterId: string, uploadedAt: string, choice?: RestoreChoice) => {
     const result = await cloud.restore(characterId, uploadedAt, choice);
     if (result.ok) {
@@ -411,7 +417,6 @@ function Cloud({ cloud }: { cloud: CloudBackup }) {
       message={message}
       conflict={asking?.conflict ?? null}
       onBack={() => navigate({ name: 'list' })}
-      onSignIn={() => void cloud.signIn().then(setMessage)}
       onRestore={(characterId, uploadedAt) => void restore(characterId, uploadedAt)}
       onDeleteVersion={(characterId, uploadedAt) =>
         void cloud.deleteVersion(characterId, uploadedAt).then(setMessage)

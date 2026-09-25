@@ -48,7 +48,6 @@ function renderScreen(view: CloudView, overrides: Partial<Parameters<typeof Clou
     message: null,
     conflict: null,
     onBack: vi.fn(),
-    onSignIn: vi.fn(),
     onRestore: vi.fn(),
     onDeleteVersion: vi.fn(),
     onDeleteCharacter: vi.fn(),
@@ -60,19 +59,15 @@ function renderScreen(view: CloudView, overrides: Partial<Parameters<typeof Clou
 }
 
 describe('CloudScreen', () => {
-  it('signed out, offers only Google sign-in', () => {
-    const props = renderScreen({ ...signedIn, status: 'signedOut', user: null, characters: [] });
-    fireEvent.click(screen.getByRole('button', { name: 'Sign in with Google' }));
-    expect(props.onSignIn).toHaveBeenCalledOnce();
-    expect(screen.queryByRole('button', { name: /Restore/ })).toBeNull();
-  });
-
-  it('signed out, names the terms beside the sign-in button', () => {
-    renderScreen({ ...signedIn, status: 'signedOut', user: null, characters: [] });
-    expect(screen.getByRole('link', { name: 'Terms of Use' }).getAttribute('href')).toBe('#/terms');
-    expect(screen.getByRole('link', { name: 'Privacy Policy' }).getAttribute('href')).toBe(
-      '#/privacy',
+  it('not signed in, shows only the message: no sign-in, no account, no versions', () => {
+    renderScreen(
+      { ...signedIn, status: 'unavailable', user: null },
+      { message: 'Cloud backup could not be loaded. Check your connection and try again.' },
     );
+    expect(screen.getByRole('alert').textContent).toMatch(/could not be loaded/);
+    expect(screen.queryByRole('button', { name: /Sign in/ })).toBeNull();
+    expect(screen.queryByText(/ja@example.com/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Restore' })).toBeNull();
   });
 
   it('shows the account and the usage out of the limit', () => {

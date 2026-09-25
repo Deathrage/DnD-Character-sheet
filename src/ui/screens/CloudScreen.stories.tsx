@@ -8,7 +8,6 @@ const meta = {
     message: null,
     conflict: null,
     onBack: () => {},
-    onSignIn: () => {},
     onRestore: () => {},
     onDeleteVersion: () => {},
     onDeleteCharacter: () => {},
@@ -54,10 +53,12 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const SignedIn: Story = {};
-export const SignedOut: Story = {
+/** Signed out never shows: the shell sends the player back to the characters. */
+export const Unavailable: Story = {
   args: {
+    message: 'Cloud backup could not be loaded. Check your connection and try again.',
     view: {
-      status: 'signedOut',
+      status: 'unavailable',
       user: null,
       characters: [],
       usedBytes: 0,

@@ -66,6 +66,25 @@ describe('App', () => {
     expect(await screen.findByText('No characters yet. Tap + to make one.')).toBeDefined();
   });
 
+  it('sends a signed-out player from the cloud page back to the characters', async () => {
+    globalThis.location.hash = '#/cloud';
+    renderApp(port(), cloudWith(false));
+    expect(await screen.findByText('No characters yet. Tap + to make one.')).toBeDefined();
+    expect(globalThis.location.hash).toBe('#/');
+    expect(screen.queryByRole('button', { name: 'Sign in with Google' })).toBeNull();
+  });
+
+  it('shows only the error on the cloud page when the cloud cannot be reached', async () => {
+    globalThis.location.hash = '#/cloud';
+    renderApp();
+    expect(
+      await screen.findByText(
+        'Cloud backup could not be loaded. Check your connection and try again.',
+      ),
+    ).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Sign in with Google' })).toBeNull();
+  });
+
   it('creates a character, opens it, and stores what is typed into it', async () => {
     const { library } = renderApp();
     await screen.findByText('No characters yet. Tap + to make one.');

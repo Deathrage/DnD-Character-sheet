@@ -3,7 +3,6 @@ import { ConflictDialog } from '../components/ConflictDialog.js';
 import { formatWhen, initialOf } from '../format.js';
 import { formatBytes } from '../../shared/formatBytes.js';
 import type { CloudView, ConflictView } from '../types.js';
-import { CloudTerms } from './Legal.js';
 
 interface Props {
   view: CloudView;
@@ -11,7 +10,6 @@ interface Props {
   message: string | null;
   conflict: ConflictView | null;
   onBack(): void;
-  onSignIn(): void;
   onRestore(characterId: string, uploadedAt: string): void;
   onDeleteVersion(characterId: string, uploadedAt: string): void;
   onDeleteCharacter(characterId: string): void;
@@ -20,16 +18,15 @@ interface Props {
 }
 
 /**
- * Sign-out is not here: it lives in the list menu's account panel, beside sign-in. This screen
- * is only reached signed in, and leaving it by signing out would strand the player on a page
- * whose whole content just disappeared.
+ * Only for a signed-in player: sign-in and sign-out both live in the list menu's account panel,
+ * and the shell sends a signed-out player back to the characters. Until the sign-in check settles,
+ * or when the cloud cannot be reached, only the message shows.
  */
 export function CloudScreen({
   view,
   message,
   conflict,
   onBack,
-  onSignIn,
   onRestore,
   onDeleteVersion,
   onDeleteCharacter,
@@ -56,30 +53,7 @@ export function CloudScreen({
           </div>
         )}
 
-        {!signedIn ? (
-          <div className="chero">
-            <span className="cheroico" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="M7 19a5 5 0 0 1-.6-9.96A6 6 0 0 1 18 10a4.5 4.5 0 0 1-.5 9z" />
-                <path d="M12 16v-5M9.5 13.5 12 11l2.5 2.5" />
-              </svg>
-            </span>
-            <h2>Back up to your Google account</h2>
-            <p className="hint">
-              Keep dated copies of your characters, and restore them on any device.
-            </p>
-            <button
-              type="button"
-              className="primary"
-              disabled={view.status === 'signingIn'}
-              onClick={onSignIn}
-            >
-              Sign in with Google
-            </button>
-            {view.status === 'signingIn' && <p className="hint">Waiting for Google{'…'}</p>}
-            <CloudTerms />
-          </div>
-        ) : (
+        {signedIn && (
           <>
             {/* The list menu's account panel, so the account looks the same wherever it shows. */}
             <div className="mgroup">
