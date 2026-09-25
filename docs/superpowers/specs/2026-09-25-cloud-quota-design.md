@@ -412,3 +412,7 @@ Every test proven to bite, as AGENTS.md requires.
     again…") cannot help. On `PERMISSION_DENIED`, `CloudBackup` therefore reads the document too,
     like §5 does for `UNKNOWN`: if it is `FROM_FUTURE`, the sentence is `describeLayoutError`'s
     "Reload to update"; otherwise, or if the read fails, the original.
+11. **§5's size check also runs on `QUOTA`**, not only on `UNKNOWN`. If production answered an
+    oversized write with `resource-exhausted`, a full cloud would otherwise read "out of free
+    capacity for today". A real daily-quota failure makes the read fail too, so its sentence
+    stands.

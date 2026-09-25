@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { CloudError } from '../data/remote/cloudError.js';
+import { CloudError, describeFull } from '../data/remote/cloudError.js';
 import {
   cloudDocumentPath,
   cloudDocumentSize,
@@ -8,7 +8,7 @@ import {
 } from '../data/remote/cloudDocument.js';
 import { decodePayload, encodePayload } from '../data/remote/codec.js';
 import { parseCloudDocument, type CloudDocument } from '../data/remote/layout/index.js';
-import { documentSize, MAX_DOCUMENT_BYTES } from '../data/remote/size.js';
+import { documentSize, MAX_DOCUMENT_BYTES, stringSize } from '../data/remote/size.js';
 import type { CloudLoad, CloudRepository, CloudUser } from '../data/remote/types.js';
 import { createIndexedDbRepository } from '../data/repository/indexedDbRepository.js';
 import type { CharacterRepository } from '../data/repository/types.js';
@@ -706,21 +706,44 @@ describe('CloudBackup', () => {
     expect((cloud.state.stored as CloudDocument).characters).toEqual({});
   });
 
-  it('says how much space an upload needs when the cloud is full, even unlisted', async () => {
-    const { backup: cloudBackup, cloud } = backup();
-    cloud.state.stored = {
+  /** A cloud 200 bytes short of full, and the sentence an upload of `ID_A`'s stored sheet gets. */
+  async function fullCloud() {
+    const stored = {
       layoutVersion: 2,
       characters: {
         [ID_B]: { [AT]: { sheet: new Uint8Array(MAX_DOCUMENT_BYTES - 200), portrait: null } },
       },
     };
+    const { sheet } = await encodePayload(docFor(ID_A, 'Sable'), null);
+    // By size.ts's rules, not by `withVersion`: `{ [ID_A]: { [at]: { sheet, portrait: null } } }`.
+    const at = '2026-09-24T18:00:00.000Z'; // `clock()`'s first
+    const needed =
+      stringSize(ID_A) +
+      stringSize(at) +
+      stringSize('sheet') +
+      sheet.byteLength +
+      stringSize('portrait') +
+      1;
+    const free = MAX_DOCUMENT_BYTES - documentSize(['cloud', USER.uid], stored);
+    return { stored, sentence: describeFull(needed, free) };
+  }
+
+  it('says how much space an upload needs when the cloud is full, even unlisted', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    const full = await fullCloud();
+    cloud.state.stored = full.stored;
     const result = await cloudBackup.upload(ID_A); // no refresh: straight from a sheet
-    expect(result).toEqual({
-      ok: false,
-      message: expect.stringMatching(
-        /^Not enough cloud space: this version needs [\d.]+ KB and [\d.]+ KB is free\./,
-      ) as unknown,
-    });
+    expect(result).toEqual({ ok: false, message: full.sentence });
+    expect(full.sentence).toMatch(/^Not enough cloud space: this version needs [\d.]+ KB and /);
+  });
+
+  it('says how much space is needed even when a full cloud answers resource-exhausted', async () => {
+    const { backup: cloudBackup, cloud } = backup();
+    const full = await fullCloud();
+    cloud.state.stored = full.stored;
+    // Production's code for an oversized write is undocumented, and may be this one.
+    cloud.state.failNext = Object.assign(new Error('too big'), { code: 'resource-exhausted' });
+    expect(await cloudBackup.upload(ID_A)).toEqual({ ok: false, message: full.sentence });
   });
 
   it('an unexplained upload failure that is not about space keeps its own sentence', async () => {

@@ -309,7 +309,8 @@ export class CloudBackup {
    * failure is the one to report.
    *
    * - Spec §5: the numbers decide "full", never the error code, which production may word
-   *   differently.
+   *   differently — `UNKNOWN`, or `QUOTA` if it answers an oversized write `resource-exhausted`.
+   *   A real daily-quota failure fails the read too, so its own sentence stands.
    * - Spec §6: the rules refuse this build's write over a newer layout, and "sign in again" would
    *   be useless advice there.
    */
@@ -328,7 +329,7 @@ export class CloudBackup {
       if (loaded?.ok === false && loaded.error.code === 'FROM_FUTURE') {
         return describeLayoutError(loaded.error);
       }
-    } else if (code === 'UNKNOWN') {
+    } else if (code === 'UNKNOWN' || code === 'QUOTA') {
       const loaded = await load();
       if (loaded?.ok) {
         const before = loaded.doc === null ? 0 : cloudDocumentSize(uid, loaded.doc);
