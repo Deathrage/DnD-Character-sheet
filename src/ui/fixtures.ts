@@ -356,7 +356,6 @@ export const abilitiesAndSkills: AbilitiesAndSkillsView = {
   proficiencyBonus: 3,
   passivePerception: 14,
   speed: 30,
-  initiative: 3,
   abilities: {
     strength: ability(10, 0, 0),
     dexterity: ability(17, 3, 6, true),
@@ -513,7 +512,6 @@ export const noAbilitiesActions: AbilitiesAndSkillsActions = {
   setProficiencyBonus: () => {},
   setPassivePerception: () => {},
   setSpeed: () => {},
-  setInitiative: () => {},
   setAbilityScore: () => {},
   setAbilityModifier: () => {},
   setSavingThrowModifier: () => {},

@@ -58,8 +58,8 @@ export interface CharacterView {
   hitDices: HitDieView[];
   armorClass: number;
   /**
-   * Signed, and stored under abilities and skills; the header shows it too, beside armor class.
-   * Never derived from Dexterity.
+   * Signed, and never derived from Dexterity. Stored under abilities and skills, but the header,
+   * beside armor class, is the only place it is shown or edited.
    */
   initiative: number;
   /** A data URL, or `null` when none has been picked. */
@@ -332,7 +332,6 @@ export interface AbilitiesAndSkillsView {
   proficiencyBonus: number;
   passivePerception: number;
   speed: number;
-  initiative: number;
   abilities: Record<AbilityKey, AbilityView>;
   skills: Record<SkillKey, SkillView>;
 }
@@ -341,7 +340,6 @@ export interface AbilitiesAndSkillsActions {
   setProficiencyBonus(value: number): void;
   setPassivePerception(value: number): void;
   setSpeed(value: number): void;
-  setInitiative(value: number): void;
   setAbilityScore(key: AbilityKey, value: number): void;
   setAbilityModifier(key: AbilityKey, value: number): void;
   setSavingThrowModifier(key: AbilityKey, value: number): void;

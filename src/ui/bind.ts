@@ -277,7 +277,6 @@ function abilitiesView(sheet: CharacterSheetBO): AbilitiesAndSkillsView {
     proficiencyBonus: bo.proficiencyBonus,
     passivePerception: bo.passivePerception,
     speed: bo.speed,
-    initiative: bo.initiative,
     // Iterated from `reference.ts`'s display order rather than `Object.keys` of the business
     // object: the UI owns its own key list, and a divergence is then a type error on this line.
     abilities: Object.fromEntries(
@@ -532,7 +531,6 @@ function abilitiesActions(sheet: CharacterSheetBO): AbilitiesAndSkillsActions {
     setProficiencyBonus: (value) => bo.setProficiencyBonus(value),
     setPassivePerception: (value) => bo.setPassivePerception(value),
     setSpeed: (value) => bo.setSpeed(value),
-    setInitiative: (value) => bo.setInitiative(value),
     setAbilityScore: (key, value) => bo.abilities[key].setScore(value),
     setAbilityModifier: (key, value) => bo.abilities[key].setModifier(value),
     setSavingThrowModifier: (key, value) => bo.abilities[key].setSavingThrowModifier(value),

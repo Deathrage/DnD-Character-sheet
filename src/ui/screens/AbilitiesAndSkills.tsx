@@ -11,9 +11,9 @@ interface Props {
 /**
  * Every number on this screen is typed by the player, including the ones a character sheet
  * normally works out for you: a modifier is not derived from its score, a saving throw is not
- * derived from proficiency, passive perception is not derived from the perception skill, and
- * initiative is not derived from Dexterity. That is the whole point of the app (AGENTS.md) — it is
- * what lets a homebrew feature or a house rule be written down without the sheet arguing.
+ * derived from proficiency, and passive perception is not derived from the perception skill.
+ * That is the whole point of the app (AGENTS.md) — it is what lets a homebrew feature or a
+ * house rule be written down without the sheet arguing.
  *
  * The proficiency and expertise marks are therefore *labels*, not inputs. Ticking P changes
  * nothing else on the row.
@@ -55,16 +55,6 @@ export function AbilitiesAndSkills({ data, actions, onClose }: Props) {
               className="num big"
               value={data.speed}
               onChange={actions.setSpeed}
-            />
-          </div>
-          <div className="statbox">
-            <div className="lbl">Initiative</div>
-            <NumberField
-              label="Initiative"
-              className="num big"
-              value={data.initiative}
-              onChange={actions.setInitiative}
-              signed
             />
           </div>
         </div>

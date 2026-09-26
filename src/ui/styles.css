@@ -1299,8 +1299,7 @@ body {
 /* ---------- abilities & skills ---------- */
 .topstats {
   display: grid;
-  /* Two by two: four across left each box too narrow for its label on a phone. */
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
   margin: 8px 0 2px;
 }
