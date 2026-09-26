@@ -139,7 +139,11 @@ describe('App', () => {
     fireEvent.change(picker);
 
     expect(await screen.findByText(/Sable is already in this app/)).toBeDefined();
-    fireEvent.click(screen.getByRole('button', { name: 'Keep both' }));
+    // `findByRole`, not `getByRole`: this dialog appears after an asynchronous file read, and
+    // `ResponsiveDialog` calls `showModal()` in an effect. The text can be found in the moment
+    // between React's commit and that effect, while the dialog is still closed and its buttons
+    // are hidden from role queries — about one run in forty, on main as well as here.
+    fireEvent.click(await screen.findByRole('button', { name: 'Keep both' }));
 
     // Listed, not opened: the player stays on the list.
     expect(await screen.findByText('Sable (restored)')).toBeDefined();
