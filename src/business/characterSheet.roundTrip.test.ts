@@ -23,12 +23,16 @@ function fill(sheet: CharacterSheetBO): void {
   sheet.journalAndNotes.setNotes('Find the Sunsword.');
   sheet.inventory.coins.setGp(84);
   sheet.inventory.add({ name: 'Rope', count: 1 });
-  sheet.equipment.addWeapon({ name: 'Rapier', equipped: true });
+  const rapier = sheet.equipment.addWeapon({ name: 'Rapier', equipped: true });
+  rapier.setAttackAbility('dexterity');
+  rapier.setAttackBonus(6);
+  rapier.setAttackDamage('1d8+3 piercing');
   sheet.equipment.addOther({ name: 'Cloak', attuned: true });
   sheet.featsAndTraits.createCategory('Combat').add({ name: 'Sneak Attack' });
   sheet.featsAndTraits.add({ name: 'Darkvision' });
   sheet.spellList.createCategory('Evocation').add({ name: 'Fire Bolt' });
   sheet.spellList.add({ name: 'Prestidigitation' });
+  sheet.spellList.spellcasting.add('intelligence', { attackBonus: 6, saveDc: 14 });
   sheet.counters.createCategory('Class features').add({ name: 'Rage' });
   sheet.counters.add({ name: 'Inspiration' });
   sheet.counters.spellSlots[0]?.setTotal(4);
@@ -113,6 +117,7 @@ const overLongWrites: [string, (sheet: CharacterSheetBO) => void][] = [
   ['a new inventory item name', (sheet) => sheet.inventory.add({ name: LONG_NAME })],
   ['an inventory item rename', (sheet) => sheet.inventory.items[0]?.setName(LONG_NAME)],
   ['a new weapon name', (sheet) => sheet.equipment.addWeapon({ name: LONG_NAME })],
+  ['a weapon damage', (sheet) => sheet.equipment.weapons[0]?.setAttackDamage(LONG_NAME)],
   ['a new feat name', (sheet) => sheet.featsAndTraits.add({ name: LONG_NAME })],
   ['a new spell name', (sheet) => sheet.spellList.add({ name: LONG_NAME })],
   ['a new counter name', (sheet) => sheet.counters.add({ name: LONG_NAME })],

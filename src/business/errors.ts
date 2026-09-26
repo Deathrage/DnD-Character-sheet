@@ -14,6 +14,9 @@ export type RuleCode =
   | 'UNKNOWN_CATEGORY'
   | 'INVALID_DIE_SIZE'
   | 'INVALID_IMAGE'
+  | 'UNKNOWN_ABILITY'
+  | 'DUPLICATE_SPELLCASTING'
+  | 'NO_ATTACK'
   | 'GONE';
 
 export class RuleViolation extends Error {

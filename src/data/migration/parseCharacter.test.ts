@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import { CURRENT } from '../schema/index.js';
 import { ID_A, docFor } from '../../test/fixtures.js';
 import type { Migration } from './migrations.js';
 import { defaultRegistry, parseCharacter, type MigrationRegistry } from './parseCharacter.js';
@@ -65,7 +66,8 @@ describe('parseCharacter', () => {
     const result = parseCharacter(raw);
     expect(result.ok).toBe(false);
     if (!result.ok && result.error.code === 'INVALID_AT_VERSION') {
-      expect(result.error.version).toBe(1);
+      // Validated at its own version, which for a fresh document is the current one.
+      expect(result.error.version).toBe(CURRENT);
       expect(result.error.issues.some((issue) => issue.path === 'armorClass')).toBe(true);
     } else {
       throw new Error('expected INVALID_AT_VERSION');

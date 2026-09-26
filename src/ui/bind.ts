@@ -21,6 +21,7 @@ import {
   type CloudBackup,
   type EquipmentItemBO,
   RuleViolation,
+  WeaponBO,
   type RuleCode,
   type StorageFailure,
   type StorageGate,
@@ -58,6 +59,7 @@ import type {
   SpellListActions,
   SpellListView,
   VitalsActions,
+  WeaponView,
 } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -208,15 +210,25 @@ const equipmentItemView = (item: EquipmentItemBO): EquipmentItemView => ({
   equipped: item.equipped,
 });
 
+/** `attack` is a copy from `WeaponBO`, so the view never holds the stored object. */
+const weaponView = (item: WeaponBO): WeaponView => ({
+  ...equipmentItemView(item),
+  attack: item.attack,
+});
+
+/** The derived lists mix both kinds; a weapon there keeps its attack, so its row can show it. */
+const anyEquipmentView = (item: EquipmentItemBO): WeaponView | EquipmentItemView =>
+  item instanceof WeaponBO ? weaponView(item) : equipmentItemView(item);
+
 function equipmentView(sheet: CharacterSheetBO): EquipmentView {
   const { equipment } = sheet;
   return {
-    weapons: equipment.weapons.map(equipmentItemView),
+    weapons: equipment.weapons.map(weaponView),
     other: equipment.other.map(equipmentItemView),
     // Read from the facade's derived getters rather than filtered again here, so the view cannot
     // disagree with the business object about what "attuned" means.
-    attuned: equipment.attuned.map(equipmentItemView),
-    equipped: equipment.equipped.map(equipmentItemView),
+    attuned: equipment.attuned.map(anyEquipmentView),
+    equipped: equipment.equipped.map(anyEquipmentView),
   };
 }
 
@@ -233,7 +245,15 @@ function spellListView(sheet: CharacterSheetBO): SpellListView {
   // Array#sort is stable, so spells of one level keep the order the player added them in.
   view.categories.forEach((category) => category.items.sort(byLevel));
   view.uncategorized.sort(byLevel);
-  return view;
+  return {
+    ...view,
+    // Already STR to CHA: the business object orders them, so the view cannot disagree.
+    spellcasting: sheet.spellList.spellcasting.items.map((entry) => ({
+      ability: entry.ability,
+      attackBonus: entry.attackBonus,
+      saveDc: entry.saveDc,
+    })),
+  };
 }
 
 function countersView(sheet: CharacterSheetBO): CountersView {
@@ -400,16 +420,22 @@ function inventoryActions(sheet: CharacterSheetBO): InventoryActions {
 function equipmentActions(sheet: CharacterSheetBO): EquipmentActions {
   const bo = sheet.equipment;
   const item = (id: string) => byId([...bo.weapons, ...bo.other], id, 'equipment item');
+  const weapon = (id: string) => byId(bo.weapons, id, 'weapon');
   return {
-    addEquipment: (slot, init) => {
-      if (slot === 'weapons') bo.addWeapon(init);
-      else bo.addOther(init);
+    addWeapon: (init) => {
+      bo.addWeapon(init);
+    },
+    addOther: (init) => {
+      bo.addOther(init);
     },
     renameEquipment: (id, name) => attempt(() => item(id).setName(name)),
     setEquipmentDescription: (id, description) => item(id).setDescription(description),
     setAttuned: (id, attuned) => item(id).setAttuned(attuned),
     setEquipped: (id, equipped) => item(id).setEquipped(equipped),
     removeEquipment: (id) => item(id).remove(),
+    setWeaponAttackAbility: (id, ability) => weapon(id).setAttackAbility(ability),
+    setWeaponAttackBonus: (id, value) => weapon(id).setAttackBonus(value),
+    setWeaponAttackDamage: (id, damage) => attempt(() => weapon(id).setAttackDamage(damage)),
   };
 }
 
@@ -434,6 +460,14 @@ function spellListActions(sheet: CharacterSheetBO): SpellListActions {
   const bo = sheet.spellList;
   const spell = (id: string) => itemById(bo, id, 'spell');
   const category = (id: string) => byId(bo.categories, id, 'category');
+  // Keyed by ability, as spell slots are by level: there is no id to look up.
+  const casting = (ability: AbilityKey) => {
+    const found = bo.spellcasting.items.find((entry) => entry.ability === ability);
+    if (found === undefined) {
+      throw new RuleViolation('GONE', `there is no ${ability} spellcasting entry`);
+    }
+    return found;
+  };
   return {
     ...categoryActions(bo),
     // `add` takes a name and a description only; level and prepared go through the added item's
@@ -450,6 +484,12 @@ function spellListActions(sheet: CharacterSheetBO): SpellListActions {
     moveSpell: (id, categoryId) =>
       spell(id).moveTo(categoryId === null ? null : category(categoryId)),
     removeSpell: (id) => spell(id).remove(),
+    addSpellcasting: (ability, init) => {
+      bo.spellcasting.add(ability, init);
+    },
+    setSpellAttackBonus: (ability, value) => casting(ability).setAttackBonus(value),
+    setSpellSaveDc: (ability, value) => casting(ability).setSaveDc(value),
+    removeSpellcasting: (ability) => casting(ability).remove(),
   };
 }
 

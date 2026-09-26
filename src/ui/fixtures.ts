@@ -20,6 +20,7 @@ import type {
   SpellListActions,
   SpellListView,
   VitalsActions,
+  WeaponView,
 } from './types.js';
 
 /**
@@ -169,13 +170,15 @@ export const inventory: InventoryView = {
   ],
 };
 
-const weapons: EquipmentItemView[] = [
+/** Shortbow has no attack roll entered yet, so the stories show both kinds of weapon row. */
+const weapons: WeaponView[] = [
   {
     id: 'e1',
     name: 'Rapier',
     description: '1d8 piercing, finesse.',
     attuned: false,
     equipped: true,
+    attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8+3 piercing' },
   },
   {
     id: 'e2',
@@ -183,6 +186,7 @@ const weapons: EquipmentItemView[] = [
     description: '1d6 piercing, range 80/320.',
     attuned: false,
     equipped: false,
+    attack: null,
   },
   {
     id: 'e3',
@@ -190,6 +194,7 @@ const weapons: EquipmentItemView[] = [
     description: '1d4 piercing, finesse, thrown 20/60.',
     attuned: false,
     equipped: true,
+    attack: { ability: 'dexterity', attackBonus: 6, damage: '1d4+3 piercing' },
   },
 ];
 
@@ -220,6 +225,7 @@ export const equipment: EquipmentView = {
 };
 
 export const spellList: SpellListView = {
+  spellcasting: [{ ability: 'intelligence', attackBonus: 6, saveDc: 14 }],
   categories: [
     {
       id: 'sc1',
@@ -382,7 +388,7 @@ export const abilitiesAndSkills: AbilitiesAndSkillsView = {
 
 export const sableJson = JSON.stringify(
   {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: '6d0b0f7e-3c41-4a2a-9f6f-2a1f0c9d8e77',
     name: 'Sable Nightwind',
     updatedAt: '2026-09-20T18:04:11.000Z',
@@ -458,7 +464,11 @@ export const noInventoryActions: InventoryActions = {
 };
 
 export const noEquipmentActions: EquipmentActions = {
-  addEquipment: () => {},
+  addWeapon: () => {},
+  addOther: () => {},
+  setWeaponAttackAbility: () => {},
+  setWeaponAttackBonus: () => {},
+  setWeaponAttackDamage: () => null,
   renameEquipment: () => null,
   setEquipmentDescription: () => {},
   setAttuned: () => {},
@@ -468,6 +478,10 @@ export const noEquipmentActions: EquipmentActions = {
 
 export const noSpellListActions: SpellListActions = {
   addSpell: () => {},
+  addSpellcasting: () => {},
+  setSpellAttackBonus: () => {},
+  setSpellSaveDc: () => {},
+  removeSpellcasting: () => {},
   renameSpell: () => null,
   setSpellDescription: () => {},
   setSpellLevel: () => {},

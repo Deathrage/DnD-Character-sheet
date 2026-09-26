@@ -46,13 +46,19 @@ describe('toSheetData', () => {
     sheet.journalAndNotes.setNotes('Find the Sunsword.');
     sheet.inventory.coins.setGp(84);
     sheet.inventory.add({ name: 'Rope', description: '50 ft', count: 2 });
-    sheet.equipment.addWeapon({ name: 'Rapier', equipped: true });
+    sheet.equipment.addWeapon({
+      name: 'Rapier',
+      equipped: true,
+      attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8+3 piercing' },
+    });
     sheet.equipment.addOther({ name: 'Cloak', attuned: true });
     sheet.featsAndTraits.createCategory('Rogue').add({ name: 'Sneak Attack', description: '+3d6' });
     sheet.featsAndTraits.add({ name: 'Darkvision' });
     const spell = sheet.spellList.createCategory('Combat').add({ name: 'Fireball' });
     spell.setLevel(3);
     spell.setPrepared(true);
+    sheet.spellList.spellcasting.add('charisma', { attackBonus: 4, saveDc: 12 });
+    sheet.spellList.spellcasting.add('intelligence', { attackBonus: 6, saveDc: 14 });
     sheet.counters.add({ name: 'Inspiration' }).setTotal(1);
     sheet.counters.spellSlots[1]?.setTotal(2);
     sheet.counters.spellSlots[1]?.setCurrent(1);
@@ -107,11 +113,27 @@ describe('toSheetData', () => {
         description: '',
         attuned: false,
         equipped: true,
+        attack: doc.equipment.weapons[0]?.attack,
       },
     ]);
-    expect(data.equipment.other.map((item) => item.name)).toEqual(['Cloak']);
+    expect(doc.equipment.weapons[0]?.attack).toEqual({
+      ability: 'dexterity',
+      attackBonus: 6,
+      damage: '1d8+3 piercing',
+    });
+    // Other equipment has no attack in its view: only a weapon's view carries the key.
+    expect(data.equipment.other).toEqual([
+      {
+        id: doc.equipment.other[0]?.id,
+        name: 'Cloak',
+        description: '',
+        attuned: true,
+        equipped: false,
+      },
+    ]);
     expect(data.equipment.attuned.map((item) => item.name)).toEqual(['Cloak']);
-    expect(data.equipment.equipped.map((item) => item.name)).toEqual(['Rapier']);
+    // A weapon in a derived list keeps its attack, so the Equipped block can show it.
+    expect(data.equipment.equipped).toEqual([data.equipment.weapons[0]]);
 
     expect(data.featsAndTraits).toEqual({
       categories: [
@@ -139,6 +161,15 @@ describe('toSheetData', () => {
       level: 3,
       prepared: true,
     });
+    // STR to CHA, whatever order they were added in; read against the document, not the view.
+    expect(doc.spellList.spellcasting).toEqual({
+      intelligence: { attackBonus: 6, saveDc: 14 },
+      charisma: { attackBonus: 4, saveDc: 12 },
+    });
+    expect(data.spellList.spellcasting).toEqual([
+      { ability: 'intelligence', attackBonus: 6, saveDc: 14 },
+      { ability: 'charisma', attackBonus: 4, saveDc: 12 },
+    ]);
 
     expect(data.counters.uncategorized).toEqual([
       {
@@ -215,13 +246,14 @@ describe('toSheetActions', () => {
     actions.journalAndNotes.setNotes('Find the Sunsword.');
     actions.inventory.setCoin('gp', 84);
     actions.inventory.addItem({ name: 'Rope', description: '50 ft', count: 2 });
-    actions.equipment.addEquipment('weapons', {
+    actions.equipment.addWeapon({
       name: 'Rapier',
       description: '',
       attuned: false,
       equipped: true,
+      attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8+3 piercing' },
     });
-    actions.equipment.addEquipment('other', {
+    actions.equipment.addOther({
       name: 'Cloak',
       description: '',
       attuned: true,
@@ -234,6 +266,7 @@ describe('toSheetActions', () => {
       level: 3,
       prepared: true,
     });
+    actions.spellList.addSpellcasting('wisdom', { attackBonus: 5, saveDc: 13 });
     actions.counters.addCounter(null, { name: 'Inspiration', description: '', total: 1 });
     actions.counters.setSpellSlotTotal(2, 2);
     actions.counters.setSpellSlotCurrent(2, 1);
@@ -256,10 +289,15 @@ describe('toSheetActions', () => {
     });
     expect(doc.inventory.coins.gp).toBe(84);
     expect(doc.inventory.items[0]).toMatchObject({ name: 'Rope', description: '50 ft', count: 2 });
-    expect(doc.equipment.weapons[0]).toMatchObject({ name: 'Rapier', equipped: true });
+    expect(doc.equipment.weapons[0]).toMatchObject({
+      name: 'Rapier',
+      equipped: true,
+      attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8+3 piercing' },
+    });
     expect(doc.equipment.other[0]).toMatchObject({ name: 'Cloak', attuned: true });
     expect(doc.featsAndTraits.categories[0]?.items[0]).toMatchObject({ name: 'Sneak Attack' });
     expect(doc.spellList.uncategorized[0]).toMatchObject({ level: 3, prepared: true });
+    expect(doc.spellList.spellcasting).toEqual({ wisdom: { attackBonus: 5, saveDc: 13 } });
     expect(doc.counters.uncategorized[0]).toMatchObject({
       name: 'Inspiration',
       current: 1,
@@ -272,6 +310,25 @@ describe('toSheetActions', () => {
       savingThrowProficient: true,
     });
     expect(doc.abilitiesAndSkills.skills.stealth.expertise).toBe(true);
+  });
+
+  it('returns a message for over-long damage instead of throwing, and None clears the attack', () => {
+    const sheet = newSheet();
+    const actions = toSheetActions(sheet);
+    actions.equipment.addWeapon({
+      name: 'Rapier',
+      description: '',
+      attuned: false,
+      equipped: false,
+      attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8' },
+    });
+    const id = toSheetData(sheet).equipment.weapons[0]?.id ?? '';
+
+    expect(actions.equipment.setWeaponAttackDamage(id, 'x'.repeat(81))).toMatch(/80/);
+    expect(sheet.toDocument().equipment.weapons[0]?.attack?.damage).toBe('1d8');
+
+    actions.equipment.setWeaponAttackAbility(id, null);
+    expect(sheet.toDocument().equipment.weapons[0]?.attack).toBeNull();
   });
 
   it("sets speed from the header, into the abilities section's field", () => {
@@ -293,11 +350,12 @@ describe('toSheetActions', () => {
     actions.vitals.addHitDie(8);
     actions.journalAndNotes.appendDay();
     actions.inventory.addItem({ name: 'Rope', description: '', count: 1 });
-    actions.equipment.addEquipment('weapons', {
+    actions.equipment.addWeapon({
       name: 'Rapier',
       description: '',
       attuned: false,
       equipped: false,
+      attack: null,
     });
     actions.featsAndTraits.createCategory('Rogue');
     actions.featsAndTraits.addFeat(null, { name: 'Darkvision', description: '' });
@@ -308,6 +366,7 @@ describe('toSheetActions', () => {
       prepared: false,
     });
     actions.counters.addCounter(null, { name: 'Inspiration', description: '', total: 0 });
+    actions.spellList.addSpellcasting('intelligence', { attackBonus: 1, saveDc: 2 });
 
     const before = toSheetData(sheet);
     const classId = before.character.classes[0]?.id ?? '';
@@ -326,6 +385,10 @@ describe('toSheetActions', () => {
     actions.equipment.setEquipmentDescription(gearId, '1d8 piercing');
     actions.equipment.setAttuned(gearId, true);
     actions.equipment.setEquipped(gearId, true);
+    actions.equipment.setWeaponAttackAbility(gearId, 'strength');
+    actions.equipment.setWeaponAttackBonus(gearId, 7);
+    const damageFailure = actions.equipment.setWeaponAttackDamage(gearId, '2d6+4 slashing');
+    actions.equipment.setWeaponAttackAbility(gearId, 'dexterity');
     actions.featsAndTraits.renameCategory(featCategoryId, 'Rogue levels');
     actions.featsAndTraits.renameFeat(featId, 'Superior Darkvision');
     actions.featsAndTraits.setFeatDescription(featId, '120 ft');
@@ -333,6 +396,8 @@ describe('toSheetActions', () => {
     actions.spellList.setSpellDescription(spellId, '12d6 fire');
     actions.spellList.setSpellLevel(spellId, 7);
     actions.spellList.setSpellPrepared(spellId, true);
+    actions.spellList.setSpellAttackBonus('intelligence', 6);
+    actions.spellList.setSpellSaveDc('intelligence', 14);
     actions.counters.renameCounter(counterId, 'Bardic Inspiration');
     actions.counters.setCounterDescription(counterId, 'd8, regained on a rest');
     actions.counters.setCounterTotal(counterId, 4);
@@ -356,7 +421,9 @@ describe('toSheetActions', () => {
       description: '1d8 piercing',
       attuned: true,
       equipped: true,
+      attack: { ability: 'dexterity', attackBonus: 7, damage: '2d6+4 slashing' },
     });
+    expect(damageFailure).toBeNull();
     expect(doc.featsAndTraits.categories[0]?.name).toBe('Rogue levels');
     expect(doc.featsAndTraits.uncategorized[0]).toMatchObject({
       name: 'Superior Darkvision',
@@ -368,6 +435,7 @@ describe('toSheetActions', () => {
       level: 7,
       prepared: true,
     });
+    expect(doc.spellList.spellcasting).toEqual({ intelligence: { attackBonus: 6, saveDc: 14 } });
     expect(doc.counters.uncategorized[0]).toMatchObject({
       name: 'Bardic Inspiration',
       description: 'd8, regained on a rest',
@@ -394,6 +462,7 @@ describe('toSheetActions', () => {
     actions.inventory.removeItem(itemId);
     actions.equipment.removeEquipment(gearId);
     actions.spellList.removeSpell(spellId);
+    actions.spellList.removeSpellcasting('intelligence');
     actions.counters.removeCounter(counterId);
 
     const emptied = sheet.toDocument();
@@ -403,6 +472,7 @@ describe('toSheetActions', () => {
     expect(emptied.inventory.items).toEqual([]);
     expect(emptied.equipment.weapons).toEqual([]);
     expect(emptied.spellList.uncategorized).toEqual([]);
+    expect(emptied.spellList.spellcasting).toEqual({});
     expect(emptied.counters.uncategorized).toEqual([]);
   });
 

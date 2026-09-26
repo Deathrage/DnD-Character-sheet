@@ -1,4 +1,5 @@
 import { MAX_PORTRAIT, portraitSchema } from '../data/repository/portrait.js';
+import type { AbilityKey } from './abilitiesAndSkills.js';
 import { RuleViolation } from './errors.js';
 
 // Duplicated rather than imported: `src/business/` may not import a schema version directory
@@ -103,4 +104,43 @@ export function rejectDuplicate<TData extends { name: string }>(
   if (entries.some((entry) => entry !== except && entry.name === name)) {
     throw new RuleViolation('DUPLICATE_NAME', `a ${noun} named "${name}" already exists`);
   }
+}
+
+// Duplicated rather than imported, like the limits at the top of this file and
+// `SPELL_SLOT_LEVELS` in `counters.ts`: the tuple is a fact about one schema version, and
+// `src/business/` may not import a version directory. Display order too — STR to CHA.
+export const ABILITY_KEYS = [
+  'strength',
+  'dexterity',
+  'constitution',
+  'intelligence',
+  'wisdom',
+  'charisma',
+] as const satisfies readonly AbilityKey[];
+
+/**
+ * The type already restricts callers; this is the net for one it cannot reach — plain
+ * JavaScript, or a cast — because a key the schema does not know makes the document unsaveable.
+ */
+export function abilityKey(value: string): AbilityKey {
+  if (!(ABILITY_KEYS as readonly string[]).includes(value)) {
+    throw new RuleViolation('UNKNOWN_ABILITY', `"${value}" is not an ability`);
+  }
+  return value as AbilityKey;
+}
+
+/**
+ * A weapon's damage: trimmed at the write boundary, like a name, but allowed to be empty — no
+ * damage entered yet — which is why this is not `trimmedName`. Capped at the short-name limit the
+ * schema's `damageText` shares.
+ */
+export function damageText(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length > MAX_SHORT_NAME) {
+    throw new RuleViolation(
+      'TOO_LONG',
+      `damage must be at most ${MAX_SHORT_NAME} characters, got ${trimmed.length}`,
+    );
+  }
+  return trimmed;
 }

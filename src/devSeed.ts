@@ -111,12 +111,15 @@ const seedSable = seeder('Sable Nightwind', (sheet) => {
     name: 'Rapier',
     description: '1d8 piercing, finesse.',
     equipped: true,
+    attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8+3 piercing' },
   });
+  // No attack roll yet, so the list shows both kinds of weapon row.
   sheet.equipment.addWeapon({ name: 'Shortbow', description: '1d6 piercing, range 80/320.' });
   sheet.equipment.addWeapon({
     name: 'Dagger (x2)',
     description: '1d4 piercing, finesse, thrown 20/60.',
     equipped: true,
+    attack: { ability: 'dexterity', attackBonus: 6, damage: '1d4+3 piercing' },
   });
   sheet.equipment.addOther({
     name: 'Cloak of Elvenkind',
@@ -159,6 +162,7 @@ const seedSable = seeder('Sable Nightwind', (sheet) => {
     description: 'See in dim light within 60 ft as if bright.',
   });
 
+  sheet.spellList.spellcasting.add('intelligence', { attackBonus: 6, saveDc: 14 });
   const combat = sheet.spellList.createCategory('Combat');
   spell(
     combat.add({ name: 'Fire Bolt', description: 'Ranged spell attack, 2d10 fire.' }),
@@ -266,10 +270,12 @@ const seedThorne = seeder('Thorne Ironfell', (sheet) => {
   const d10 = sheet.hitDices.add(10);
   d10.setTotal(8);
   d10.setCurrent(8);
+  // A fighter: an attack, and no spellcasting, so the Spell List shows its empty hint.
   sheet.equipment.addWeapon({
     name: 'Greatsword',
     description: '2d6 slashing, heavy, two-handed.',
     equipped: true,
+    attack: { ability: 'strength', attackBonus: 7, damage: '2d6+4 slashing' },
   });
 });
 
@@ -279,6 +285,7 @@ const seedWren = seeder('Wren Duskwhisper', (sheet) => {
   sheet.hitPoints.setTotal(27);
   sheet.hitPoints.setCurrent(27);
   sheet.setArmorClass(14);
+  sheet.spellList.spellcasting.add('wisdom', { attackBonus: 5, saveDc: 13 });
 });
 
 function spell(added: SpellBO, level: SpellLevel, prepared: boolean): void {

@@ -12,7 +12,7 @@ import { HitPointsBO } from './hitPoints.js';
 import { InventoryBO } from './inventory.js';
 import { JournalAndNotesBO } from './journalAndNotes.js';
 import './mobxConfig.js';
-import { makeSpellList, type SpellListBO } from './spellList.js';
+import { SpellListBO } from './spellList.js';
 import type { CharacterData } from './types.js';
 
 export class CharacterSheetBO {
@@ -58,7 +58,7 @@ export class CharacterSheetBO {
     this.inventory = new InventoryBO(this.#doc.inventory.coins, this.#doc.inventory.items);
     this.equipment = new EquipmentBO(this.#doc.equipment.weapons, this.#doc.equipment.other);
     this.featsAndTraits = makeFeatsAndTraits(this.#doc.featsAndTraits);
-    this.spellList = makeSpellList(this.#doc.spellList);
+    this.spellList = new SpellListBO(this.#doc.spellList);
     this.counters = new CountersBO(this.#doc.counters);
     this.abilitiesAndSkills = new AbilitiesAndSkillsBO(this.#doc.abilitiesAndSkills);
   }
