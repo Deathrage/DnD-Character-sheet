@@ -225,6 +225,7 @@ export const equipment: EquipmentView = {
 };
 
 export const spellList: SpellListView = {
+  spellcasting: [{ ability: 'intelligence', attackBonus: 6, saveDc: 14 }],
   categories: [
     {
       id: 'sc1',
@@ -477,6 +478,10 @@ export const noEquipmentActions: EquipmentActions = {
 
 export const noSpellListActions: SpellListActions = {
   addSpell: () => {},
+  addSpellcasting: () => {},
+  setSpellAttackBonus: () => {},
+  setSpellSaveDc: () => {},
+  removeSpellcasting: () => {},
   renameSpell: () => null,
   setSpellDescription: () => {},
   setSpellLevel: () => {},

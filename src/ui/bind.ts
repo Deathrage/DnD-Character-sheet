@@ -245,7 +245,15 @@ function spellListView(sheet: CharacterSheetBO): SpellListView {
   // Array#sort is stable, so spells of one level keep the order the player added them in.
   view.categories.forEach((category) => category.items.sort(byLevel));
   view.uncategorized.sort(byLevel);
-  return view;
+  return {
+    ...view,
+    // Already STR to CHA: the business object orders them, so the view cannot disagree.
+    spellcasting: sheet.spellList.spellcasting.items.map((entry) => ({
+      ability: entry.ability,
+      attackBonus: entry.attackBonus,
+      saveDc: entry.saveDc,
+    })),
+  };
 }
 
 function countersView(sheet: CharacterSheetBO): CountersView {
@@ -452,6 +460,14 @@ function spellListActions(sheet: CharacterSheetBO): SpellListActions {
   const bo = sheet.spellList;
   const spell = (id: string) => itemById(bo, id, 'spell');
   const category = (id: string) => byId(bo.categories, id, 'category');
+  // Keyed by ability, as spell slots are by level: there is no id to look up.
+  const casting = (ability: AbilityKey) => {
+    const found = bo.spellcasting.items.find((entry) => entry.ability === ability);
+    if (found === undefined) {
+      throw new RuleViolation('GONE', `there is no ${ability} spellcasting entry`);
+    }
+    return found;
+  };
   return {
     ...categoryActions(bo),
     // `add` takes a name and a description only; level and prepared go through the added item's
@@ -468,6 +484,12 @@ function spellListActions(sheet: CharacterSheetBO): SpellListActions {
     moveSpell: (id, categoryId) =>
       spell(id).moveTo(categoryId === null ? null : category(categoryId)),
     removeSpell: (id) => spell(id).remove(),
+    addSpellcasting: (ability, init) => {
+      bo.spellcasting.add(ability, init);
+    },
+    setSpellAttackBonus: (ability, value) => casting(ability).setAttackBonus(value),
+    setSpellSaveDc: (ability, value) => casting(ability).setSaveDc(value),
+    removeSpellcasting: (ability) => casting(ability).remove(),
   };
 }
 

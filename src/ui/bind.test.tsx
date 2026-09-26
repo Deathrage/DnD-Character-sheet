@@ -57,6 +57,8 @@ describe('toSheetData', () => {
     const spell = sheet.spellList.createCategory('Combat').add({ name: 'Fireball' });
     spell.setLevel(3);
     spell.setPrepared(true);
+    sheet.spellList.spellcasting.add('charisma', { attackBonus: 4, saveDc: 12 });
+    sheet.spellList.spellcasting.add('intelligence', { attackBonus: 6, saveDc: 14 });
     sheet.counters.add({ name: 'Inspiration' }).setTotal(1);
     sheet.counters.spellSlots[1]?.setTotal(2);
     sheet.counters.spellSlots[1]?.setCurrent(1);
@@ -159,6 +161,15 @@ describe('toSheetData', () => {
       level: 3,
       prepared: true,
     });
+    // STR to CHA, whatever order they were added in; read against the document, not the view.
+    expect(doc.spellList.spellcasting).toEqual({
+      intelligence: { attackBonus: 6, saveDc: 14 },
+      charisma: { attackBonus: 4, saveDc: 12 },
+    });
+    expect(data.spellList.spellcasting).toEqual([
+      { ability: 'intelligence', attackBonus: 6, saveDc: 14 },
+      { ability: 'charisma', attackBonus: 4, saveDc: 12 },
+    ]);
 
     expect(data.counters.uncategorized).toEqual([
       {
@@ -255,6 +266,7 @@ describe('toSheetActions', () => {
       level: 3,
       prepared: true,
     });
+    actions.spellList.addSpellcasting('wisdom', { attackBonus: 5, saveDc: 13 });
     actions.counters.addCounter(null, { name: 'Inspiration', description: '', total: 1 });
     actions.counters.setSpellSlotTotal(2, 2);
     actions.counters.setSpellSlotCurrent(2, 1);
@@ -285,6 +297,7 @@ describe('toSheetActions', () => {
     expect(doc.equipment.other[0]).toMatchObject({ name: 'Cloak', attuned: true });
     expect(doc.featsAndTraits.categories[0]?.items[0]).toMatchObject({ name: 'Sneak Attack' });
     expect(doc.spellList.uncategorized[0]).toMatchObject({ level: 3, prepared: true });
+    expect(doc.spellList.spellcasting).toEqual({ wisdom: { attackBonus: 5, saveDc: 13 } });
     expect(doc.counters.uncategorized[0]).toMatchObject({
       name: 'Inspiration',
       current: 1,
@@ -353,6 +366,7 @@ describe('toSheetActions', () => {
       prepared: false,
     });
     actions.counters.addCounter(null, { name: 'Inspiration', description: '', total: 0 });
+    actions.spellList.addSpellcasting('intelligence', { attackBonus: 1, saveDc: 2 });
 
     const before = toSheetData(sheet);
     const classId = before.character.classes[0]?.id ?? '';
@@ -382,6 +396,8 @@ describe('toSheetActions', () => {
     actions.spellList.setSpellDescription(spellId, '12d6 fire');
     actions.spellList.setSpellLevel(spellId, 7);
     actions.spellList.setSpellPrepared(spellId, true);
+    actions.spellList.setSpellAttackBonus('intelligence', 6);
+    actions.spellList.setSpellSaveDc('intelligence', 14);
     actions.counters.renameCounter(counterId, 'Bardic Inspiration');
     actions.counters.setCounterDescription(counterId, 'd8, regained on a rest');
     actions.counters.setCounterTotal(counterId, 4);
@@ -419,6 +435,7 @@ describe('toSheetActions', () => {
       level: 7,
       prepared: true,
     });
+    expect(doc.spellList.spellcasting).toEqual({ intelligence: { attackBonus: 6, saveDc: 14 } });
     expect(doc.counters.uncategorized[0]).toMatchObject({
       name: 'Bardic Inspiration',
       description: 'd8, regained on a rest',
@@ -445,6 +462,7 @@ describe('toSheetActions', () => {
     actions.inventory.removeItem(itemId);
     actions.equipment.removeEquipment(gearId);
     actions.spellList.removeSpell(spellId);
+    actions.spellList.removeSpellcasting('intelligence');
     actions.counters.removeCounter(counterId);
 
     const emptied = sheet.toDocument();
@@ -454,6 +472,7 @@ describe('toSheetActions', () => {
     expect(emptied.inventory.items).toEqual([]);
     expect(emptied.equipment.weapons).toEqual([]);
     expect(emptied.spellList.uncategorized).toEqual([]);
+    expect(emptied.spellList.spellcasting).toEqual({});
     expect(emptied.counters.uncategorized).toEqual([]);
   });
 

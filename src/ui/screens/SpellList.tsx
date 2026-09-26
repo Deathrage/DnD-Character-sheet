@@ -1,15 +1,26 @@
 import { useState } from 'react';
+import { AbilityPicker } from '../components/AbilityPicker.js';
 import { pasteLists } from '../components/pasteLists.js';
 import { CategorizedSection } from '../components/CategorizedSection.js';
 import { CheckRow } from '../components/CheckRow.js';
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import { ItemRow } from '../components/ItemRow.js';
 import { NameField } from '../components/NameField.js';
+import { NumberField } from '../components/NumberField.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
-import { SPELL_LEVELS, spellLevelBadge, spellLevelName } from '../reference.js';
+import { formatSigned } from '../format.js';
+import {
+  ABILITIES,
+  SPELL_LEVELS,
+  abilityOf,
+  spellLevelBadge,
+  spellLevelName,
+} from '../reference.js';
 import { CategorySelect, locate, type Located } from './categoryPicker.js';
 import type {
+  AbilityKey,
   CategoryView,
+  SpellcastingView,
   SpellListActions,
   SpellListView,
   SpellLevel,
@@ -23,12 +34,23 @@ interface Props {
   onClose(): void;
 }
 
-type Dialog = { kind: 'new'; categoryId: string | null } | { kind: 'edit'; id: string } | null;
+type Dialog =
+  | { kind: 'new'; categoryId: string | null }
+  | { kind: 'edit'; id: string }
+  | { kind: 'addCasting' }
+  | { kind: 'editCasting'; ability: AbilityKey }
+  | null;
 
 export function SpellList({ characterId, data, actions, onClose }: Props) {
   const [dialog, setDialog] = useState<Dialog>(null);
   const close = () => setDialog(null);
   const editing = dialog?.kind === 'edit' ? locate(data, dialog.id) : undefined;
+  // Resolved from the view, like `editing`, so an entry that vanishes underneath its dialog — a
+  // raw-JSON commit rebuilds the whole sheet — simply unmounts it.
+  const editingCasting =
+    dialog?.kind === 'editCasting'
+      ? data.spellcasting.find((entry) => entry.ability === dialog.ability)
+      : undefined;
 
   return (
     <>
@@ -62,7 +84,13 @@ export function SpellList({ characterId, data, actions, onClose }: Props) {
             after={<span className="lvlbadge">{spellLevelBadge(spell.level)}</span>}
           />
         )}
-      />
+      >
+        <Spellcasting
+          entries={data.spellcasting}
+          onAdd={() => setDialog({ kind: 'addCasting' })}
+          onOpen={(ability) => setDialog({ kind: 'editCasting', ability })}
+        />
+      </CategorizedSection>
 
       {dialog?.kind === 'new' && (
         <NewSpellDialog
@@ -71,6 +99,16 @@ export function SpellList({ characterId, data, actions, onClose }: Props) {
           onCreate={actions.addSpell}
           onClose={close}
         />
+      )}
+      {dialog?.kind === 'addCasting' && (
+        <AddSpellcastingDialog
+          used={data.spellcasting.map((entry) => entry.ability)}
+          onCreate={actions.addSpellcasting}
+          onClose={close}
+        />
+      )}
+      {editingCasting && (
+        <EditSpellcastingDialog entry={editingCasting} actions={actions} onClose={close} />
       )}
       {editing && (
         <EditSpellDialog
@@ -251,6 +289,189 @@ function EditSpellDialog({
         label="Prepared"
         checked={spell.prepared}
         onChange={(prepared) => actions.setSpellPrepared(spell.id, prepared)}
+      />
+    </ResponsiveDialog>
+  );
+}
+
+/**
+ * The spellcasting block above the categories (spec §5.1): one chip per ability, wrapping onto a
+ * new line rather than scrolling — a chip scrolled out of sight would hide a number the player
+ * may need every turn. Add is hidden once every ability has an entry.
+ */
+function Spellcasting({
+  entries,
+  onAdd,
+  onOpen,
+}: {
+  entries: SpellcastingView[];
+  onAdd(): void;
+  onOpen(ability: AbilityKey): void;
+}) {
+  return (
+    <>
+      <div className="sechead-row">
+        <span className="sechead static">Spellcasting</span>
+        {entries.length < ABILITIES.length && (
+          <button type="button" className="txtbtn" onClick={onAdd}>
+            + Add
+          </button>
+        )}
+      </div>
+      {entries.length === 0 ? (
+        <div className="castempty">No spellcasting ability yet — tap “Add”.</div>
+      ) : (
+        <div className="castchips">
+          {entries.map((entry) => {
+            const ability = abilityOf(entry.ability);
+            return (
+              <button
+                key={entry.ability}
+                type="button"
+                className="castchip"
+                aria-label={`${ability.name} spellcasting: attack ${formatSigned(entry.attackBonus)}, save DC ${entry.saveDc}`}
+                onClick={() => onOpen(entry.ability)}
+              >
+                <span className="ab">{ability.short}</span>
+                <span className="tl">Atk</span>
+                <b>{formatSigned(entry.attackBonus)}</b>
+                <span className="sep" aria-hidden="true">
+                  |
+                </span>
+                <span className="tl">DC</span>
+                <b>{entry.saveDc}</b>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** The two numbers, side by side, in both spellcasting dialogs. */
+function CastingNumbers({
+  attackBonus,
+  saveDc,
+  onAttackBonus,
+  onSaveDc,
+}: {
+  attackBonus: number;
+  saveDc: number;
+  onAttackBonus(value: number): void;
+  onSaveDc(value: number): void;
+}) {
+  return (
+    <div className="row2">
+      <div className="col">
+        <span className="dlabel">Spell attack</span>
+        <NumberField
+          label="Spell attack"
+          className="inp stat"
+          signed
+          value={attackBonus}
+          onChange={onAttackBonus}
+        />
+      </div>
+      <div className="col">
+        <span className="dlabel">Save DC</span>
+        <NumberField label="Save DC" className="inp stat" value={saveDc} onChange={onSaveDc} />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Ability first: the numbers appear once one is picked, and Create writes all three at once, so
+ * an entry never exists before the player has seen its fields.
+ */
+function AddSpellcastingDialog({
+  used,
+  onCreate,
+  onClose,
+}: {
+  used: AbilityKey[];
+  onCreate: SpellListActions['addSpellcasting'];
+  onClose(): void;
+}) {
+  const [ability, setAbility] = useState<AbilityKey | null>(null);
+  const [attackBonus, setAttackBonus] = useState(0);
+  const [saveDc, setSaveDc] = useState(0);
+  const taken = used.map((key) => ` ${abilityOf(key).name} already has an entry.`).join('');
+
+  return (
+    <ResponsiveDialog
+      title="Add spellcasting"
+      open
+      onClose={onClose}
+      footer={
+        <button
+          type="button"
+          className="primary"
+          disabled={ability === null}
+          onClick={() => {
+            if (ability === null) return;
+            onCreate(ability, { attackBonus, saveDc });
+            onClose();
+          }}
+        >
+          Create
+        </button>
+      }
+    >
+      <span className="dlabel">Ability</span>
+      <AbilityPicker label="Ability" value={ability} disabled={used} onChange={setAbility} />
+      {ability === null ? (
+        <div className="hint tight">Pick the ability you cast with.{taken}</div>
+      ) : (
+        <CastingNumbers
+          attackBonus={attackBonus}
+          saveDc={saveDc}
+          onAttackBonus={setAttackBonus}
+          onSaveDc={setSaveDc}
+        />
+      )}
+    </ResponsiveDialog>
+  );
+}
+
+/** The ability is the entry's identity, so it is not editable here: delete and add another. */
+function EditSpellcastingDialog({
+  entry,
+  actions,
+  onClose,
+}: {
+  entry: SpellcastingView;
+  actions: SpellListActions;
+  onClose(): void;
+}) {
+  const { name } = abilityOf(entry.ability);
+
+  return (
+    <ResponsiveDialog
+      title={name}
+      open
+      onClose={onClose}
+      footer={
+        <ConfirmDelete
+          what={`${name} spellcasting`}
+          onConfirm={() => {
+            actions.removeSpellcasting(entry.ability);
+            onClose();
+          }}
+        >
+          Delete
+        </ConfirmDelete>
+      }
+    >
+      <div className="hint" style={{ marginTop: 0 }}>
+        Spellcasting with {name}. To use another ability, delete this and add one.
+      </div>
+      <CastingNumbers
+        attackBonus={entry.attackBonus}
+        saveDc={entry.saveDc}
+        onAttackBonus={(value) => actions.setSpellAttackBonus(entry.ability, value)}
+        onSaveDc={(value) => actions.setSpellSaveDc(entry.ability, value)}
       />
     </ResponsiveDialog>
   );

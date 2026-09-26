@@ -151,7 +151,18 @@ export interface SpellView extends NamedItemView {
   prepared: boolean;
 }
 
-export type SpellListView = CategorizedView<SpellView>;
+/** One spellcasting ability's two numbers, as the player entered them. */
+export interface SpellcastingView {
+  ability: AbilityKey;
+  attackBonus: number;
+  saveDc: number;
+}
+
+/** The spell categories, plus spellcasting beside them — the way `CountersView` adds its slots. */
+export interface SpellListView extends CategorizedView<SpellView> {
+  /** STR to CHA, present abilities only. */
+  spellcasting: SpellcastingView[];
+}
 
 export interface SpellListActions extends CategoryActions {
   addSpell(
@@ -164,6 +175,11 @@ export interface SpellListActions extends CategoryActions {
   setSpellPrepared(id: string, prepared: boolean): void;
   moveSpell(id: string, categoryId: string | null): void;
   removeSpell(id: string): void;
+  /** The picker offers only unused abilities, so a duplicate is a bug and stays loud. */
+  addSpellcasting(ability: AbilityKey, init: { attackBonus: number; saveDc: number }): void;
+  setSpellAttackBonus(ability: AbilityKey, value: number): void;
+  setSpellSaveDc(ability: AbilityKey, value: number): void;
+  removeSpellcasting(ability: AbilityKey): void;
 }
 
 export interface CounterView extends NamedItemView {

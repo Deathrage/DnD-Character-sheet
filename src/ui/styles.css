@@ -1899,7 +1899,8 @@ body {
   gap: 10px;
   margin-top: 12px;
 }
-.atkfields .inp.signed {
+/* A bonus or a DC in a dialog: centred and bold, as the stat reads on the sheet. */
+.inp.stat {
   text-align: center;
   font-weight: 700;
 }
@@ -1915,4 +1916,54 @@ body {
    with its text (field-sizing: content), up to the same 60dvh as every other description. */
 .dialog .area.brief {
   min-height: 4lh;
+}
+
+/* ---------- attack rolls: spellcasting ---------- */
+/* One chip per ability; the row wraps, never scrolls (spec §5.1). */
+.castchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.castchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  background: var(--fill-2);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.castchip .ab {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--ink-2);
+  background: var(--fill);
+  border-radius: 5px;
+  padding: 2px 5px;
+}
+.castchip .tl {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-2);
+  font-weight: 700;
+}
+.castchip b {
+  font-size: 15px;
+  font-weight: 800;
+}
+.castchip .sep {
+  color: var(--line);
+}
+.castempty {
+  font-size: 13px;
+  color: var(--ink-2);
+  font-style: italic;
+  opacity: 0.6;
 }

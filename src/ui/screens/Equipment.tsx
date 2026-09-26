@@ -247,7 +247,7 @@ function NewEquipmentDialog({
           bonusField={
             <NumberField
               label="Attack bonus"
-              className="inp signed"
+              className="inp stat"
               signed
               value={attack?.attackBonus ?? 0}
               onChange={(attackBonus) => attack && setAttack({ ...attack, attackBonus })}
@@ -327,7 +327,7 @@ function EditEquipmentDialog({
           bonusField={
             <NumberField
               label="Attack bonus"
-              className="inp signed"
+              className="inp stat"
               signed
               value={weapon.attack?.attackBonus ?? 0}
               onChange={(value) => actions.setWeaponAttackBonus(weapon.id, value)}
