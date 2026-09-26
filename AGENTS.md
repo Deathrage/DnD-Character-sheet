@@ -530,7 +530,10 @@ live in `docs/BACKLOG.md` — add new ones there, not here:
   under the bar — so `viewport-fit=cover` is gone from `index.html`. Do not re-add it without
   testing the installed app on a real Android phone, reload included. The padding stays, a no-op
   without `cover`. Chromium can simulate the inset (CDP `Emulation.setSafeAreaInsetsOverride`),
-  but not the installed app's misreport.
+  but not the installed app's misreport. The player then found the page could be scrolled to
+  the button: `100dvh` itself was taller than the window after a reload. `#root` is therefore
+  `position: fixed; inset: 0` rather than `height: 100dvh`; do not size the page shell by a
+  viewport unit again.
 - **The character list has no order.** `repository.list()` walks an IndexedDB cursor, which is
   key order — and the key is a uuid, so the list is effectively shuffled. Sorting by `updatedAt`
   descending ("most recently played first") is the obvious fix and belongs in `list()` or in
