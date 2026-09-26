@@ -22,6 +22,88 @@ export function docFor(id: string, name: string): CharacterDocument {
   return createCharacter({ name, id, now: FIXED_NOW });
 }
 
+export const V1_WEAPON_ID = '66666666-6666-4666-8666-666666666666';
+export const V1_OTHER_ID = '77777777-7777-4777-8777-777777777777';
+
+/**
+ * A complete v1 document, written out by hand. `createCharacter` makes the current version, and
+ * nothing outside `schema/` may import `v1/`, so a test that needs an older document spells it.
+ * `fixtures.test.ts` checks it against `SCHEMAS[1]`: a migration test whose input was never valid
+ * v1 would pass for the wrong reason. The weapon's description is the kind a player really
+ * writes — which the migration must leave alone.
+ */
+export function v1DocFor(id: string, name: string): Record<string, unknown> {
+  const zero = () => ({ current: 0, total: 0 });
+  const abilities = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
+  const skills = [
+    'acrobatics',
+    'animalHandling',
+    'arcana',
+    'athletics',
+    'deception',
+    'history',
+    'insight',
+    'intimidation',
+    'investigation',
+    'medicine',
+    'nature',
+    'perception',
+    'performance',
+    'persuasion',
+    'religion',
+    'sleightOfHand',
+    'stealth',
+    'survival',
+  ];
+  return {
+    schemaVersion: 1,
+    id,
+    name,
+    updatedAt: FIXED_NOW.toISOString(),
+    classes: [],
+    hitPoints: { current: 0, total: 0, temporary: 0 },
+    hitDices: {},
+    armorClass: 0,
+    journalAndNotes: { journal: [], notes: '' },
+    inventory: { coins: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 }, items: [] },
+    featsAndTraits: { categories: [], uncategorized: [] },
+    equipment: {
+      weapons: [
+        {
+          id: V1_WEAPON_ID,
+          name: 'Rapier',
+          description: '+5 to hit, 1d8+3 piercing',
+          attuned: false,
+          equipped: true,
+        },
+      ],
+      other: [{ id: V1_OTHER_ID, name: 'Cloak', description: '', attuned: true, equipped: true }],
+    },
+    spellList: { categories: [], uncategorized: [] },
+    counters: {
+      categories: [],
+      uncategorized: [],
+      spellSlots: Object.fromEntries(
+        ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((level) => [level, zero()]),
+      ),
+    },
+    abilitiesAndSkills: {
+      proficiencyBonus: 0,
+      passivePerception: 0,
+      speed: 0,
+      abilities: Object.fromEntries(
+        abilities.map((key) => [
+          key,
+          { score: 0, modifier: 0, savingThrowModifier: 0, savingThrowProficient: false },
+        ]),
+      ),
+      skills: Object.fromEntries(
+        skills.map((key) => [key, { modifier: 0, proficient: false, expertise: false }]),
+      ),
+    },
+  };
+}
+
 /**
  * The tests' own opener, so the repository need not export `openDb` itself — a second connection
  * opened outside the repository is what blocks a version bump in an installed PWA. It shares the

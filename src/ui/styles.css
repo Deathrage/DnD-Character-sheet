@@ -1837,3 +1837,132 @@ body {
 .mnote .legalnote {
   margin: 0;
 }
+
+/* ---------- attack rolls: weapons (docs/superpowers/specs/2026-09-26-attack-rolls-design.md §5) */
+/* On the row: the ability as the skill rows' grey tag, the bonus bold beside it. */
+.atk {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+}
+.atk .ab {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--ink-2);
+  background: var(--fill);
+  border-radius: 5px;
+  padding: 2px 5px;
+}
+.atk .b {
+  font-size: 15px;
+  font-weight: 800;
+}
+/* Damage leads the preview line, in ink, so it reads before the description. */
+.recopen .pv .dmg {
+  color: var(--ink);
+  font-weight: 600;
+}
+/* The proficiency toggles' look (.mk), laid out as one row of choices. */
+.abpick {
+  display: grid;
+  grid-template-columns: repeat(var(--n, 6), 1fr);
+  gap: 5px;
+}
+.abpick button {
+  height: 34px;
+  border-radius: 8px;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 0;
+  cursor: pointer;
+}
+.abpick button[aria-checked='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.abpick button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+/* Attack bonus narrow, damage wide: a bonus is two characters, damage is a phrase. */
+.atkfields {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+/* A bonus or a DC in a dialog: centred and bold, as the stat reads on the sheet. */
+.inp.stat {
+  text-align: center;
+  font-weight: 700;
+}
+.hint.tight {
+  margin-top: 6px;
+}
+/* Attuned and Equipped side by side: the attack takes the height they gave up. */
+.chkpair {
+  display: flex;
+  gap: 28px;
+}
+/* A weapon's key facts now sit in its attack, so its description starts shorter. It still grows
+   with its text (field-sizing: content), up to the same 60dvh as every other description. */
+.dialog .area.brief {
+  min-height: 4lh;
+}
+
+/* ---------- attack rolls: spellcasting ---------- */
+/* One chip per ability; the row wraps, never scrolls (spec §5.1). */
+.castchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.castchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  background: var(--fill-2);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.castchip .ab {
+  font-size: 9.5px;
+  font-weight: 800;
+  color: var(--ink-2);
+  background: var(--fill);
+  border-radius: 5px;
+  padding: 2px 5px;
+}
+.castchip .tl {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-2);
+  font-weight: 700;
+}
+.castchip b {
+  font-size: 15px;
+  font-weight: 800;
+}
+.castchip .sep {
+  color: var(--line);
+}
+.castempty {
+  font-size: 13px;
+  color: var(--ink-2);
+  font-style: italic;
+  opacity: 0.6;
+}

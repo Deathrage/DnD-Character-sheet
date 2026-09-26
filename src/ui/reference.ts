@@ -12,15 +12,27 @@
  */
 
 export const ABILITIES = [
-  { key: 'strength', short: 'STR' },
-  { key: 'dexterity', short: 'DEX' },
-  { key: 'constitution', short: 'CON' },
-  { key: 'intelligence', short: 'INT' },
-  { key: 'wisdom', short: 'WIS' },
-  { key: 'charisma', short: 'CHA' },
+  { key: 'strength', short: 'STR', name: 'Strength' },
+  { key: 'dexterity', short: 'DEX', name: 'Dexterity' },
+  { key: 'constitution', short: 'CON', name: 'Constitution' },
+  { key: 'intelligence', short: 'INT', name: 'Intelligence' },
+  { key: 'wisdom', short: 'WIS', name: 'Wisdom' },
+  { key: 'charisma', short: 'CHA', name: 'Charisma' },
 ] as const;
 
 export type AbilityKey = (typeof ABILITIES)[number]['key'];
+
+type Ability = (typeof ABILITIES)[number];
+
+const BY_KEY = Object.fromEntries(ABILITIES.map((ability) => [ability.key, ability])) as Record<
+  AbilityKey,
+  Ability
+>;
+
+/** The labels for one ability: `abilityOf('intelligence').short` is `INT`. */
+export function abilityOf(key: AbilityKey): Ability {
+  return BY_KEY[key];
+}
 
 export const SKILLS = [
   { key: 'acrobatics', label: 'Acrobatics', ability: 'DEX' },

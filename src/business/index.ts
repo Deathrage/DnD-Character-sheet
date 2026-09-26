@@ -9,8 +9,9 @@
  * (a base class, a MobX-push helper, a side-effecting config import), not shapes or types a UI
  * consumer would ever need to name. `CategorizedBO` and `CategorizedItemBO` are absent for a
  * related reason: both are generic over a `*Data` shape, so neither can be named at all without
- * an alias this barrel withholds on purpose. `FeatsAndTraitsBO` and `SpellListBO` are the
- * already-applied aliases a UI consumer actually wants. `categorized.js`'s `moveTo` takes a
+ * an alias this barrel withholds on purpose. `FeatsAndTraitsBO` is the already-applied alias a UI
+ * consumer actually wants; `SpellListBO` and `CountersBO` are subclasses, so they are named
+ * directly. `categorized.js`'s `moveTo` takes a
  * `CategoryBO` directly —
  * a UI caller passes a `CategoryBO` it already has — so there is no separate destination type to
  * export either.
@@ -22,10 +23,18 @@ export { HitPointsBO } from './hitPoints.js';
 export { HitDicesBO, HitDieBO } from './hitDices.js';
 export { JournalAndNotesBO, JournalDayBO } from './journalAndNotes.js';
 export { InventoryBO, CoinsBO, InventoryItemBO, type NewInventoryItem } from './inventory.js';
-export { EquipmentBO, EquipmentItemBO, type NewEquipmentItem } from './equipment.js';
+export {
+  EquipmentBO,
+  EquipmentItemBO,
+  WeaponBO,
+  type NewEquipmentItem,
+  type NewWeapon,
+  type WeaponAttack,
+} from './equipment.js';
 export { CategoryBO, type NewNamedItem } from './categorized.js';
 export { FeatBO, type FeatsAndTraitsBO } from './featsAndTraits.js';
-export { SpellBO, type SpellLevel, type SpellListBO } from './spellList.js';
+export { SpellBO, SpellListBO, type SpellLevel } from './spellList.js';
+export { SpellcastingBO, SpellcastingEntryBO } from './spellcasting.js';
 export { CountersBO, CounterBO, SpellSlotBO } from './counters.js';
 export {
   AbilitiesAndSkillsBO,

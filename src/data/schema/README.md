@@ -63,9 +63,15 @@ wrong directory.
 2. Edit only the new directory. The previous one does not change.
 3. Write the migration function that takes a document from the previous version to the new one
    (`1 → 2`, and so on).
-4. Register the new schema so the rest of the app can find it. That registration point is the
-   only file outside a version directory that changes when a version is added — everything else
-   about the new version lives inside its own directory.
+4. Register the new version so the rest of the app can find it. That takes exactly two files
+   outside the version directories: `schema/index.ts`, for the schema, and
+   `migration/migrations.ts`, for the migration. Everything else about the new version lives
+   inside its own directory.
+
+A migration is frozen once released, like the schema it produces. Cloud backups are never
+rewritten, so an old version's documents go through every migration after it on each restore,
+for as long as the app exists; changing a released migration changes what an old backup restores
+as.
 
 ## The one exception
 

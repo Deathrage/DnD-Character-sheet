@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 interface Props {
   name: string;
   description: string;
+  /** Shown in ink at the head of the preview, before the description: a weapon's damage. */
+  lead?: string;
   onOpen(): void;
   /** Rendered before the name — the prepared dot on a spell. */
   before?: ReactNode;
@@ -19,7 +21,7 @@ interface Props {
  * beside the name is the only thing that differs across the five sections that use this row —
  * and some of those slots hold an input, which must not open the dialog when tapped.
  */
-export function ItemRow({ name, description, onOpen, before, after, dim }: Props) {
+export function ItemRow({ name, description, lead = '', onOpen, before, after, dim }: Props) {
   const preview = description.replace(/\s+/g, ' ').trim();
 
   return (
@@ -29,7 +31,15 @@ export function ItemRow({ name, description, onOpen, before, after, dim }: Props
           descendant — nesting a control inside a button is invalid and swallows its taps. */}
       <button type="button" className="recopen" onClick={onOpen}>
         <span className="nm">{name}</span>
-        {preview !== '' && <span className="pv">{preview}</span>}
+        {(lead !== '' || preview !== '') && (
+          // The preview line is the one that cuts off with an ellipsis, so it is where a long
+          // damage can go without ever squeezing the name (spec §5.2).
+          <span className="pv">
+            {lead !== '' && <span className="dmg">{lead}</span>}
+            {lead !== '' && preview !== '' && ' · '}
+            {preview}
+          </span>
+        )}
       </button>
       {after}
       <span className="chev" aria-hidden="true">
