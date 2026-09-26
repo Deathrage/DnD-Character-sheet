@@ -1,0 +1,302 @@
+// Schema v3, frozen from its first release: these tests lock in what a v3 character document is
+// allowed to be. Editing an assertion here to let new code pass is editing v3's meaning — see
+// ../README.md#when-the-freeze-begins for what "frozen" means and when it starts applying.
+
+import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
+import {
+  MAX_CATEGORY_NAME,
+  MAX_LONG_TEXT,
+  MAX_SHORT_NAME,
+  categorized,
+  categoryName,
+  currentAndTotal,
+  damageText,
+  dieSizeKey,
+  isoDateTime,
+  longText,
+  nameAndDescription,
+  nonNegativeInt,
+  shortName,
+  signedInt,
+  uuid,
+} from './primitives.js';
+
+describe('shortName', () => {
+  // Not trimmed: parseCharacter returns the parsed value, so trimming on load would silently
+  // rewrite a stored or hand-edited document. Padding is rejected instead — see primitives.ts.
+  it('returns an already-trimmed name unchanged', () => {
+    expect(shortName.parse('Sable')).toBe('Sable');
+  });
+
+  it('preserves internal whitespace', () => {
+    // The case that stops someone "fixing" the refinement into a whitespace ban.
+    expect(shortName.parse('Sable Nightwind')).toBe('Sable Nightwind');
+  });
+
+  it.each(['  Sable', 'Sable  ', '  Sable  '])(
+    'rejects leading and/or trailing whitespace: %p',
+    (value) => {
+      expect(shortName.safeParse(value).success).toBe(false);
+    },
+  );
+
+  it('rejects an empty string', () => {
+    expect(shortName.safeParse('').success).toBe(false);
+  });
+
+  it('rejects a whitespace-only string, which .min(1) alone would not catch', () => {
+    // '   ' has length 3, so it passes .min(1); the trim refinement is what rejects it.
+    expect(shortName.safeParse('   ').success).toBe(false);
+  });
+
+  it(`accepts exactly ${MAX_SHORT_NAME} characters and rejects one more`, () => {
+    expect(shortName.safeParse('a'.repeat(MAX_SHORT_NAME)).success).toBe(true);
+    expect(shortName.safeParse('a'.repeat(MAX_SHORT_NAME + 1)).success).toBe(false);
+  });
+});
+
+describe('categoryName', () => {
+  it('returns an already-trimmed name unchanged', () => {
+    expect(categoryName.parse('Rogue')).toBe('Rogue');
+  });
+
+  it('preserves internal whitespace', () => {
+    expect(categoryName.parse('Class Features')).toBe('Class Features');
+  });
+
+  it.each(['  Rogue', 'Rogue  ', '  Rogue  '])(
+    'rejects leading and/or trailing whitespace: %p',
+    (value) => {
+      expect(categoryName.safeParse(value).success).toBe(false);
+    },
+  );
+
+  it('rejects an empty string', () => {
+    expect(categoryName.safeParse('').success).toBe(false);
+  });
+
+  it('rejects a whitespace-only string, which .min(1) alone would not catch', () => {
+    expect(categoryName.safeParse('   ').success).toBe(false);
+  });
+
+  it(`accepts exactly ${MAX_CATEGORY_NAME} characters and rejects one more`, () => {
+    expect(categoryName.safeParse('a'.repeat(MAX_CATEGORY_NAME)).success).toBe(true);
+    expect(categoryName.safeParse('a'.repeat(MAX_CATEGORY_NAME + 1)).success).toBe(false);
+  });
+
+  it('accepts a purely numeric name, which merely sorts first (spec §3.4)', () => {
+    expect(categoryName.safeParse('1').success).toBe(true);
+  });
+});
+
+describe('longText', () => {
+  it('accepts an empty string', () => {
+    expect(longText.parse('')).toBe('');
+  });
+
+  it('does not trim, because leading indentation may be meaningful', () => {
+    expect(longText.parse('  indented')).toBe('  indented');
+  });
+
+  // Both halves, like the two name limits above: the reject-at-+1 case alone pins only that
+  // *some* limit exists at or below MAX_LONG_TEXT, so `.max(19_999)` would satisfy it while
+  // quietly refusing a document that was always legitimately valid.
+  it(`accepts exactly ${MAX_LONG_TEXT} characters and rejects one more`, () => {
+    expect(longText.safeParse('a'.repeat(MAX_LONG_TEXT)).success).toBe(true);
+    expect(longText.safeParse('a'.repeat(MAX_LONG_TEXT + 1)).success).toBe(false);
+  });
+});
+
+describe('nonNegativeInt', () => {
+  it.each([0, 1, 9999])('accepts %i', (value) => {
+    expect(nonNegativeInt.parse(value)).toBe(value);
+  });
+
+  it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])('rejects %p', (value) => {
+    expect(nonNegativeInt.safeParse(value).success).toBe(false);
+  });
+});
+
+describe('signedInt', () => {
+  it.each([-9999, -1, 0, 1, 9999])('accepts %i', (value) => {
+    expect(signedInt.parse(value)).toBe(value);
+  });
+
+  it.each([1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    'rejects %p',
+    (value) => {
+      expect(signedInt.safeParse(value).success).toBe(false);
+    },
+  );
+});
+
+describe('dieSizeKey', () => {
+  it.each(['1', '8', '12', '100'])('accepts %s', (value) => {
+    expect(dieSizeKey.parse(value)).toBe(value);
+  });
+
+  it.each(['0', '08', '', 'd8', '-8', '8.5'])('rejects %p', (value) => {
+    expect(dieSizeKey.safeParse(value).success).toBe(false);
+  });
+});
+
+describe('uuid and isoDateTime', () => {
+  it('accepts a crypto.randomUUID() value', () => {
+    expect(uuid.safeParse(crypto.randomUUID()).success).toBe(true);
+  });
+
+  it('rejects a non-uuid string', () => {
+    expect(uuid.safeParse('not-a-uuid').success).toBe(false);
+  });
+
+  it('rejects the nil UUID, which z.uuid() would wrongly accept', () => {
+    // This is the case that specifically catches z.uuidv4() being "simplified" to z.uuid():
+    // z.uuid() special-cases 00000000-0000-0000-0000-000000000000 as valid; uuidv4 does not.
+    expect(uuid.safeParse('00000000-0000-0000-0000-000000000000').success).toBe(false);
+  });
+
+  it('rejects a bad version nibble, otherwise correctly shaped', () => {
+    // Version nibble (3rd group, 1st char) must be exactly 4; '6' is out of range.
+    expect(uuid.safeParse('aaaaaaaa-aaaa-6aaa-8aaa-aaaaaaaaaaaa').success).toBe(false);
+  });
+
+  it('rejects a bad variant nibble, otherwise correctly shaped', () => {
+    // Variant nibble (4th group, 1st char) must be 8/9/a/b; 'c' is out of range.
+    // Version nibble is a valid '4' so this case is isolated to the variant alone.
+    expect(uuid.safeParse('aaaaaaaa-aaaa-4aaa-caaa-aaaaaaaaaaaa').success).toBe(false);
+  });
+
+  it('rejects a wrong-length group, otherwise correctly shaped', () => {
+    // 2nd group has 3 hex digits instead of the required 4.
+    expect(uuid.safeParse('aaaaaaaa-aaa-4aaa-8aaa-aaaaaaaaaaaa').success).toBe(false);
+  });
+
+  it('rejects a non-hex character, otherwise correctly shaped', () => {
+    // Last character of the final group is 'z', which is not a hex digit.
+    expect(uuid.safeParse('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaz').success).toBe(false);
+  });
+
+  it('accepts a Date.toISOString() value', () => {
+    expect(isoDateTime.safeParse(new Date('2026-07-25T09:41:00.000Z').toISOString()).success).toBe(
+      true,
+    );
+  });
+
+  it('rejects a local-time string with no zone', () => {
+    expect(isoDateTime.safeParse('2026-07-25 09:41').success).toBe(false);
+  });
+
+  it('rejects a value with no trailing Z, otherwise correctly shaped', () => {
+    expect(isoDateTime.safeParse('2026-07-25T09:41:00.000').success).toBe(false);
+  });
+
+  it('rejects a non-UTC offset in place of Z', () => {
+    expect(isoDateTime.safeParse('2026-07-25T09:41:00.000+02:00').success).toBe(false);
+  });
+
+  it('rejects the wrong number of millisecond digits', () => {
+    expect(isoDateTime.safeParse('2026-07-25T09:41:00.00Z').success).toBe(false);
+  });
+
+  it('rejects a value with no milliseconds at all', () => {
+    expect(isoDateTime.safeParse('2026-07-25T09:41:00Z').success).toBe(false);
+  });
+
+  it('rejects an impossible month, which a hand-rolled regex would not catch', () => {
+    expect(isoDateTime.safeParse('2026-13-01T09:41:00.000Z').success).toBe(false);
+  });
+
+  it('rejects an impossible hour, which a hand-rolled regex would not catch', () => {
+    expect(isoDateTime.safeParse('2026-07-25T99:41:00.000Z').success).toBe(false);
+  });
+});
+
+describe('currentAndTotal', () => {
+  it('permits current above total, which is deliberate (spec §3.2)', () => {
+    expect(currentAndTotal.parse({ current: 12, total: 4 })).toEqual({ current: 12, total: 4 });
+  });
+
+  it('rejects a negative current', () => {
+    expect(currentAndTotal.safeParse({ current: -1, total: 4 }).success).toBe(false);
+  });
+});
+
+describe('nameAndDescription', () => {
+  it('requires both fields', () => {
+    expect(nameAndDescription.safeParse({ name: 'Sneak Attack' }).success).toBe(false);
+  });
+
+  // Every item schema built on nameAndDescription reaches document.ts via `.extend()`, which
+  // re-applies its own `.strict()` on the clone regardless of whether this base is itself
+  // strict — so none of those extended schemas can detect nameAndDescription losing its own
+  // `.strict()`. This is the only place that can.
+  it('rejects an unknown key, so an extending schema is not the only thing standing guard', () => {
+    const value = { name: 'Sneak Attack', description: '+3d6.', extra: 'x' };
+    expect(nameAndDescription.safeParse(value).success).toBe(false);
+  });
+});
+
+describe('categorized', () => {
+  const schema = categorized(z.object({ id: uuid, name: shortName }).strict());
+  const item = { id: '33333333-3333-4333-8333-333333333333', name: 'Rage' };
+  const valid = () => ({
+    categories: [{ id: '44444444-4444-4444-8444-444444444444', name: 'Combat', items: [item] }],
+    uncategorized: [] as unknown[],
+  });
+
+  it('accepts categories as an ordered array', () => {
+    expect(schema.safeParse(valid()).success).toBe(true);
+  });
+
+  it('requires an id on every category', () => {
+    const value = valid();
+    delete (value.categories[0] as Record<string, unknown>).id;
+    expect(schema.safeParse(value).success).toBe(false);
+  });
+
+  it('rejects an unknown key on a category', () => {
+    const value = valid();
+    (value.categories[0] as Record<string, unknown>).extra = 'x';
+    expect(schema.safeParse(value).success).toBe(false);
+  });
+
+  it('rejects a padded category name rather than trimming it', () => {
+    const value = valid();
+    value.categories[0]!.name = ' Combat ';
+    expect(schema.safeParse(value).success).toBe(false);
+  });
+
+  it('accepts two categories sharing a name, which the business layer rejects rather than the schema', () => {
+    const value = valid();
+    value.categories.push({
+      id: '55555555-5555-4555-8555-555555555555',
+      name: 'Combat',
+      items: [],
+    });
+    expect(schema.safeParse(value).success).toBe(true);
+  });
+
+  it('is a ZodObject, so document sections can extend it', () => {
+    expect(schema).toBeInstanceOf(z.ZodObject);
+  });
+});
+
+describe('damageText', () => {
+  it('accepts an empty string: no damage entered yet', () => {
+    expect(damageText.safeParse('').success).toBe(true);
+  });
+
+  it('accepts dice and a type, with inner spaces', () => {
+    expect(damageText.safeParse('1d8+3 piercing').success).toBe(true);
+  });
+
+  it.each([' 1d8', '1d8 ', '\t1d8'])('rejects padding %j rather than trimming it', (value) => {
+    expect(damageText.safeParse(value).success).toBe(false);
+  });
+
+  it('accepts 80 characters and rejects 81', () => {
+    expect(damageText.safeParse('x'.repeat(MAX_SHORT_NAME)).success).toBe(true);
+    expect(damageText.safeParse('x'.repeat(MAX_SHORT_NAME + 1)).success).toBe(false);
+  });
+});
