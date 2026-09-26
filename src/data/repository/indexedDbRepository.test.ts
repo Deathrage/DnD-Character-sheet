@@ -2,7 +2,8 @@ import { openDB } from 'idb';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { SCHEMAS } from '../schema/index.js';
-import { ID_A, ID_B, createOpener, docFor, putRaw, wipe } from '../../test/fixtures.js';
+import { migrateV1ToV2 } from '../migration/v1ToV2.js';
+import { ID_A, ID_B, createOpener, docFor, putRaw, v1DocFor, wipe } from '../../test/fixtures.js';
 import {
   CHARACTER_STORE,
   DB_NAME,
@@ -326,7 +327,7 @@ describe('createIndexedDbRepository', () => {
   });
 
   it('migrates a document written by an older schema version', async () => {
-    const v1Doc = docFor(ID_A, 'Sable');
+    const v1Doc = v1DocFor(ID_A, 'Sable');
     // A synthetic two-version world: version 1 is the real schema, version 2 is what this
     // build claims to write, and the migration from 1 to 2 is the identity plus a version bump.
     const registry = {
@@ -351,6 +352,19 @@ describe('createIndexedDbRepository', () => {
     expect((loaded as { doc: { schemaVersion: number } }).doc.schemaVersion).toBe(2);
   });
 
+  it('migrates a stored v1 document with the real registry, and writes it back at v2', async () => {
+    // No `registry` option: the real schemas and the real 1 → 2 migration. Every test beside this
+    // one uses a synthetic two-version world, so none of them would notice the migration missing
+    // from `MIGRATIONS`.
+    await putRaw(ID_A, v1DocFor(ID_A, 'Sable'));
+    const repository = createIndexedDbRepository({ openDb: createOpener() });
+
+    const [entry] = await repository.list();
+
+    expect(entry?.ok).toBe(true);
+    expect(await repository.getRaw(ID_A)).toEqual(migrateV1ToV2(v1DocFor(ID_A, 'Sable')));
+  });
+
   describe('writes a migrated document back, so it migrates once rather than on every load', () => {
     // The same synthetic two-version world as above.
     const registry = {
@@ -358,7 +372,7 @@ describe('createIndexedDbRepository', () => {
       schemas: { 1: SCHEMAS[1]!, 2: z.looseObject({ schemaVersion: z.literal(2) }) },
       migrations: new Map([[1, (doc: unknown) => ({ ...(doc as object), schemaVersion: 2 })]]),
     };
-    const v1Doc = docFor(ID_A, 'Sable');
+    const v1Doc = v1DocFor(ID_A, 'Sable');
 
     it('from get()', async () => {
       await putRaw(ID_A, v1Doc);

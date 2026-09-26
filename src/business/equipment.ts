@@ -2,7 +2,7 @@ import { createId } from './createId.js';
 import { longText, trimmedName } from './guards.js';
 import { NamedItemBO } from './namedItem.js';
 import { pushAndRead } from './observableList.js';
-import type { EquipmentItemData } from './types.js';
+import type { EquipmentItemData, WeaponData } from './types.js';
 
 export interface NewEquipmentItem {
   name: string;
@@ -12,10 +12,10 @@ export interface NewEquipmentItem {
 }
 
 export class EquipmentBO {
-  readonly #weapons: EquipmentItemData[];
+  readonly #weapons: WeaponData[];
   readonly #other: EquipmentItemData[];
 
-  constructor(weapons: EquipmentItemData[], other: EquipmentItemData[]) {
+  constructor(weapons: WeaponData[], other: EquipmentItemData[]) {
     this.#weapons = weapons;
     this.#other = other;
   }
@@ -29,11 +29,13 @@ export class EquipmentBO {
   }
 
   addWeapon(init: NewEquipmentItem): EquipmentItemBO {
-    return addTo(this.#weapons, init);
+    const node = pushAndRead(this.#weapons, { ...equipmentNode(init), attack: null });
+    return new EquipmentItemBO(node, this.#weapons);
   }
 
   addOther(init: NewEquipmentItem): EquipmentItemBO {
-    return addTo(this.#other, init);
+    const node = pushAndRead(this.#other, equipmentNode(init));
+    return new EquipmentItemBO(node, this.#other);
   }
 
   /**
@@ -50,18 +52,19 @@ export class EquipmentBO {
   }
 }
 
-function addTo(
-  list: EquipmentItemData[],
-  { name, description = '', attuned = false, equipped = false }: NewEquipmentItem,
-): EquipmentItemBO {
-  const node = pushAndRead(list, {
+function equipmentNode({
+  name,
+  description = '',
+  attuned = false,
+  equipped = false,
+}: NewEquipmentItem): EquipmentItemData {
+  return {
     id: createId(),
     name: trimmedName(name),
     description: longText(description),
     attuned,
     equipped,
-  });
-  return new EquipmentItemBO(node, list);
+  };
 }
 
 export class EquipmentItemBO extends NamedItemBO<EquipmentItemData> {

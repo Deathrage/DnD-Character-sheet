@@ -382,7 +382,7 @@ export const abilitiesAndSkills: AbilitiesAndSkillsView = {
 
 export const sableJson = JSON.stringify(
   {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: '6d0b0f7e-3c41-4a2a-9f6f-2a1f0c9d8e77',
     name: 'Sable Nightwind',
     updatedAt: '2026-09-20T18:04:11.000Z',

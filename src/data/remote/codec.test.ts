@@ -2,7 +2,8 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ID_A, ID_B, docFor } from '../../test/fixtures.js';
-import type { CharacterDocument } from '../schema/index.js';
+import { migrateV1ToV2 } from '../migration/v1ToV2.js';
+import { CURRENT, type CharacterDocument } from '../schema/index.js';
 import {
   bytesToPortrait,
   decodePayload,
@@ -30,7 +31,9 @@ describe('codec', () => {
     expect(payload.sheet.byteLength).toBeLessThan(JSON.stringify(zahir).length / 2);
 
     const decoded = await decodePayload(payload, zahir.id);
-    expect(decoded).toEqual({ ok: true, doc: zahir, portrait: null });
+    // The file is a v1 export, so it comes back migrated, exactly as `parseCharacter` migrates a
+    // stored document.
+    expect(decoded).toEqual({ ok: true, doc: migrateV1ToV2(zahir), portrait: null });
   });
 
   it('round-trips a portrait byte for byte', async () => {
@@ -67,14 +70,14 @@ describe('codec', () => {
   });
 
   it('reports a document from a newer app as a load error, not as corrupt', async () => {
-    // schemaVersion is a literal `1` on CharacterDocument, so a genuinely-future document (99)
+    // schemaVersion is a literal on CharacterDocument, so a genuinely-future document (99)
     // is not representable in the type — the cast is the point, not a workaround for it.
     const future = { ...docFor(ID_A, 'Sable'), schemaVersion: 99 } as unknown as CharacterDocument;
     const decoded = await decodePayload(await encodePayload(future, null), ID_A);
     expect(decoded).toEqual({
       ok: false,
       kind: 'document',
-      error: { code: 'FROM_FUTURE', found: 99, current: 1 },
+      error: { code: 'FROM_FUTURE', found: 99, current: CURRENT },
     });
   });
 
