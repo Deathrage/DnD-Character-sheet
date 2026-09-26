@@ -4,8 +4,8 @@ Lets a player record a weapon's attack roll (ability, attack bonus, damage) and,
 they cast with, a spell attack bonus and spell save DC. Every number is typed by the player; the
 app computes none of them (AGENTS.md, "What this is"). Needs character schema v2.
 
-Status: **draft, awaiting validation.** Nothing here is built. Revised 2026-09-26 after checking
-it against the code (§9).
+Status: **validated; UI layout approved 2026-09-26.** Nothing here is built. Revised after checking
+it against the code, and again when the UI was laid out (§9).
 
 ## 1. Decisions
 
@@ -194,56 +194,132 @@ class SpellcastingEntryBO {
 
 ## 5. UI
 
-### 5.1 Spell List
+Mockups, built from the running app's markup and `src/ui/styles.css` at 390 px:
+`2026-09-26-attack-rolls-mockups/spell-list.png` and `…/equipment.png`. The layout below is
+what they show, and was approved on 2026-09-26. New pieces reuse what the app already has: the
+skill rows' grey ability tag, the proficiency toggles' look, the text button beside "Spell
+Slots", the two-column dialog row.
+
+### 5.1 Spell List: Spellcasting chips
 
 A **Spellcasting** block above the categories, in the slot `CategorizedSection` already gives
 Counters for its spell slots:
 
 ```
-Spellcasting                              [+ Add]
-  INT   Spell attack +7   Save DC 15
-  WIS   Spell attack +5   Save DC 13
+SPELLCASTING                                   [+ Add]
+[INT  ATK +6 | DC 14]  [WIS  ATK +7 | DC 15]
+[CHA  ATK +4 | DC 12]
+▸ COMBAT  3/3 PREPARED                        ✎  (+)
 ```
 
-- **Add** opens a dialog. It shows an ability select listing only the unused abilities, and the
-  attack bonus and save DC fields appear once an ability is picked. **Create** writes all three
-  in one `add`. The button is hidden when all six are used.
-- **Tapping a row** opens an edit dialog with the two numbers and **Delete**. The ability is not
-  editable here, because it is the entry's identity: to change it, delete the entry and add another.
-- With no entries the block shows "No spellcasting ability — tap Add." It is always visible,
-  like Counters' spell slots, so the way in is never hidden.
+- **The header** is a static section heading, "Spellcasting", with a **+ Add** text button on
+  the right, the same control as Counters' "Set totals". The button is hidden when all six
+  abilities have an entry.
+- **One chip per entry**, in STR→CHA order. Each chip shows:
+  - the ability in the grey tag the skill rows use
+  - `ATK` and the attack bonus, signed and bold
+  - a thin divider
+  - `DC` and the save DC, bold
 
-### 5.2 Weapons
+  The whole chip is one button that opens the edit dialog. Its accessible name reads in full,
+  e.g. "Intelligence spellcasting: attack +6, save DC 14".
+- **Chips wrap, never scroll.** Two fit across a phone, and a third starts a new line. Most
+  characters have none or one, so the block is usually a single short line. A scroller would
+  hide the last ability, which the player may need every turn, and a mouse wheel cannot reach it
+  on desktop. Considered and rejected on 2026-09-26.
+- **With no entries** there is no card and no chip, only one italic line under the header:
+  "No spellcasting ability yet — tap “Add”." The categories move up to where they are today.
 
-In the **new weapon** and **edit weapon** dialogs, beneath the description:
+**Add dialog**, "Add spellcasting":
 
-- **Attack ability**: a select with *None* and STR, DEX, CON, INT, WIS, CHA.
-- **Attack bonus** (a signed `NumberField`) and **Damage** appear only when an ability is chosen.
+- **Ability**: six buttons, STR to CHA, in one row. They look like the proficiency toggles on
+  Abilities & Skills: outlined, filled with the accent colour when chosen, and dimmed and
+  disabled when that ability already has an entry.
+- A hint under the row: "Pick the ability you cast with.", followed by "Intelligence already has
+  an entry." when one is disabled.
+- **Spell attack** (signed) and **Save DC** appear side by side once an ability is picked.
+- **Create** is disabled until then, and writes all three in one `add`.
+
+**Edit dialog**, titled with the ability's full name ("Intelligence"):
+
+- a one-line hint: "Spellcasting with Intelligence. To use another ability, delete this and add one."
+- **Spell attack** and **Save DC** side by side, each saving as it parses, like every number in
+  the app
+- **Delete** in the footer, through the existing `ConfirmDelete`
+
+### 5.2 Equipment: weapon attacks
+
+**A weapon row** with an attack shows it in two places:
+
+- **Right side:** the ability in the grey tag, then the attack bonus, bold (`DEX +6`). It is
+  short and fixed-width, so it never squeezes the name.
+- **Preview line:** the damage comes first, in the ink colour and semibold, then ` · `, then the
+  description in grey. That line already cuts off with "…", so a long damage costs nothing.
+
+```
+Rapier                                   [DEX] +6  ›
+1d8+3 piercing · 1d8 piercing, finesse.
+Shortbow                                           ›
+1d6 piercing, range 80/320.
+```
+
+A weapon with no attack, and every item in Other Equipment, looks exactly as it does today. The
+rows look the same in the derived Attuned and Equipped blocks.
+
+**The new weapon and edit weapon dialogs** are titled "New weapon" and "Edit weapon"; other
+equipment keeps "New equipment" and "Edit item". Top to bottom:
+
+1. **Name**
+2. **Attack ability**: seven buttons, *None* then STR to CHA, in one row, in the same style as
+   the spellcasting picker. It sits right under the name, because the attack is what the player
+   opens a weapon for mid-combat. The description is reference text.
+3. When an ability is chosen:
+   - **Attack bonus** (signed, a narrow 92 px column) and **Damage** (the rest of the row, with
+     placeholder "e.g. 1d8+3 piercing") side by side
+   - a hint below them: "None clears the attack bonus and damage."
+
+   With *None* chosen, both fields are hidden, and the hint reads "Pick the ability you attack
+   with to enter the attack bonus and damage."
+4. **Description**, starting at **4 lines instead of 10**. It still grows with its text, up to
+   the same limit as every description. The attack now holds the facts a player looks up, and
+   at 10 lines the edit sheet reached the top of the screen.
+5. **Attuned** and **Equipped**, side by side in one row, in every equipment dialog, not only
+   for weapons. This gives back the height the attack fields take.
+
+Behaviour:
+
 - **Damage is a `NameField`** in the edit dialog: it saves on blur and on Enter, not on every
-  keystroke. Saving per keystroke, as Description does, would trim the space after `1d8+4`
-  before `slashing` could follow it. `NameField` already passes an empty value through, and
+  keystroke. Saving per keystroke, as Description does, would trim the space after `1d8+3`
+  before `piercing` could follow it. `NameField` already passes an empty value through, and
   shows `TOO_LONG` beside the field. In the new-weapon dialog it is a plain input in local state,
   like the name, and the text is trimmed on Create.
-- In the edit dialog, choosing *None* clears the attack at once, with a hint beside the
-  select: "Choosing None clears the attack bonus and damage." It needs no confirmation:
-  re-entering one number and a short string is cheap.
-- Other-equipment dialogs are unchanged.
+- **Choosing *None* in the edit dialog clears the attack at once**, with no confirmation:
+  re-entering one number and a short string is cheap, and the hint says what will happen.
+- **Choosing an ability after *None*** shows `+0` and an empty damage field (§1, "Starting
+  values"). The mockup shows this state.
 
-A weapon row shows the attack when it has one. The **right side holds only `DEX +7`**, which is
-short and fixed-width. **Damage leads the one-line preview** under the name, before the
-description, because that line already cuts off with "…" and the right side does not: an 80-character
-damage there would squash the name to nothing on a phone.
+### 5.3 New UI pieces
 
-```
-Rapier                                            DEX +7  ›
-1d8+4 piercing · 1d8 piercing, finesse.
-Improvised club                                           ›
-```
+- **`AbilityPicker`**, a new component in `src/ui/components/`, used by both dialogs:
+  - props: `value: AbilityKey | null`, `onChange`, `allowNone`, and `disabled: AbilityKey[]`
+  - it is a `role="radiogroup"` of buttons, each `role="radio"` with `aria-checked`
+  - labels come from `reference.ts`'s `ABILITIES`
+  - buttons are 34 px tall. That is under the 44 px touch guideline, but taller than the 26 px
+    + buttons beside each category. Seven equal columns still leave each about 46 px wide on a
+    390 px phone.
+- **Styles** added to `src/ui/styles.css`, each a variation of an existing rule:
 
-With no damage the preview is the description alone, as today. The attack shows the same way
-when the weapon appears in the derived Attuned and Equipped blocks.
+  | Class | What it is | Borrowed from |
+  |---|---|---|
+  | `.castchips`, `.castchip` | the wrapping chip row and one chip | `.slotblock`'s fill and border, `.skrow .ab`'s tag |
+  | `.atk` | the row's `DEX +6` | `.skrow .ab` and `.valcluster` |
+  | `.recopen .pv .dmg` | damage at the head of the preview | `.recopen .nm`'s ink colour |
+  | `.abpick` | the picker's grid of buttons | `.mk` / `.mk.on` |
+  | `.atkfields` | attack bonus and damage in one row | `.row2` |
+  | `.chkpair` | Attuned and Equipped side by side | `.chkrow` |
+  | `.dialog .area.brief` | the shorter weapon description | `.dialog .area` |
 
-### 5.3 Types and binding
+### 5.4 Types and binding
 
 - `WeaponView extends EquipmentItemView` adds `attack: { ability; attackBonus; damage } | null`.
   `EquipmentView.weapons` is `WeaponView[]`. `attuned` and `equipped` hold both kinds. `bind.ts`
@@ -317,15 +393,25 @@ Every new test is proven to bite: break what it guards, watch it (and only it) f
   `CURRENT_SCHEMA`, and still finds no accessor that exposes the document.
 - **UI.**
   - `bind.test.tsx` covers each new action, and a weapon in the Equipped list keeping its attack.
+  - `AbilityPicker.test.tsx`:
+    - one `aria-checked` at a time
+    - a disabled ability cannot be chosen
+    - *None* only when `allowNone`
   - `Equipment.test.tsx`:
     - the attack fields appear only after an ability is chosen
     - *None* clears them
-    - typing `1d8+4 slashing` into damage keeps the space
-    - the row shows `DEX +7` on the right and the damage leading the preview
-  - A new `SpellList.test.tsx`: only unused abilities are offered, Add is hidden at six, and
-    edit and delete work.
-  - Stories and fixtures are updated, and `devSeed.ts` gives its characters attacks and
-    spellcasting, so `npm run dev` shows the feature.
+    - typing `1d8+3 piercing` into damage keeps the space
+    - the row shows `DEX +6` on the right and the damage leading the preview
+    - other equipment has no picker and keeps its title
+  - A new `SpellList.test.tsx`:
+    - no entries shows the hint line
+    - a chip per entry, in STR→CHA order
+    - the Add dialog disables used abilities and keeps Create disabled until a pick
+    - Add is hidden at six
+    - edit and delete work
+  - Stories and fixtures are updated: Spell List with none, one and three entries, Equipment with
+    attacks. `devSeed.ts` gives its characters attacks and spellcasting, so `npm run dev` shows
+    the feature.
 - Test, typecheck, lint and `prettier --check` stay green.
 
 ## 7. Delivery order
@@ -337,8 +423,8 @@ Small commits, tests first, each one green:
    breaks, repointed (§6)
 3. `WeaponBO`, with its tests
 4. `SpellcastingBO` and `SpellListBO`, with their tests
-5. types, binding, the split add actions and the Equipment UI
-6. the Spell List UI
+5. `AbilityPicker`, types, binding, the split add actions and the Equipment UI (§5.2)
+6. the Spell List chips and dialogs (§5.1)
 7. `devSeed.ts`, stories, then AGENTS.md "Current state" and the test counts. `docs/BACKLOG.md`
    gets anything deferred
 
@@ -374,3 +460,11 @@ Small commits, tests first, each one green:
   - The "+0" contradiction is settled as "Starting values" (§1).
   - The v1 fixture, the tests the bump breaks, the Zahir migration test, `devSeed.ts` and the
     old-tab risk were added.
+- **2026-09-26, UI laid out and approved.**
+  - §5 rewritten from mockups built in the app's own markup and CSS (§5, first paragraph).
+  - Spellcasting is a row of chips, not a card of rows. The chips wrap; scrolling was
+    considered and rejected.
+  - The weapon dialogs put Attack ability right under Name, as a row of buttons rather than a
+    select.
+  - The weapon description starts shorter, and Attuned and Equipped share one row.
+  - `AbilityPicker` is added as a component.
