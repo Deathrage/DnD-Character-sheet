@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { SCHEMAS } from '../schema/index.js';
+import { CURRENT, SCHEMAS } from '../schema/index.js';
 import { ID_A, V1_OTHER_ID, V1_WEAPON_ID, v1DocFor } from '../../test/fixtures.js';
 import { parseCharacter } from './parseCharacter.js';
 import { migrateV1ToV2 } from './v1ToV2.js';
@@ -78,9 +78,16 @@ describe('migrateV1ToV2', () => {
 });
 
 describe('parseCharacter on a v1 document', () => {
-  it('returns the migrated v2 document', () => {
+  // Asserts this step ran, not where the chain ends: comparing with `migrateV1ToV2`'s output
+  // broke the day v3 made that output one step short of current. The repository's real-registry
+  // test pins the whole chain.
+  it('runs it through this migration on the way to the current version', () => {
     const result = parseCharacter(v1DocFor(ID_A, 'Sable'));
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.doc).toEqual(migrateV1ToV2(v1DocFor(ID_A, 'Sable')));
+    if (result.ok) {
+      expect(result.doc.schemaVersion).toBe(CURRENT);
+      expect(result.doc.equipment.weapons.map((weapon) => weapon.attack)).toEqual([null]);
+      expect(result.doc.spellList.spellcasting).toEqual({});
+    }
   });
 });

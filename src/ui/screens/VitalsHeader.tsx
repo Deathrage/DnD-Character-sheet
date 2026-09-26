@@ -18,8 +18,8 @@ interface Props {
 
 /**
  * The pinned header of the hub: name, total level, the classes button, and the HP / hit dice /
- * AC tiles. Classes and hit dice open dialogs, exactly as in the wireframe — both are lists
- * that would crowd a header that has to stay visible above every section.
+ * AC / initiative tiles. Classes and hit dice open dialogs, exactly as in the wireframe — both are
+ * lists that would crowd a header that has to stay visible above every section.
  */
 export function VitalsHeader({ character, actions, onBack }: Props) {
   const [dialog, setDialog] = useState<'classes' | 'hitDice' | 'portrait' | null>(null);
@@ -133,11 +133,17 @@ export function VitalsHeader({ character, actions, onBack }: Props) {
             />
           </div>
 
-          {/* The other number read every turn of a fight. Stored with abilities and skills,
-              so this is a second door onto the same field, not a copy. */}
+          {/* Rolled at the start of every fight, so it sits with AC rather than behind a tap.
+              Signed: it is a modifier. Stored beside armor class and, like it, edited only here.
+              It took speed's tile; speed is edited on Abilities & Skills only. */}
           <div className="tile">
-            <div className="tl">Speed</div>
-            <NumberField label="Speed" value={character.speed} onChange={actions.setSpeed} />
+            <div className="tl">Init</div>
+            <NumberField
+              label="Initiative"
+              value={character.initiative}
+              onChange={actions.setInitiative}
+              signed
+            />
           </div>
         </div>
       )}
@@ -282,7 +288,8 @@ function PortraitDialog({ open, onClose, character, actions }: DialogProps) {
 
 function summariseHitDice({ hitDices }: CharacterView): string {
   if (hitDices.length === 0) return 'Tap to set up';
-  return hitDices.map((die) => `${die.current}/${die.total} d${die.size}`).join(' · ');
+  // A no-break space inside each die, so a narrow tile wraps between dice and never splits one.
+  return hitDices.map((die) => `${die.current}/${die.total}\u00a0d${die.size}`).join(' · ');
 }
 
 function summariseVitals({ level, hitPoints, hitDices, armorClass }: CharacterView): string {

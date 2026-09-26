@@ -6,7 +6,7 @@ import { createId } from './createId.js';
 import { CountersBO } from './counters.js';
 import { EquipmentBO } from './equipment.js';
 import { type FeatsAndTraitsBO, makeFeatsAndTraits } from './featsAndTraits.js';
-import { nonNegativeInt, portrait, trimmedName } from './guards.js';
+import { integer, nonNegativeInt, portrait, trimmedName } from './guards.js';
 import { HitDicesBO } from './hitDices.js';
 import { HitPointsBO } from './hitPoints.js';
 import { InventoryBO } from './inventory.js';
@@ -86,6 +86,18 @@ export class CharacterSheetBO {
 
   setArmorClass(value: number): void {
     this.#doc.armorClass = nonNegativeInt(value);
+  }
+
+  get initiative(): number {
+    return this.#doc.initiative;
+  }
+
+  /**
+   * Signed, because it is a modifier, and entered by the player — never taken from the Dexterity
+   * modifier, which Alert or Jack of All Trades would make wrong.
+   */
+  setInitiative(value: number): void {
+    this.#doc.initiative = integer(value);
   }
 
   /** A data URL ready for `<img src>`, or `null` when the player has not picked one. */

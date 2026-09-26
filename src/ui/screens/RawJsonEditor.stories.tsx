@@ -36,8 +36,8 @@ export const SchemaError: Story = {
  */
 export const DamagedDocument: Story = {
   args: {
-    text: '{\n  "schemaVersion": 3,\n  "id": "6d0b0f7e-3c41-4a2a-9f6f-2a1f0c9d8e77",\n  "name": "Sable Nightwind"\n}\n',
+    text: '{\n  "schemaVersion": 99,\n  "id": "6d0b0f7e-3c41-4a2a-9f6f-2a1f0c9d8e77",\n  "name": "Sable Nightwind"\n}\n',
     onCommit: () =>
-      'Written by a newer version of this app (schema version 3); this build understands 1.',
+      'This file was written by a newer version of the app (schema 99, this build understands 3). Update the app to open it.',
   },
 };

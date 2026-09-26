@@ -40,6 +40,29 @@ describe('CharacterSheetBO', () => {
     );
   });
 
+  // Initiative is a modifier, so unlike armour class beside it, it is signed.
+  it('writes initiative, a negative one included', () => {
+    const sheet = sheetFor();
+    sheet.setInitiative(5);
+    expect(sheet.initiative).toBe(5);
+    sheet.setInitiative(-1);
+    expect(sheet.initiative).toBe(-1);
+    expect(sheet.toDocument().initiative).toBe(-1);
+  });
+
+  it('rejects a fractional initiative', () => {
+    const sheet = sheetFor();
+    expect(() => sheet.setInitiative(1.5)).toThrow(
+      expect.objectContaining({ code: 'NOT_AN_INTEGER' }) as Error,
+    );
+  });
+
+  it('never derives initiative from Dexterity', () => {
+    const sheet = sheetFor();
+    sheet.abilitiesAndSkills.abilities.dexterity.setModifier(3);
+    expect(sheet.initiative).toBe(0);
+  });
+
   it('sets and clears a portrait, which never enters the document', () => {
     const sheet = sheetFor();
     sheet.setPortrait('data:image/jpeg;base64,/9j/4AAQ');

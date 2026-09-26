@@ -329,7 +329,7 @@ body {
 }
 .tiles {
   display: grid;
-  /* HP spans the row; below it hit dice take half, armor class and speed a quarter each. */
+  /* HP spans the row; below it hit dice take half, armor class and initiative a quarter each. */
   grid-template-columns: 2fr 1fr 1fr;
   gap: 8px;
   margin-top: 10px;

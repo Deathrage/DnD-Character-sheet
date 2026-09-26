@@ -73,6 +73,7 @@ const seedSable = seeder('Sable Nightwind', (sheet) => {
   sheet.hitPoints.setCurrent(38);
   sheet.hitPoints.setTemporary(5);
   sheet.setArmorClass(15);
+  sheet.setInitiative(3);
 
   const d6 = sheet.hitDices.add(6);
   d6.setTotal(2);
@@ -267,6 +268,8 @@ const seedThorne = seeder('Thorne Ironfell', (sheet) => {
   sheet.hitPoints.setTotal(71);
   sheet.hitPoints.setCurrent(71);
   sheet.setArmorClass(18);
+  // In plate with Dexterity 8: a negative initiative, so the signed header tile shows one.
+  sheet.setInitiative(-1);
   const d10 = sheet.hitDices.add(10);
   d10.setTotal(8);
   d10.setCurrent(8);

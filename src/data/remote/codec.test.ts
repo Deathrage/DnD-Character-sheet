@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { ID_A, ID_B, docFor } from '../../test/fixtures.js';
 import { migrateV1ToV2 } from '../migration/v1ToV2.js';
+import { migrateV2ToV3 } from '../migration/v2ToV3.js';
 import { CURRENT, type CharacterDocument } from '../schema/index.js';
 import {
   bytesToPortrait,
@@ -31,9 +32,13 @@ describe('codec', () => {
     expect(payload.sheet.byteLength).toBeLessThan(JSON.stringify(zahir).length / 2);
 
     const decoded = await decodePayload(payload, zahir.id);
-    // The file is a v1 export, so it comes back migrated, exactly as `parseCharacter` migrates a
-    // stored document.
-    expect(decoded).toEqual({ ok: true, doc: migrateV1ToV2(zahir), portrait: null });
+    // The file is a v1 export, so it comes back migrated through every version since, exactly as
+    // `parseCharacter` migrates a stored document.
+    expect(decoded).toEqual({
+      ok: true,
+      doc: migrateV2ToV3(migrateV1ToV2(zahir)),
+      portrait: null,
+    });
   });
 
   it('round-trips a portrait byte for byte', async () => {

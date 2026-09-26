@@ -105,6 +105,39 @@ export function v1DocFor(id: string, name: string): Record<string, unknown> {
 }
 
 /**
+ * A complete v2 document: `v1DocFor` with what v2 added, filled in rather than left empty — an
+ * attack on the Rapier and one spellcasting entry — so a v2 → v3 test can see them come through.
+ * The Dexterity modifier is +3 on purpose: a migration that worked initiative out from it would
+ * show up as a 3 where a 0 belongs. `fixtures.test.ts` checks it against `SCHEMAS[2]`.
+ */
+export function v2DocFor(id: string, name: string): Record<string, unknown> {
+  const v1 = v1DocFor(id, name) as {
+    equipment: { weapons: object[]; other: object[] };
+    spellList: object;
+    abilitiesAndSkills: { abilities: Record<string, object> };
+  };
+  return {
+    ...v1,
+    schemaVersion: 2,
+    equipment: {
+      ...v1.equipment,
+      weapons: v1.equipment.weapons.map((weapon) => ({
+        ...weapon,
+        attack: { ability: 'dexterity', attackBonus: 5, damage: '1d8+3 piercing' },
+      })),
+    },
+    spellList: { ...v1.spellList, spellcasting: { intelligence: { attackBonus: 5, saveDc: 13 } } },
+    abilitiesAndSkills: {
+      ...v1.abilitiesAndSkills,
+      abilities: {
+        ...v1.abilitiesAndSkills.abilities,
+        dexterity: { score: 16, modifier: 3, savingThrowModifier: 3, savingThrowProficient: false },
+      },
+    },
+  };
+}
+
+/**
  * The tests' own opener, so the repository need not export `openDb` itself — a second connection
  * opened outside the repository is what blocks a version bump in an installed PWA. It shares the
  * real opener's `upgradeCharacterDb`, so a future change to the object store cannot silently

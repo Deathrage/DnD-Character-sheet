@@ -105,20 +105,33 @@ describe('VitalsHeader collapse', () => {
   });
 });
 
-describe('VitalsHeader speed', () => {
-  it('sits beside armor class and writes through setSpeed', () => {
-    const setSpeed = vi.fn();
+describe('VitalsHeader initiative', () => {
+  it('sits beside armor class, signed, and writes through setInitiative', () => {
+    const setInitiative = vi.fn();
     render(
       <VitalsHeader
         character={sable}
-        actions={{ ...noVitalsActions, setSpeed }}
+        actions={{ ...noVitalsActions, setInitiative }}
         onBack={() => {}}
       />,
     );
-    const field = screen.getByLabelText('Speed') as HTMLInputElement;
-    expect(field.value).toBe('30');
-    fireEvent.change(field, { target: { value: '25' } });
-    expect(setSpeed).toHaveBeenCalledWith(25);
+    const field = screen.getByLabelText('Initiative') as HTMLInputElement;
+    expect(field.value).toBe('+3');
+    fireEvent.change(field, { target: { value: '-1' } });
+    expect(setInitiative).toHaveBeenCalledWith(-1);
+  });
+
+  it('takes the place of speed, which is edited on Abilities & Skills only', () => {
+    header(null);
+    expect(screen.queryByLabelText('Speed')).toBeNull();
+  });
+});
+
+describe('VitalsHeader hit dice tile', () => {
+  it('wraps only between dice: a no-break space inside each one', () => {
+    header(null);
+    const tile = screen.getByRole('button', { name: /^Hit Dice/ });
+    expect(tile.textContent).toContain('2/2\u00a0d6 · 3/5\u00a0d8');
   });
 });
 

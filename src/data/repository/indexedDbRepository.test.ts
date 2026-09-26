@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { SCHEMAS } from '../schema/index.js';
 import { migrateV1ToV2 } from '../migration/v1ToV2.js';
+import { migrateV2ToV3 } from '../migration/v2ToV3.js';
 import { ID_A, ID_B, createOpener, docFor, putRaw, v1DocFor, wipe } from '../../test/fixtures.js';
 import {
   CHARACTER_STORE,
@@ -352,17 +353,19 @@ describe('createIndexedDbRepository', () => {
     expect((loaded as { doc: { schemaVersion: number } }).doc.schemaVersion).toBe(2);
   });
 
-  it('migrates a stored v1 document with the real registry, and writes it back at v2', async () => {
-    // No `registry` option: the real schemas and the real 1 → 2 migration. Every test beside this
-    // one uses a synthetic two-version world, so none of them would notice the migration missing
-    // from `MIGRATIONS`.
+  it('migrates a stored v1 document with the real registry, and writes it back at the current version', async () => {
+    // No `registry` option: the real schemas and every real migration. Every test beside this one
+    // uses a synthetic two-version world, so none of them would notice a migration missing from
+    // `MIGRATIONS`.
     await putRaw(ID_A, v1DocFor(ID_A, 'Sable'));
     const repository = createIndexedDbRepository({ openDb: createOpener() });
 
     const [entry] = await repository.list();
 
     expect(entry?.ok).toBe(true);
-    expect(await repository.getRaw(ID_A)).toEqual(migrateV1ToV2(v1DocFor(ID_A, 'Sable')));
+    expect(await repository.getRaw(ID_A)).toEqual(
+      migrateV2ToV3(migrateV1ToV2(v1DocFor(ID_A, 'Sable'))),
+    );
   });
 
   describe('writes a migrated document back, so it migrates once rather than on every load', () => {
