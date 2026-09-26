@@ -65,6 +65,7 @@ describe('toSheetData', () => {
     sheet.abilitiesAndSkills.setProficiencyBonus(3);
     sheet.abilitiesAndSkills.setPassivePerception(14);
     sheet.abilitiesAndSkills.setSpeed(30);
+    sheet.abilitiesAndSkills.setInitiative(5);
     sheet.abilitiesAndSkills.abilities.dexterity.setScore(17);
     sheet.abilitiesAndSkills.abilities.dexterity.setModifier(3);
     sheet.abilitiesAndSkills.abilities.dexterity.setSavingThrowModifier(6);
@@ -93,6 +94,7 @@ describe('toSheetData', () => {
       ],
       armorClass: 15,
       speed: 30,
+      initiative: 5,
       portrait: 'data:image/jpeg;base64,/9j/4AAQ',
     });
 
@@ -186,6 +188,7 @@ describe('toSheetData', () => {
     expect(data.abilitiesAndSkills.proficiencyBonus).toBe(3);
     expect(data.abilitiesAndSkills.passivePerception).toBe(14);
     expect(data.abilitiesAndSkills.speed).toBe(30);
+    expect(data.abilitiesAndSkills.initiative).toBe(5);
     expect(data.abilitiesAndSkills.abilities.dexterity).toEqual({
       score: 17,
       modifier: 3,
@@ -271,6 +274,7 @@ describe('toSheetActions', () => {
     actions.counters.setSpellSlotTotal(2, 2);
     actions.counters.setSpellSlotCurrent(2, 1);
     actions.abilitiesAndSkills.setSpeed(30);
+    actions.abilitiesAndSkills.setInitiative(-1);
     actions.abilitiesAndSkills.setAbilityScore('dexterity', 17);
     actions.abilitiesAndSkills.setSavingThrowProficient('dexterity', true);
     actions.abilitiesAndSkills.setSkillExpertise('stealth', true);
@@ -305,6 +309,7 @@ describe('toSheetActions', () => {
     });
     expect(doc.counters.spellSlots['2']).toEqual({ current: 1, total: 2 });
     expect(doc.abilitiesAndSkills.speed).toBe(30);
+    expect(doc.abilitiesAndSkills.initiative).toBe(-1);
     expect(doc.abilitiesAndSkills.abilities.dexterity).toMatchObject({
       score: 17,
       savingThrowProficient: true,
@@ -335,6 +340,12 @@ describe('toSheetActions', () => {
     const sheet = newSheet();
     toSheetActions(sheet).vitals.setSpeed(25);
     expect(sheet.toDocument().abilitiesAndSkills.speed).toBe(25);
+  });
+
+  it("sets initiative from the header, into the abilities section's field", () => {
+    const sheet = newSheet();
+    toSheetActions(sheet).vitals.setInitiative(-2);
+    expect(sheet.toDocument().abilitiesAndSkills.initiative).toBe(-2);
   });
 
   /**

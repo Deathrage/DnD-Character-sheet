@@ -122,6 +122,31 @@ describe('VitalsHeader speed', () => {
   });
 });
 
+describe('VitalsHeader initiative', () => {
+  it('sits beside armor class, signed, and writes through setInitiative', () => {
+    const setInitiative = vi.fn();
+    render(
+      <VitalsHeader
+        character={sable}
+        actions={{ ...noVitalsActions, setInitiative }}
+        onBack={() => {}}
+      />,
+    );
+    const field = screen.getByLabelText('Initiative') as HTMLInputElement;
+    expect(field.value).toBe('+3');
+    fireEvent.change(field, { target: { value: '-1' } });
+    expect(setInitiative).toHaveBeenCalledWith(-1);
+  });
+});
+
+describe('VitalsHeader hit dice tile', () => {
+  it('wraps only between dice: a no-break space inside each one', () => {
+    header(null);
+    const tile = screen.getByRole('button', { name: /^Hit Dice/ });
+    expect(tile.textContent).toContain('2/2\u00a0d6 · 3/5\u00a0d8');
+  });
+});
+
 describe('VitalsHeader classes', () => {
   it('shows the total level and class names, and the levels behind a tap', () => {
     header(null);

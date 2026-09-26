@@ -185,6 +185,7 @@ export function toCharacterView(sheet: CharacterSheetBO): CharacterView {
     })),
     armorClass: sheet.armorClass,
     speed: sheet.abilitiesAndSkills.speed,
+    initiative: sheet.abilitiesAndSkills.initiative,
     portrait: sheet.portrait,
   };
 }
@@ -277,6 +278,7 @@ function abilitiesView(sheet: CharacterSheetBO): AbilitiesAndSkillsView {
     proficiencyBonus: bo.proficiencyBonus,
     passivePerception: bo.passivePerception,
     speed: bo.speed,
+    initiative: bo.initiative,
     // Iterated from `reference.ts`'s display order rather than `Object.keys` of the business
     // object: the UI owns its own key list, and a divergence is then a type error on this line.
     abilities: Object.fromEntries(
@@ -345,6 +347,7 @@ function vitalsActions(sheet: CharacterSheetBO): VitalsActions {
     setTemporaryHitPoints: (value) => sheet.hitPoints.setTemporary(value),
     setArmorClass: (value) => sheet.setArmorClass(value),
     setSpeed: (value) => sheet.abilitiesAndSkills.setSpeed(value),
+    setInitiative: (value) => sheet.abilitiesAndSkills.setInitiative(value),
     // Any failure is the file's — undecodable, or somehow still too large — so it is told to
     // the player rather than thrown out of an event handler as an unhandled rejection.
     setPortrait: async (file, crop) => {
@@ -531,6 +534,7 @@ function abilitiesActions(sheet: CharacterSheetBO): AbilitiesAndSkillsActions {
     setProficiencyBonus: (value) => bo.setProficiencyBonus(value),
     setPassivePerception: (value) => bo.setPassivePerception(value),
     setSpeed: (value) => bo.setSpeed(value),
+    setInitiative: (value) => bo.setInitiative(value),
     setAbilityScore: (key, value) => bo.abilities[key].setScore(value),
     setAbilityModifier: (key, value) => bo.abilities[key].setModifier(value),
     setSavingThrowModifier: (key, value) => bo.abilities[key].setSavingThrowModifier(value),

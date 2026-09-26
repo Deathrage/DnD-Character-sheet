@@ -59,6 +59,8 @@ export interface CharacterView {
   armorClass: number;
   /** Stored under abilities and skills; the header shows it too, beside armor class. */
   speed: number;
+  /** Signed, and stored under abilities and skills like speed. Never derived from Dexterity. */
+  initiative: number;
   /** A data URL, or `null` when none has been picked. */
   portrait: string | null;
 }
@@ -70,6 +72,7 @@ export interface VitalsActions {
   setTemporaryHitPoints(value: number): void;
   setArmorClass(value: number): void;
   setSpeed(value: number): void;
+  setInitiative(value: number): void;
   /** Crops and compresses the picked image and stores it; the message when it could not be used. */
   setPortrait(file: Blob, crop: Crop): Promise<NameResult>;
   removePortrait(): void;
@@ -329,6 +332,7 @@ export interface AbilitiesAndSkillsView {
   proficiencyBonus: number;
   passivePerception: number;
   speed: number;
+  initiative: number;
   abilities: Record<AbilityKey, AbilityView>;
   skills: Record<SkillKey, SkillView>;
 }
@@ -337,6 +341,7 @@ export interface AbilitiesAndSkillsActions {
   setProficiencyBonus(value: number): void;
   setPassivePerception(value: number): void;
   setSpeed(value: number): void;
+  setInitiative(value: number): void;
   setAbilityScore(key: AbilityKey, value: number): void;
   setAbilityModifier(key: AbilityKey, value: number): void;
   setSavingThrowModifier(key: AbilityKey, value: number): void;

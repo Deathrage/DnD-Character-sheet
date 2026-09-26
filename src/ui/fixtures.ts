@@ -46,6 +46,7 @@ export const sable: CharacterView = {
   ],
   armorClass: 15,
   speed: 30,
+  initiative: 3,
   portrait: null,
 };
 
@@ -58,6 +59,7 @@ export const blankCharacter: CharacterView = {
   hitDices: [],
   armorClass: 10,
   speed: 0,
+  initiative: 0,
   portrait: null,
 };
 
@@ -356,6 +358,7 @@ export const abilitiesAndSkills: AbilitiesAndSkillsView = {
   proficiencyBonus: 3,
   passivePerception: 14,
   speed: 30,
+  initiative: 3,
   abilities: {
     strength: ability(10, 0, 0),
     dexterity: ability(17, 3, 6, true),
@@ -388,7 +391,7 @@ export const abilitiesAndSkills: AbilitiesAndSkillsView = {
 
 export const sableJson = JSON.stringify(
   {
-    schemaVersion: 2,
+    schemaVersion: 3,
     id: '6d0b0f7e-3c41-4a2a-9f6f-2a1f0c9d8e77',
     name: 'Sable Nightwind',
     updatedAt: '2026-09-20T18:04:11.000Z',
@@ -424,6 +427,7 @@ export const noVitalsActions: VitalsActions = {
   setTemporaryHitPoints: () => {},
   setArmorClass: () => {},
   setSpeed: () => {},
+  setInitiative: () => {},
   setPortrait: () => Promise.resolve(null),
   removePortrait: () => {},
   addClass: () => null,
@@ -512,6 +516,7 @@ export const noAbilitiesActions: AbilitiesAndSkillsActions = {
   setProficiencyBonus: () => {},
   setPassivePerception: () => {},
   setSpeed: () => {},
+  setInitiative: () => {},
   setAbilityScore: () => {},
   setAbilityModifier: () => {},
   setSavingThrowModifier: () => {},
