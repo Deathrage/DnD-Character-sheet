@@ -428,7 +428,7 @@ Small commits, tests first, each one green:
 7. `devSeed.ts`, stories, then AGENTS.md "Current state" and the test counts. `docs/BACKLOG.md`
    gets anything deferred
 
-## 8. Accepted risks and open items
+## 8. Accepted risks and settled questions
 
 - **An old tab can overwrite an upgraded character.** A tab still running the old build holds a
   v1 copy. If it autosaves after the new build wrote the same character back at v2, the v1 copy
@@ -439,10 +439,12 @@ Small commits, tests first, each one green:
 - **Multiclass with one shared ability.** A Wizard/Artificer casts with INT for both classes, so
   one entry covers both, which the D&D rules also give them. If a magic item ever makes two INT
   bonuses differ, the player records the one they use; there is no per-class split.
-- **Open: order.** Spellcasting is shown STR→CHA, not in the order added.
-- **Open: fixed ability.** A spellcasting entry's ability cannot be changed; the player deletes
-  the entry and adds another.
-- **Open: weapons only.** Other equipment has no attack.
+- **Decided: order.** Spellcasting chips are shown STR→CHA, not in the order added: a fixed
+  order means a given ability is always in the same place.
+- **Decided: fixed ability.** A spellcasting entry's ability cannot be changed; the player deletes
+  the entry and adds another. The ability is the entry's key (§2).
+- **Decided: weapons only.** Other equipment has no attack. An item that makes an attack roll
+  belongs in Weapons.
 
 ## 9. Revision log
 
@@ -468,3 +470,4 @@ Small commits, tests first, each one green:
     select.
   - The weapon description starts shorter, and Attuned and Equipped share one row.
   - `AbilityPicker` is added as a component.
+- **2026-09-26, open items closed.** Order, fixed ability and weapons-only confirmed as designed (§8).
