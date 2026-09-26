@@ -18,8 +18,8 @@ interface Props {
 
 /**
  * The pinned header of the hub: name, total level, the classes button, and the HP / hit dice /
- * AC / initiative tiles. Classes and hit dice open dialogs, exactly as in the wireframe — both are lists
- * that would crowd a header that has to stay visible above every section.
+ * AC / initiative tiles. Classes and hit dice open dialogs, exactly as in the wireframe — both are
+ * lists that would crowd a header that has to stay visible above every section.
  */
 export function VitalsHeader({ character, actions, onBack }: Props) {
   const [dialog, setDialog] = useState<'classes' | 'hitDice' | 'portrait' | null>(null);
