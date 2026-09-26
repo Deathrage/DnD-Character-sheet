@@ -22,7 +22,14 @@ export { HitPointsBO } from './hitPoints.js';
 export { HitDicesBO, HitDieBO } from './hitDices.js';
 export { JournalAndNotesBO, JournalDayBO } from './journalAndNotes.js';
 export { InventoryBO, CoinsBO, InventoryItemBO, type NewInventoryItem } from './inventory.js';
-export { EquipmentBO, EquipmentItemBO, type NewEquipmentItem } from './equipment.js';
+export {
+  EquipmentBO,
+  EquipmentItemBO,
+  WeaponBO,
+  type NewEquipmentItem,
+  type NewWeapon,
+  type WeaponAttack,
+} from './equipment.js';
 export { CategoryBO, type NewNamedItem } from './categorized.js';
 export { FeatBO, type FeatsAndTraitsBO } from './featsAndTraits.js';
 export { SpellBO, type SpellLevel, type SpellListBO } from './spellList.js';

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { createCharacter } from '../data/schema/index.js';
 import { RuleViolation } from './errors.js';
 import {
+  ABILITY_KEYS,
+  abilityKey,
+  damageText,
   integer,
   longText,
   MAX_CATEGORY_NAME,
@@ -100,5 +104,46 @@ describe('nonNegativeInt', () => {
 
   it('throws RuleViolation, not a bare Error', () => {
     expect(() => nonNegativeInt(-1)).toThrow(RuleViolation);
+  });
+});
+
+describe('abilityKey', () => {
+  it.each(ABILITY_KEYS)('accepts %s', (key) => {
+    expect(abilityKey(key)).toBe(key);
+  });
+
+  it.each(['STR', 'luck', ''])('rejects %j as UNKNOWN_ABILITY', (value) => {
+    expect(() => abilityKey(value)).toThrow(
+      expect.objectContaining({ code: 'UNKNOWN_ABILITY' }) as Error,
+    );
+  });
+
+  // The tuple is duplicated from the schema version on purpose (a layer may not import a version
+  // directory). This is what makes the duplicate honest: a missing, extra or reordered ability
+  // fails here instead of passing silently.
+  it('lists exactly the abilities a blank document has, in its order', () => {
+    const doc = createCharacter({
+      name: 'Sable',
+      id: '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e',
+      now: new Date(),
+    });
+    expect([...ABILITY_KEYS]).toEqual(Object.keys(doc.abilitiesAndSkills.abilities));
+  });
+});
+
+describe('damageText', () => {
+  it('trims at the write boundary, as a name is trimmed', () => {
+    expect(damageText('  1d8+3 piercing ')).toBe('1d8+3 piercing');
+  });
+
+  it('allows an empty result, unlike a name: no damage entered yet', () => {
+    expect(damageText('   ')).toBe('');
+  });
+
+  it('accepts 80 characters and refuses 81 as TOO_LONG, after trimming', () => {
+    expect(damageText(` ${'x'.repeat(MAX_SHORT_NAME)} `)).toHaveLength(MAX_SHORT_NAME);
+    expect(() => damageText('x'.repeat(MAX_SHORT_NAME + 1))).toThrow(
+      expect.objectContaining({ code: 'TOO_LONG' }) as Error,
+    );
   });
 });
