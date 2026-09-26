@@ -4,8 +4,9 @@ Lets a player record a weapon's attack roll (ability, attack bonus, damage) and,
 they cast with, a spell attack bonus and spell save DC. Every number is typed by the player; the
 app computes none of them (AGENTS.md, "What this is"). Needs character schema v2.
 
-Status: **validated; UI layout approved 2026-09-26.** Nothing here is built. Revised after checking
-it against the code, and again when the UI was laid out (§9).
+Status: **built 2026-09-26** on branch `claude/dnd-attack-roll-calculations-omg43t`, from
+`docs/superpowers/plans/2026-09-26-attack-rolls.md`. Revised after checking it against the code,
+and again when the UI was laid out (§9). §10 records where the build differs from this text.
 
 ## 1. Decisions
 
@@ -471,3 +472,14 @@ Small commits, tests first, each one green:
   - The weapon description starts shorter, and Attuned and Equipped share one row.
   - `AbilityPicker` is added as a component.
 - **2026-09-26, open items closed.** Order, fixed ability and weapons-only confirmed as designed (§8).
+
+## 10. Deviations found while building
+
+- **`.inp.stat`, not `.atkfields .inp.signed`.** The spellcasting dialogs' Save DC needed the same
+  centred, bold number as the weapon's attack bonus, and it is neither signed nor inside
+  `.atkfields`. So the rule became one neutral class, `.inp.stat`, used by all four fields.
+- **`ItemRow` gained a `lead` prop.** This is how the damage reaches the head of the preview line
+  (§5.2). Every other row passes nothing and renders as before.
+- **The repository's migration tests had gone vacuous.** They used `docFor` as their "v1"
+  document. Once `createCharacter` built v2, they compared a v2 document with itself and still
+  passed. They now use `v1DocFor`, and a new test runs the real registry (§6).

@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 811 tests across 58 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 1055 tests across 66 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -47,10 +47,10 @@ back on the next load (criterion 14).
   still holds exactly what was read (re-checked in the same transaction), so a concurrent
   autosave wins; a failed write-back goes to `onFailure` and never fails the read.
 - Developed on `feature/character-sheet-foundation`, merged into `main` as PR #1 on 2026-09-23.
-- **Portraits live beside the document, never in it** (2026-09-24). The character schema is still
-  v1. A portrait is its own IndexedDB store, `portraits`, keyed by character id — IndexedDB
-  version 2 added it; see "IndexedDB versioning" below. It was briefly a v2 schema field, never
-  committed or deployed, and moved out because a 20 KB base64 string was four fifths of the
+- **Portraits live beside the document, never in it** (2026-09-24). The character schema was still
+  v1 then. A portrait is its own IndexedDB store, `portraits`, keyed by character id — IndexedDB
+  version 2 added it; see "IndexedDB versioning" below. It was briefly a field in an uncommitted v2
+  schema draft — unrelated to the v2 that shipped on 2026-09-26 — never committed or deployed, and moved out because a 20 KB base64 string was four fifths of the
   raw-JSON editor. The split also mirrors the planned Firestore layout (see the sync entry in
   `docs/BACKLOG.md`).
   - **The rule** is `src/data/repository/portrait.ts`: a base64 JPEG data URL, at most 32 000
@@ -80,6 +80,31 @@ back on the next load (criterion 14).
   (`doc.id` is excluded from that check: it is the IndexedDB store key, not a collection member).
   Duplicate _names_ are representable now; rejecting them is the business layer's job, not the
   schema's.
+- **Schema v2: attack rolls and spellcasting** (2026-09-26). The first real version bump;
+  `docs/superpowers/specs/2026-09-26-attack-rolls-design.md` is the design and
+  `docs/superpowers/plans/2026-09-26-attack-rolls.md` the plan it was built from.
+  - **What v2 adds.** `equipment.weapons[].attack` is `{ ability, attackBonus, damage } | null`,
+    and `spellList.spellcasting` is a partial record keyed by ability, each entry
+    `{ attackBonus, saveDc }`. Everything is entered by the player; nothing is computed. Ability
+    keys are the full names (`dexterity`), and `STR`…`CHA` are UI labels only.
+  - **Ability first.** Nothing numeric exists without its ability: choosing a weapon's first
+    ability creates the attack at `+0` with no damage, changing it keeps both, and clearing it
+    clears the attack (`NO_ATTACK` guards the rest). A spellcasting entry is added with its
+    numbers in one call, and a second entry for the same ability is `DUPLICATE_SPELLCASTING`.
+  - **v1 is frozen now.** It has shipped and real documents exist
+    (`testAssets/zahir-ibn-talaar-2026-09-24.json` is one). `migrateV1ToV2` gives every weapon
+    `attack: null` and the spell list `spellcasting: {}`, and reads no description: "Damage: 1d8
+    Slashing" is the player's note, not data. **A migration is frozen once released**, like the
+    schema it produces, because cloud versions are never rewritten and an old backup goes through
+    it on every restore.
+  - **Tests need a v1 fixture.** `docFor` builds the current version, so `src/test/fixtures.ts`
+    has `v1DocFor`, a hand-written v1 literal that `fixtures.test.ts` checks against
+    `SCHEMAS[1]`. The repository's migration tests used `docFor` as their "v1" document and
+    passed vacuously once it built v2 — worth remembering at the next bump.
+  - **UI.** Spellcasting is a row of chips above the spell categories, wrapping rather than
+    scrolling. A weapon row shows `DEX +6` on the right and the damage at the head of the
+    preview. Damage commits on blur (`NameField`), never per keystroke, because the setter trims.
+    Mockups: `docs/superpowers/specs/2026-09-26-attack-rolls-mockups/`.
 - The storage-layer work the followups doc called the sharpest risk is done: `createIndexedDbRepository`
   takes an injectable `registry` and `openDb`, reports `blocked`, `blocking` and `terminated`
   through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
@@ -281,7 +306,7 @@ were arrived at _after_ getting them wrong once.
 ### Schema versions are isolated by construction
 
 Each version owns a self-contained directory under `src/data/schema/`. **Nothing is shared between
-versions.** `v2/` will begin as a literal copy of `v1/` and diverge.
+versions.** `v2/` began as a literal copy of `v1/` and diverged (2026-09-26).
 
 Do not "DRY this up" by extracting shared primitives or a shared base schema. The duplication _is_
 the isolation mechanism. The migration loop validates a document _at its own version_, so a
@@ -396,10 +421,12 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
   hitDices.ts          HitDicesBO / HitDieBO, keyed by die size — no id, the size is the identity
   journalAndNotes.ts   JournalAndNotesBO / JournalDayBO — append or delete-the-newest-day only
   inventory.ts         InventoryBO / CoinsBO / InventoryItemBO
-  equipment.ts         EquipmentBO / EquipmentItemBO, plus derived (never stored) attuned/equipped
+  equipment.ts         EquipmentBO / EquipmentItemBO / WeaponBO (the attack roll, ability first),
+                       plus derived (never stored) attuned/equipped
   categorized.ts       CategorizedBO / CategoryBO / CategorizedItemBO, shared by the three below
   featsAndTraits.ts    FeatBO, over categorized.ts
-  spellList.ts         SpellBO, over categorized.ts
+  spellList.ts         SpellListBO / SpellBO, over categorized.ts plus spellcasting
+  spellcasting.ts      SpellcastingBO / SpellcastingEntryBO, keyed by ability — no id, like hit dice
   counters.ts          CounterBO / SpellSlotBO, over categorized.ts plus the nine fixed slots
   abilitiesAndSkills.ts AbilityBO / SkillBO, fixed key sets built once in the constructor
   errors.ts            RuleViolation, RuleCode — every rule this layer enforces, plus the
@@ -424,14 +451,16 @@ src/ui/                components are presentational: data in, callbacks out, no
   route.ts             hash routing, hand-rolled; three routes, no dependency
   UpdatePrompt.tsx     "a new version is ready": saves pending edits, then lets the new service
                        worker take over. Rendered from main.tsx so App never imports virtual:pwa-*
-  components/, screens/   the wireframe's screens; fixtures.ts feeds the stories
+  components/, screens/   the wireframe's screens; fixtures.ts feeds the stories. AbilityPicker is
+                       the one row of ability buttons both attack dialogs share
 src/main.tsx           the composition root; the only place the real library is constructed
 index.html             the app document; vite.config.ts builds and tests it
 src/data/schema/       index.ts is the public face; README.md governs versioning
-  v1/                  primitives, document, blank (factory), index — self-contained
+  v1/                  frozen: primitives, document, blank (factory), index — self-contained
+  v2/                  current: v1 plus weapon attacks and spellcasting; blank lives here now
 src/data/migration/    versionOf, versioned.ts (parseVersioned, the generic validate-migrate walk
                        shared by `schemaVersion` and `layoutVersion`), parseCharacter (now a thin
-                       wrapper over it), the LoadError taxonomy
+                       wrapper over it), the LoadError taxonomy, v1ToV2.ts (the one migration)
 src/data/serialization/ export and import (three-outcome ParseTextResult)
 src/data/repository/   the IndexedDB repository (characters + portraits stores), ListEntry, summarize,
                        portrait.ts — the portrait rule
