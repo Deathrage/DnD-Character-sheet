@@ -525,9 +525,15 @@ live in `docs/BACKLOG.md` — add new ones there, not here:
   lets Chrome on Android draw the installed app under the system navigation bar, so `100dvh`
   reaches under it and the list's add button was half hidden. Seen on a phone with three-button
   navigation, and only after a reload (pull-to-refresh, or Reload in the update strip) — a fresh
-  launch was fine. `#root` and the bottom sheet pad by
-  `env(safe-area-inset-*)`; anything else anchored to the bottom edge must too. Chromium can
-  simulate it: CDP `Emulation.setSafeAreaInsetsOverride` with `{ insets: { bottom: 48 } }`.
+  launch was fine. Padding `#root` and the bottom sheet by `env(safe-area-inset-*)` fixed it in
+  the browser but not in the installed app, which evidently reported an inset of 0 while drawing
+  under the bar — so `viewport-fit=cover` is gone from `index.html`. Do not re-add it without
+  testing the installed app on a real Android phone, reload included. The padding stays, a no-op
+  without `cover`. Chromium can simulate the inset (CDP `Emulation.setSafeAreaInsetsOverride`),
+  but not the installed app's misreport. The player then found the page could be scrolled to
+  the button: `100dvh` itself was taller than the window after a reload. `#root` is therefore
+  `position: fixed; inset: 0` rather than `height: 100dvh`; do not size the page shell by a
+  viewport unit again.
 - **The character list has no order.** `repository.list()` walks an IndexedDB cursor, which is
   key order — and the key is a uuid, so the list is effectively shuffled. Sorting by `updatedAt`
   descending ("most recently played first") is the obvious fix and belongs in `list()` or in
