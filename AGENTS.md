@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 1055 tests across 66 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 1254 tests across 71 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -105,6 +105,28 @@ back on the next load (criterion 14).
     scrolling. A weapon row shows `DEX +6` on the right and the damage at the head of the
     preview. Damage commits on blur (`NameField`), never per keystroke, because the setter trims.
     Mockups: `docs/superpowers/specs/2026-09-26-attack-rolls-mockups/`.
+- **Schema v3: the initiative bonus** (2026-09-26). v2 had been deployed that morning, so it was
+  frozen, and one new field still meant a whole new version.
+  - **What v3 adds.** `abilitiesAndSkills.initiative`, a signed integer beside `speed`. The player
+    enters it. It is never taken from the Dexterity modifier, which Alert, Jack of All Trades or
+    a magic item would make wrong.
+  - **`migrateV2ToV3`** gives it `0`, the value every untouched number on a sheet already has,
+    and reads nothing else. It rebuilds `abilitiesAndSkills` so `initiative` lands after `speed`,
+    as in a blank document. Otherwise the raw-JSON editor would show it after all eighteen skills.
+  - **Tests.** `src/test/fixtures.ts` gains `v2DocFor`, a v2 document whose v2 fields are filled
+    in. Its Dexterity modifier is +3, so a migration that derived initiative would read 3 where
+    0 belongs. The `parseCharacter` test in each migration's own file checks that its step ran,
+    not where the chain ends. At this bump `v1ToV2.test.ts` compared against `migrateV1ToV2`'s
+    output, which was one step short of current once v3 existed. The repository's real-registry
+    test and the codec test pin the whole chain, and must be extended at every bump.
+  - **UI.** A signed **Init** tile between AC and Speed in the header, and an **Initiative** box
+    on Abilities & Skills. Like speed, these are two doors onto one stored field. The header's
+    second row is now `3fr 2fr 2fr 2fr`. The hit dice summary joins each die with a no-break
+    space, so it wraps between dice and never splits `3/5 d8`. The Abilities & Skills stats are
+    two by two, because four across was too narrow for the labels on a 360px phone.
+  - **Verified in Chromium** at 360px and 412px:
+    - an initiative typed in the header survives a reload and shows on Abilities & Skills
+    - a stored v2 document opens at +0 and is written back as v3, with `initiative` after `speed`
 - The storage-layer work the followups doc called the sharpest risk is done: `createIndexedDbRepository`
   takes an injectable `registry` and `openDb`, reports `blocked`, `blocking` and `terminated`
   through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
@@ -306,7 +328,8 @@ were arrived at _after_ getting them wrong once.
 ### Schema versions are isolated by construction
 
 Each version owns a self-contained directory under `src/data/schema/`. **Nothing is shared between
-versions.** `v2/` began as a literal copy of `v1/` and diverged (2026-09-26).
+versions.** `v2/` began as a literal copy of `v1/` and diverged (2026-09-26), and `v3/` began as a
+copy of `v2/` the same day.
 
 Do not "DRY this up" by extracting shared primitives or a shared base schema. The duplication _is_
 the isolation mechanism. The migration loop validates a document _at its own version_, so a
@@ -457,10 +480,12 @@ src/main.tsx           the composition root; the only place the real library is 
 index.html             the app document; vite.config.ts builds and tests it
 src/data/schema/       index.ts is the public face; README.md governs versioning
   v1/                  frozen: primitives, document, blank (factory), index — self-contained
-  v2/                  current: v1 plus weapon attacks and spellcasting; blank lives here now
+  v2/                  frozen: v1 plus weapon attacks and spellcasting
+  v3/                  current: v2 plus the initiative bonus; blank lives here now
 src/data/migration/    versionOf, versioned.ts (parseVersioned, the generic validate-migrate walk
                        shared by `schemaVersion` and `layoutVersion`), parseCharacter (now a thin
-                       wrapper over it), the LoadError taxonomy, v1ToV2.ts (the one migration)
+                       wrapper over it), the LoadError taxonomy, v1ToV2.ts and v2ToV3.ts (the
+                       migrations, registered in migrations.ts)
 src/data/serialization/ export and import (three-outcome ParseTextResult)
 src/data/repository/   the IndexedDB repository (characters + portraits stores), ListEntry, summarize,
                        portrait.ts — the portrait rule
@@ -474,8 +499,8 @@ src/data/remote/       types.ts (CloudRepository and its shapes), codec.ts, clou
                        index.ts — the only entry point (lint-enforced), parsed by parseVersioned
 src/data/characterLifecycle.test.ts   end-to-end across all four modules
 src/test/              fake-indexeddb setup
-src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, wipe, createOpener, putRaw — shared so the
-                       data-layer test files stop each defining their own
+src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, v1DocFor, v2DocFor, wipe, createOpener,
+                       putRaw — shared so the data-layer test files stop each defining their own
 ```
 
 Tests are colocated: `foo.ts` is tested by `foo.test.ts` beside it.
