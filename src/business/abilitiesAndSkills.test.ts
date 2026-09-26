@@ -67,34 +67,6 @@ describe('AbilitiesAndSkillsBO', () => {
       );
     },
   );
-
-  // Initiative is a modifier, so unlike its three neighbours above it is signed.
-  it('setInitiative writes initiative, a negative one included', () => {
-    const { abilitiesAndSkills } = sheetFor();
-    abilitiesAndSkills.setInitiative(5);
-    expect(abilitiesAndSkills.initiative).toBe(5);
-    abilitiesAndSkills.setInitiative(-1);
-    expect(abilitiesAndSkills.initiative).toBe(-1);
-  });
-
-  it('setInitiative rejects a fraction', () => {
-    const { abilitiesAndSkills } = sheetFor();
-    expect(() => abilitiesAndSkills.setInitiative(1.5)).toThrow(
-      expect.objectContaining({ code: 'NOT_AN_INTEGER' }) as Error,
-    );
-  });
-
-  it('never derives initiative from Dexterity', () => {
-    const { abilitiesAndSkills } = sheetFor();
-    abilitiesAndSkills.abilities.dexterity.setModifier(3);
-    expect(abilitiesAndSkills.initiative).toBe(0);
-  });
-
-  it('writes initiative through to the saved document', () => {
-    const sheet = sheetFor();
-    sheet.abilitiesAndSkills.setInitiative(7);
-    expect(sheet.toDocument().abilitiesAndSkills.initiative).toBe(7);
-  });
 });
 
 describe('AbilityBO', () => {

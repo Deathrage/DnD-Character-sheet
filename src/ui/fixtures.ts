@@ -399,6 +399,7 @@ export const sableJson = JSON.stringify(
     hitPoints: { current: 38, total: 45, temporary: 5 },
     hitDices: { '6': { current: 2, total: 2 }, '8': { current: 3, total: 5 } },
     armorClass: 15,
+    initiative: 3,
   },
   null,
   2,

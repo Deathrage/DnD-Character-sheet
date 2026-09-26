@@ -53,11 +53,11 @@ describe('createCharacter', () => {
     const doc = createCharacter(INPUT);
     expect(doc.hitPoints).toEqual({ current: 0, total: 0, temporary: 0 });
     expect(doc.armorClass).toBe(0);
+    expect(doc.initiative).toBe(0);
     expect(doc.inventory.coins).toEqual({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 });
     expect(doc.abilitiesAndSkills.proficiencyBonus).toBe(0);
     expect(doc.abilitiesAndSkills.passivePerception).toBe(0);
     expect(doc.abilitiesAndSkills.speed).toBe(0);
-    expect(doc.abilitiesAndSkills.initiative).toBe(0);
   });
 
   it('includes every ability, skill and spell-slot level', () => {

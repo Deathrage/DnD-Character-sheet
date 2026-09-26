@@ -51,18 +51,6 @@ export class AbilitiesAndSkillsBO {
   setSpeed(value: number): void {
     this.#node.speed = nonNegativeInt(value);
   }
-
-  get initiative(): number {
-    return this.#node.initiative;
-  }
-
-  /**
-   * Signed, because it is a modifier, and entered by the player — never taken from the Dexterity
-   * modifier, which Alert or Jack of All Trades would make wrong.
-   */
-  setInitiative(value: number): void {
-    this.#node.initiative = integer(value);
-  }
 }
 
 /** No `proficient`: ability-check proficiency has no referent in the rules (spec section 3.1). */

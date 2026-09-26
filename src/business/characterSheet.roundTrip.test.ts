@@ -15,6 +15,7 @@ const sheetFor = () =>
 function fill(sheet: CharacterSheetBO): void {
   sheet.setName('Sable Nightwind');
   sheet.setArmorClass(15);
+  sheet.setInitiative(-1);
   sheet.setPortrait('data:image/jpeg;base64,/9j/4AAQ');
   sheet.classes.add({ name: 'Rogue', level: 5 });
   sheet.hitPoints.setTotal(45);
@@ -37,7 +38,6 @@ function fill(sheet: CharacterSheetBO): void {
   sheet.counters.add({ name: 'Inspiration' });
   sheet.counters.spellSlots[0]?.setTotal(4);
   sheet.abilitiesAndSkills.setSpeed(30);
-  sheet.abilitiesAndSkills.setInitiative(-1);
   sheet.abilitiesAndSkills.abilities.dexterity.setScore(18);
   sheet.abilitiesAndSkills.abilities.dexterity.setModifier(4);
   sheet.abilitiesAndSkills.skills.stealth.setProficient(true);

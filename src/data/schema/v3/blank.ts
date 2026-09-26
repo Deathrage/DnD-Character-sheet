@@ -41,6 +41,7 @@ export function createCharacter({ name, id, now }: CreateCharacterInput): Charac
     hitPoints: { current: 0, total: 0, temporary: 0 },
     hitDices: {},
     armorClass: 0,
+    initiative: 0,
 
     journalAndNotes: { journal: [], notes: '' },
 
@@ -66,7 +67,6 @@ export function createCharacter({ name, id, now }: CreateCharacterInput): Charac
       proficiencyBonus: 0,
       passivePerception: 0,
       speed: 0,
-      initiative: 0,
       abilities: Object.fromEntries(
         ABILITY_KEYS.map((key) => [
           key,

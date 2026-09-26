@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 1252 tests across 71 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 1251 tests across 71 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -107,12 +107,18 @@ back on the next load (criterion 14).
     Mockups: `docs/superpowers/specs/2026-09-26-attack-rolls-mockups/`.
 - **Schema v3: the initiative bonus** (2026-09-26). v2 had been deployed that morning, so it was
   frozen, and one new field still meant a whole new version.
-  - **What v3 adds.** `abilitiesAndSkills.initiative`, a signed integer beside `speed`. The player
-    enters it. It is never taken from the Dexterity modifier, which Alert, Jack of All Trades or
-    a magic item would make wrong.
+  - **What v3 adds.** `initiative`, a signed integer at the top level beside `armorClass`, and
+    handled like it: `CharacterSheetBO.initiative` / `setInitiative`. The player enters it. It is
+    never taken from the Dexterity modifier, which Alert, Jack of All Trades or a magic item would
+    make wrong.
+  - **Edited in place before release.** A draft of v3 kept `initiative` inside
+    `abilitiesAndSkills`. It moved to the top level before v3 reached `main`, which the freeze
+    rule allows. Only a local `npm run dev` database that stored the draft shape could hold one,
+    and it reports `INVALID_AT_VERSION` rather than being repaired.
   - **`migrateV2ToV3`** gives it `0`, the value every untouched number on a sheet already has,
-    and reads nothing else. It rebuilds `abilitiesAndSkills` so `initiative` lands after `speed`,
-    as in a blank document. Otherwise the raw-JSON editor would show it after all eighteen skills.
+    and reads nothing else. It copies the document key by key so `initiative` lands right after
+    `armorClass`, as in a blank document. Appended, the raw-JSON editor would show it after all
+    of abilities and skills.
   - **Tests.** `src/test/fixtures.ts` gains `v2DocFor`, a v2 document whose v2 fields are filled
     in. Its Dexterity modifier is +3, so a migration that derived initiative would read 3 where
     0 belongs. The `parseCharacter` test in each migration's own file checks that its step ran,
@@ -120,15 +126,16 @@ back on the next load (criterion 14).
     output, which was one step short of current once v3 existed. The repository's real-registry
     test and the codec test pin the whole chain, and must be extended at every bump.
   - **UI.** A signed **Init** tile in the header, beside AC, is the only place initiative is shown
-    or edited, although it is stored under `abilitiesAndSkills`. Both choices are the user's: the
-    Init tile replaced the header's Speed tile, and Abilities & Skills does not show initiative.
+    or edited, the same as armor class. All three choices are the user's: storing it like AC, the
+    Init tile replacing the header's Speed tile, and Abilities & Skills not showing initiative.
     Speed is now edited on Abilities & Skills only, and the header's second row is back to
     `2fr 1fr 1fr`. The hit dice summary joins each die with a no-break space, so a narrow tile
     wraps between dice and never splits `3/5 d8`.
   - **Verified in Chromium** at 360px and 412px:
     - an initiative typed in the header survives a reload
     - a speed typed on Abilities & Skills survives a reload
-    - a stored v2 document opens at +0 and is written back as v3, with `initiative` after `speed`
+    - a stored v2 document opens at +0 and is written back as v3, with `initiative` right after
+      `armorClass`
 - The storage-layer work the followups doc called the sharpest risk is done: `createIndexedDbRepository`
   takes an injectable `registry` and `openDb`, reports `blocked`, `blocking` and `terminated`
   through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
@@ -440,7 +447,8 @@ rejects a bare `baseUrl`. Guessing produced wrong code three times during the bu
 src/shared/            slug(), formatBytes() — decimal units, shared by the quota message and the
                        cloud screen's usage line
 src/business/          index.ts is the public face; CharacterSheetBO is the observable root
-  characterSheet.ts    id, name, armorClass, the derived `level`, toDocument() (a toJS copy)
+  characterSheet.ts    id, name, armorClass, initiative, the derived `level`, toDocument() (a toJS
+                       copy)
   classes.ts           ClassesBO / ClassBO
   hitPoints.ts         HitPointsBO
   hitDices.ts          HitDicesBO / HitDieBO, keyed by die size — no id, the size is the identity

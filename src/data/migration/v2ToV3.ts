@@ -1,36 +1,28 @@
 import type { Migration } from './migrations.js';
 
 /**
- * Only the parts of a v2 document this step touches, restated structurally: nothing outside
- * `src/data/schema/` may import a version directory, and the walk has already validated the
- * input at v2, so this describes what is known to be there rather than checking it.
- */
-interface V2Shape {
-  schemaVersion: 2;
-  abilitiesAndSkills: { abilities: object; skills: object };
-}
-
-/**
- * v2 → v3 (2026-09-26): abilities and skills gain `initiative`.
+ * v2 → v3 (2026-09-26): the document gains a top-level `initiative`, beside `armorClass`.
  *
  * It starts at 0, which is what a new character's initiative is and what every other number on a
  * v2 sheet the player never touched already reads. It is not copied from the Dexterity modifier:
  * that would be the app working a number out, and it would be wrong for exactly the characters
  * whose initiative differs from their Dexterity — Alert, Jack of All Trades, a magic item.
  *
- * Placed before `abilities`, beside `speed`, as a blank v3 document has it: key order is what the
- * raw-JSON editor shows, and after eighteen skills it would be the last thing a player found.
+ * Inserted right after `armorClass`, as a blank v3 document has it: key order is what the raw-JSON
+ * editor shows, and appended it would come after the whole of abilities and skills. So the
+ * document is copied key by key rather than spread. The walk has already validated the input at
+ * v2, so `armorClass` is known to be there.
  *
  * Frozen once released, like the schema it produces: cloud versions are never rewritten, so a v2
- * backup goes through this function on every restore, forever. Builds new objects rather than
+ * backup goes through this function on every restore, forever. Builds a new object rather than
  * editing its input.
  */
 export const migrateV2ToV3: Migration = (input) => {
-  const doc = input as V2Shape;
-  const { abilities, skills, ...rest } = doc.abilitiesAndSkills;
-  return {
-    ...doc,
-    schemaVersion: 3,
-    abilitiesAndSkills: { ...rest, initiative: 0, abilities, skills },
-  };
+  const migrated: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    migrated[key] = value;
+    if (key === 'armorClass') migrated.initiative = 0;
+  }
+  migrated.schemaVersion = 3;
+  return migrated;
 };

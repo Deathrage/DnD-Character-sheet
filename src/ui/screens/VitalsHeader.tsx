@@ -134,9 +134,8 @@ export function VitalsHeader({ character, actions, onBack }: Props) {
           </div>
 
           {/* Rolled at the start of every fight, so it sits with AC rather than behind a tap.
-              Signed: it is a modifier. Stored with abilities and skills, but this tile is the
-              only place it is edited. It took speed's tile; speed is edited on Abilities &
-              Skills only. */}
+              Signed: it is a modifier. Stored beside armor class and, like it, edited only here.
+              It took speed's tile; speed is edited on Abilities & Skills only. */}
           <div className="tile">
             <div className="tl">Init</div>
             <NumberField

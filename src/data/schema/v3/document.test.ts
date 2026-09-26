@@ -33,6 +33,7 @@ function validDocument() {
     hitPoints: { current: 38, total: 45, temporary: 5 },
     hitDices: { '8': { current: 3, total: 5 }, '6': { current: 2, total: 2 } },
     armorClass: 15,
+    initiative: 3,
     journalAndNotes: { journal: ['Arrived in Barovia.'], notes: 'Find the Sunsword.' },
     inventory: {
       coins: { pp: 2, gp: 84, ep: 0, sp: 37, cp: 12 },
@@ -169,7 +170,6 @@ function validDocument() {
       proficiencyBonus: 3,
       passivePerception: 14,
       speed: 30,
-      initiative: 3,
       abilities: Object.fromEntries(
         ABILITY_KEYS.map((key) => [
           key,
@@ -351,25 +351,30 @@ describe('characterDocumentV3Schema', () => {
   });
 
   it('requires initiative: a v2 document without it is not a v3 document', () => {
+    const doc: Record<string, unknown> = validDocument();
+    delete doc.initiative;
+    expect(characterDocumentV3Schema.safeParse(doc).success).toBe(false);
+  });
+
+  it('keeps initiative beside armor class, never inside abilities and skills', () => {
     const doc = validDocument();
-    delete (doc.abilitiesAndSkills as Record<string, unknown>).initiative;
+    (doc.abilitiesAndSkills as Record<string, unknown>).initiative = 3;
     expect(characterDocumentV3Schema.safeParse(doc).success).toBe(false);
   });
 
   it('accepts a negative initiative, because it is a modifier, and rejects a fractional one', () => {
-    const negative = validDocument();
-    negative.abilitiesAndSkills.initiative = -1;
-    expect(characterDocumentV3Schema.safeParse(negative).success).toBe(true);
-
-    const fractional = validDocument();
-    fractional.abilitiesAndSkills.initiative = 1.5;
-    expect(characterDocumentV3Schema.safeParse(fractional).success).toBe(false);
+    expect(
+      characterDocumentV3Schema.safeParse({ ...validDocument(), initiative: -1 }).success,
+    ).toBe(true);
+    expect(
+      characterDocumentV3Schema.safeParse({ ...validDocument(), initiative: 1.5 }).success,
+    ).toBe(false);
   });
 
   it.each(['+3', '3', null])('rejects %j as initiative: it is a number, never text', (value) => {
-    const doc = validDocument();
-    (doc.abilitiesAndSkills as Record<string, unknown>).initiative = value;
-    expect(characterDocumentV3Schema.safeParse(doc).success).toBe(false);
+    expect(
+      characterDocumentV3Schema.safeParse({ ...validDocument(), initiative: value }).success,
+    ).toBe(false);
   });
 
   it('rejects a negative armour class', () => {

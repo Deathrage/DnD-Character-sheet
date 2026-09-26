@@ -164,6 +164,13 @@ const documentShape = z.object({
   hitPoints: currentAndTotal.extend({ temporary: nonNegativeInt }).strict(),
   hitDices: z.record(dieSizeKey, currentAndTotal),
   armorClass: nonNegativeInt,
+  /**
+   * v3. The initiative bonus as the player wrote it on their sheet — signed, because it is a
+   * modifier. Never worked out from Dexterity: an Alert feat or a Jack of All Trades bard is
+   * exactly the case a derived value would get wrong. At the top level beside armor class: like
+   * it, a number every fight reads that belongs to no section.
+   */
+  initiative: signedInt,
 
   journalAndNotes: z
     .object({
@@ -211,12 +218,6 @@ const documentShape = z.object({
       proficiencyBonus: nonNegativeInt,
       passivePerception: nonNegativeInt,
       speed: nonNegativeInt,
-      /**
-       * v3. The initiative bonus as the player wrote it on their sheet — signed, because it is a
-       * modifier. Never worked out from Dexterity: an Alert feat or a Jack of All Trades bard is
-       * exactly the case a derived value would get wrong.
-       */
-      initiative: signedInt,
       abilities: fixedKeys(ABILITY_KEYS, abilitiesItem),
       skills: fixedKeys(SKILL_KEYS, skillsItem),
     })

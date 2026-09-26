@@ -57,10 +57,7 @@ export interface CharacterView {
   hitPoints: HitPointsView;
   hitDices: HitDieView[];
   armorClass: number;
-  /**
-   * Signed, and never derived from Dexterity. Stored under abilities and skills, but the header,
-   * beside armor class, is the only place it is shown or edited.
-   */
+  /** Signed, and never derived from Dexterity. Like armor class, shown only in the header. */
   initiative: number;
   /** A data URL, or `null` when none has been picked. */
   portrait: string | null;

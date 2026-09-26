@@ -34,6 +34,7 @@ describe('toSheetData', () => {
   it('mirrors every section of a filled document', () => {
     const sheet = newSheet();
     sheet.setArmorClass(15);
+    sheet.setInitiative(5);
     sheet.classes.add({ name: 'Rogue', level: 5 });
     sheet.classes.add({ name: 'Wizard', level: 2 });
     sheet.hitPoints.setCurrent(38);
@@ -65,7 +66,6 @@ describe('toSheetData', () => {
     sheet.abilitiesAndSkills.setProficiencyBonus(3);
     sheet.abilitiesAndSkills.setPassivePerception(14);
     sheet.abilitiesAndSkills.setSpeed(30);
-    sheet.abilitiesAndSkills.setInitiative(5);
     sheet.abilitiesAndSkills.abilities.dexterity.setScore(17);
     sheet.abilitiesAndSkills.abilities.dexterity.setModifier(3);
     sheet.abilitiesAndSkills.abilities.dexterity.setSavingThrowModifier(6);
@@ -238,6 +238,7 @@ describe('toSheetActions', () => {
     actions.vitals.setTotalHitPoints(45);
     actions.vitals.setTemporaryHitPoints(5);
     actions.vitals.setArmorClass(15);
+    actions.vitals.setInitiative(-1);
     actions.vitals.addClass('Rogue');
     actions.vitals.addHitDie(8);
     actions.vitals.setHitDieTotal(8, 5);
@@ -272,7 +273,6 @@ describe('toSheetActions', () => {
     actions.counters.setSpellSlotTotal(2, 2);
     actions.counters.setSpellSlotCurrent(2, 1);
     actions.abilitiesAndSkills.setSpeed(30);
-    actions.vitals.setInitiative(-1);
     actions.abilitiesAndSkills.setAbilityScore('dexterity', 17);
     actions.abilitiesAndSkills.setSavingThrowProficient('dexterity', true);
     actions.abilitiesAndSkills.setSkillExpertise('stealth', true);
@@ -283,6 +283,7 @@ describe('toSheetActions', () => {
     const doc = sheet.toDocument();
     expect(doc.hitPoints).toEqual({ current: 38, total: 45, temporary: 5 });
     expect(doc.armorClass).toBe(15);
+    expect(doc.initiative).toBe(-1);
     expect(doc.classes.map((entry) => entry.name)).toEqual(['Rogue']);
     expect(doc.hitDices).toEqual({ '8': { current: 3, total: 5 } });
     expect(doc.journalAndNotes).toEqual({
@@ -307,7 +308,6 @@ describe('toSheetActions', () => {
     });
     expect(doc.counters.spellSlots['2']).toEqual({ current: 1, total: 2 });
     expect(doc.abilitiesAndSkills.speed).toBe(30);
-    expect(doc.abilitiesAndSkills.initiative).toBe(-1);
     expect(doc.abilitiesAndSkills.abilities.dexterity).toMatchObject({
       score: 17,
       savingThrowProficient: true,
@@ -332,12 +332,6 @@ describe('toSheetActions', () => {
 
     actions.equipment.setWeaponAttackAbility(id, null);
     expect(sheet.toDocument().equipment.weapons[0]?.attack).toBeNull();
-  });
-
-  it("sets initiative from the header, into the abilities section's field", () => {
-    const sheet = newSheet();
-    toSheetActions(sheet).vitals.setInitiative(-2);
-    expect(sheet.toDocument().abilitiesAndSkills.initiative).toBe(-2);
   });
 
   /**
