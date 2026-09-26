@@ -12,3 +12,8 @@ export function formatWhen(iso: string): string {
     minute: '2-digit',
   });
 }
+
+/** `+6`, `+0`, `-1`: a bonus as a D&D sheet prints it. */
+export function formatSigned(value: number): string {
+  return value >= 0 ? `+${value}` : String(value);
+}

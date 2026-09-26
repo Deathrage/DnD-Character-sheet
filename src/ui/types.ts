@@ -224,31 +224,61 @@ export interface EquipmentItemView extends NamedItemView {
   equipped: boolean;
 }
 
+/** A weapon's attack roll as the player entered it. Nothing here is computed. */
+export interface WeaponAttackView {
+  ability: AbilityKey;
+  attackBonus: number;
+  damage: string;
+}
+
+/**
+ * A weapon is an equipment item plus its attack roll. Only the Weapons list holds these; a row
+ * tells the two apart by whether the `attack` key is present at all.
+ */
+export interface WeaponView extends EquipmentItemView {
+  /** `null` when no attack roll has been entered. */
+  attack: WeaponAttackView | null;
+}
+
 /** Which stored list an item lives in. There are two, and nothing moves between them. */
 export type EquipmentSlot = 'weapons' | 'other';
 
 export interface EquipmentView {
-  weapons: EquipmentItemView[];
+  weapons: WeaponView[];
   other: EquipmentItemView[];
   /**
    * Derived on the facade by filtering both lists — never stored (spec §3.1). They are separate
    * fields here rather than recomputed in the component so the component cannot disagree with
-   * the business object about what "attuned" means.
+   * the business object about what "attuned" means. A weapon here keeps its attack.
    */
-  attuned: EquipmentItemView[];
-  equipped: EquipmentItemView[];
+  attuned: (WeaponView | EquipmentItemView)[];
+  equipped: (WeaponView | EquipmentItemView)[];
+}
+
+export interface NewEquipmentItem {
+  name: string;
+  description: string;
+  attuned: boolean;
+  equipped: boolean;
 }
 
 export interface EquipmentActions {
-  addEquipment(
-    slot: EquipmentSlot,
-    item: { name: string; description: string; attuned: boolean; equipped: boolean },
-  ): void;
+  /**
+   * Two adds rather than one with a slot: only a weapon has an attack, and one action taking an
+   * optional attack for either list would have to drop it silently for other equipment.
+   */
+  addWeapon(item: NewEquipmentItem & { attack: WeaponAttackView | null }): void;
+  addOther(item: NewEquipmentItem): void;
   renameEquipment(id: string, name: string): NameResult;
   setEquipmentDescription(id: string, description: string): void;
   setAttuned(id: string, attuned: boolean): void;
   setEquipped(id: string, equipped: boolean): void;
   removeEquipment(id: string): void;
+  /** `null` clears the whole attack, bonus and damage included. */
+  setWeaponAttackAbility(id: string, ability: AbilityKey | null): void;
+  setWeaponAttackBonus(id: string, value: number): void;
+  /** Rejectable: damage over 80 characters is `TOO_LONG`. */
+  setWeaponAttackDamage(id: string, damage: string): NameResult;
 }
 
 export interface JournalAndNotesView {

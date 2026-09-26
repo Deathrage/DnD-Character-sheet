@@ -46,7 +46,11 @@ describe('toSheetData', () => {
     sheet.journalAndNotes.setNotes('Find the Sunsword.');
     sheet.inventory.coins.setGp(84);
     sheet.inventory.add({ name: 'Rope', description: '50 ft', count: 2 });
-    sheet.equipment.addWeapon({ name: 'Rapier', equipped: true });
+    sheet.equipment.addWeapon({
+      name: 'Rapier',
+      equipped: true,
+      attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8+3 piercing' },
+    });
     sheet.equipment.addOther({ name: 'Cloak', attuned: true });
     sheet.featsAndTraits.createCategory('Rogue').add({ name: 'Sneak Attack', description: '+3d6' });
     sheet.featsAndTraits.add({ name: 'Darkvision' });
@@ -107,11 +111,27 @@ describe('toSheetData', () => {
         description: '',
         attuned: false,
         equipped: true,
+        attack: doc.equipment.weapons[0]?.attack,
       },
     ]);
-    expect(data.equipment.other.map((item) => item.name)).toEqual(['Cloak']);
+    expect(doc.equipment.weapons[0]?.attack).toEqual({
+      ability: 'dexterity',
+      attackBonus: 6,
+      damage: '1d8+3 piercing',
+    });
+    // Other equipment has no attack in its view: only a weapon's view carries the key.
+    expect(data.equipment.other).toEqual([
+      {
+        id: doc.equipment.other[0]?.id,
+        name: 'Cloak',
+        description: '',
+        attuned: true,
+        equipped: false,
+      },
+    ]);
     expect(data.equipment.attuned.map((item) => item.name)).toEqual(['Cloak']);
-    expect(data.equipment.equipped.map((item) => item.name)).toEqual(['Rapier']);
+    // A weapon in a derived list keeps its attack, so the Equipped block can show it.
+    expect(data.equipment.equipped).toEqual([data.equipment.weapons[0]]);
 
     expect(data.featsAndTraits).toEqual({
       categories: [
@@ -215,13 +235,14 @@ describe('toSheetActions', () => {
     actions.journalAndNotes.setNotes('Find the Sunsword.');
     actions.inventory.setCoin('gp', 84);
     actions.inventory.addItem({ name: 'Rope', description: '50 ft', count: 2 });
-    actions.equipment.addEquipment('weapons', {
+    actions.equipment.addWeapon({
       name: 'Rapier',
       description: '',
       attuned: false,
       equipped: true,
+      attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8+3 piercing' },
     });
-    actions.equipment.addEquipment('other', {
+    actions.equipment.addOther({
       name: 'Cloak',
       description: '',
       attuned: true,
@@ -256,7 +277,11 @@ describe('toSheetActions', () => {
     });
     expect(doc.inventory.coins.gp).toBe(84);
     expect(doc.inventory.items[0]).toMatchObject({ name: 'Rope', description: '50 ft', count: 2 });
-    expect(doc.equipment.weapons[0]).toMatchObject({ name: 'Rapier', equipped: true });
+    expect(doc.equipment.weapons[0]).toMatchObject({
+      name: 'Rapier',
+      equipped: true,
+      attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8+3 piercing' },
+    });
     expect(doc.equipment.other[0]).toMatchObject({ name: 'Cloak', attuned: true });
     expect(doc.featsAndTraits.categories[0]?.items[0]).toMatchObject({ name: 'Sneak Attack' });
     expect(doc.spellList.uncategorized[0]).toMatchObject({ level: 3, prepared: true });
@@ -272,6 +297,25 @@ describe('toSheetActions', () => {
       savingThrowProficient: true,
     });
     expect(doc.abilitiesAndSkills.skills.stealth.expertise).toBe(true);
+  });
+
+  it('returns a message for over-long damage instead of throwing, and None clears the attack', () => {
+    const sheet = newSheet();
+    const actions = toSheetActions(sheet);
+    actions.equipment.addWeapon({
+      name: 'Rapier',
+      description: '',
+      attuned: false,
+      equipped: false,
+      attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8' },
+    });
+    const id = toSheetData(sheet).equipment.weapons[0]?.id ?? '';
+
+    expect(actions.equipment.setWeaponAttackDamage(id, 'x'.repeat(81))).toMatch(/80/);
+    expect(sheet.toDocument().equipment.weapons[0]?.attack?.damage).toBe('1d8');
+
+    actions.equipment.setWeaponAttackAbility(id, null);
+    expect(sheet.toDocument().equipment.weapons[0]?.attack).toBeNull();
   });
 
   it("sets speed from the header, into the abilities section's field", () => {
@@ -293,11 +337,12 @@ describe('toSheetActions', () => {
     actions.vitals.addHitDie(8);
     actions.journalAndNotes.appendDay();
     actions.inventory.addItem({ name: 'Rope', description: '', count: 1 });
-    actions.equipment.addEquipment('weapons', {
+    actions.equipment.addWeapon({
       name: 'Rapier',
       description: '',
       attuned: false,
       equipped: false,
+      attack: null,
     });
     actions.featsAndTraits.createCategory('Rogue');
     actions.featsAndTraits.addFeat(null, { name: 'Darkvision', description: '' });
@@ -326,6 +371,10 @@ describe('toSheetActions', () => {
     actions.equipment.setEquipmentDescription(gearId, '1d8 piercing');
     actions.equipment.setAttuned(gearId, true);
     actions.equipment.setEquipped(gearId, true);
+    actions.equipment.setWeaponAttackAbility(gearId, 'strength');
+    actions.equipment.setWeaponAttackBonus(gearId, 7);
+    const damageFailure = actions.equipment.setWeaponAttackDamage(gearId, '2d6+4 slashing');
+    actions.equipment.setWeaponAttackAbility(gearId, 'dexterity');
     actions.featsAndTraits.renameCategory(featCategoryId, 'Rogue levels');
     actions.featsAndTraits.renameFeat(featId, 'Superior Darkvision');
     actions.featsAndTraits.setFeatDescription(featId, '120 ft');
@@ -356,7 +405,9 @@ describe('toSheetActions', () => {
       description: '1d8 piercing',
       attuned: true,
       equipped: true,
+      attack: { ability: 'dexterity', attackBonus: 7, damage: '2d6+4 slashing' },
     });
+    expect(damageFailure).toBeNull();
     expect(doc.featsAndTraits.categories[0]?.name).toBe('Rogue levels');
     expect(doc.featsAndTraits.uncategorized[0]).toMatchObject({
       name: 'Superior Darkvision',
