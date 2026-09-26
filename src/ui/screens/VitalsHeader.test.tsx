@@ -105,23 +105,6 @@ describe('VitalsHeader collapse', () => {
   });
 });
 
-describe('VitalsHeader speed', () => {
-  it('sits beside armor class and writes through setSpeed', () => {
-    const setSpeed = vi.fn();
-    render(
-      <VitalsHeader
-        character={sable}
-        actions={{ ...noVitalsActions, setSpeed }}
-        onBack={() => {}}
-      />,
-    );
-    const field = screen.getByLabelText('Speed') as HTMLInputElement;
-    expect(field.value).toBe('30');
-    fireEvent.change(field, { target: { value: '25' } });
-    expect(setSpeed).toHaveBeenCalledWith(25);
-  });
-});
-
 describe('VitalsHeader initiative', () => {
   it('sits beside armor class, signed, and writes through setInitiative', () => {
     const setInitiative = vi.fn();
@@ -136,6 +119,11 @@ describe('VitalsHeader initiative', () => {
     expect(field.value).toBe('+3');
     fireEvent.change(field, { target: { value: '-1' } });
     expect(setInitiative).toHaveBeenCalledWith(-1);
+  });
+
+  it('takes the place of speed, which is edited on Abilities & Skills only', () => {
+    header(null);
+    expect(screen.queryByLabelText('Speed')).toBeNull();
   });
 });
 

@@ -329,9 +329,8 @@ body {
 }
 .tiles {
   display: grid;
-  /* HP spans the row. Below it hit dice take a third of the row and armor class, initiative and
-     speed share the rest: at 2fr hit dice a 360px phone split "3/5 d8" across two lines. */
-  grid-template-columns: 3fr 2fr 2fr 2fr;
+  /* HP spans the row; below it hit dice take half, armor class and initiative a quarter each. */
+  grid-template-columns: 2fr 1fr 1fr;
   gap: 8px;
   margin-top: 10px;
 }

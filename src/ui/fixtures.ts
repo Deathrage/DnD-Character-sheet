@@ -45,7 +45,6 @@ export const sable: CharacterView = {
     { size: 8, current: 3, total: 5 },
   ],
   armorClass: 15,
-  speed: 30,
   initiative: 3,
   portrait: null,
 };
@@ -58,7 +57,6 @@ export const blankCharacter: CharacterView = {
   hitPoints: { current: 0, total: 0, temporary: 0 },
   hitDices: [],
   armorClass: 10,
-  speed: 0,
   initiative: 0,
   portrait: null,
 };
@@ -426,7 +424,6 @@ export const noVitalsActions: VitalsActions = {
   setTotalHitPoints: () => {},
   setTemporaryHitPoints: () => {},
   setArmorClass: () => {},
-  setSpeed: () => {},
   setInitiative: () => {},
   setPortrait: () => Promise.resolve(null),
   removePortrait: () => {},

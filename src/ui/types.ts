@@ -57,9 +57,10 @@ export interface CharacterView {
   hitPoints: HitPointsView;
   hitDices: HitDieView[];
   armorClass: number;
-  /** Stored under abilities and skills; the header shows it too, beside armor class. */
-  speed: number;
-  /** Signed, and stored under abilities and skills like speed. Never derived from Dexterity. */
+  /**
+   * Signed, and stored under abilities and skills; the header shows it too, beside armor class.
+   * Never derived from Dexterity.
+   */
   initiative: number;
   /** A data URL, or `null` when none has been picked. */
   portrait: string | null;
@@ -71,7 +72,6 @@ export interface VitalsActions {
   setTotalHitPoints(value: number): void;
   setTemporaryHitPoints(value: number): void;
   setArmorClass(value: number): void;
-  setSpeed(value: number): void;
   setInitiative(value: number): void;
   /** Crops and compresses the picked image and stores it; the message when it could not be used. */
   setPortrait(file: Blob, crop: Crop): Promise<NameResult>;

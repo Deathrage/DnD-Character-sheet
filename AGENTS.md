@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 1254 tests across 71 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 1253 tests across 71 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -119,13 +119,15 @@ back on the next load (criterion 14).
     not where the chain ends. At this bump `v1ToV2.test.ts` compared against `migrateV1ToV2`'s
     output, which was one step short of current once v3 existed. The repository's real-registry
     test and the codec test pin the whole chain, and must be extended at every bump.
-  - **UI.** A signed **Init** tile between AC and Speed in the header, and an **Initiative** box
-    on Abilities & Skills. Like speed, these are two doors onto one stored field. The header's
-    second row is now `3fr 2fr 2fr 2fr`. The hit dice summary joins each die with a no-break
-    space, so it wraps between dice and never splits `3/5 d8`. The Abilities & Skills stats are
-    two by two, because four across was too narrow for the labels on a 360px phone.
+  - **UI.** A signed **Init** tile in the header, beside AC, and an **Initiative** box on
+    Abilities & Skills: two doors onto one stored field. The Init tile replaced the header's Speed
+    tile, by the user's decision. Speed is now edited on Abilities & Skills only, and the header's
+    second row is back to `2fr 1fr 1fr`. The hit dice summary joins each die with a no-break
+    space, so a narrow tile wraps between dice and never splits `3/5 d8`. The Abilities & Skills
+    stats are two by two, because four across was too narrow for the labels on a 360px phone.
   - **Verified in Chromium** at 360px and 412px:
     - an initiative typed in the header survives a reload and shows on Abilities & Skills
+    - a speed typed on Abilities & Skills survives a reload
     - a stored v2 document opens at +0 and is written back as v3, with `initiative` after `speed`
 - The storage-layer work the followups doc called the sharpest risk is done: `createIndexedDbRepository`
   takes an injectable `registry` and `openDb`, reports `blocked`, `blocking` and `terminated`

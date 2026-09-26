@@ -18,7 +18,7 @@ interface Props {
 
 /**
  * The pinned header of the hub: name, total level, the classes button, and the HP / hit dice /
- * AC / initiative / speed tiles. Classes and hit dice open dialogs, exactly as in the wireframe — both are lists
+ * AC / initiative tiles. Classes and hit dice open dialogs, exactly as in the wireframe — both are lists
  * that would crowd a header that has to stay visible above every section.
  */
 export function VitalsHeader({ character, actions, onBack }: Props) {
@@ -134,7 +134,9 @@ export function VitalsHeader({ character, actions, onBack }: Props) {
           </div>
 
           {/* Rolled at the start of every fight, so it sits with AC rather than behind a tap.
-              Signed: it is a modifier. Stored with abilities and skills, like speed. */}
+              Signed: it is a modifier. Stored with abilities and skills, so this is a second
+              door onto the same field, not a copy. It took speed's tile, which is edited on
+              Abilities & Skills only. */}
           <div className="tile">
             <div className="tl">Init</div>
             <NumberField
@@ -143,13 +145,6 @@ export function VitalsHeader({ character, actions, onBack }: Props) {
               onChange={actions.setInitiative}
               signed
             />
-          </div>
-
-          {/* The other number read every turn of a fight. Stored with abilities and skills,
-              so this is a second door onto the same field, not a copy. */}
-          <div className="tile">
-            <div className="tl">Speed</div>
-            <NumberField label="Speed" value={character.speed} onChange={actions.setSpeed} />
           </div>
         </div>
       )}

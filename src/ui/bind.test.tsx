@@ -93,7 +93,6 @@ describe('toSheetData', () => {
         { size: 8, current: 0, total: 5 },
       ],
       armorClass: 15,
-      speed: 30,
       initiative: 5,
       portrait: 'data:image/jpeg;base64,/9j/4AAQ',
     });
@@ -334,12 +333,6 @@ describe('toSheetActions', () => {
 
     actions.equipment.setWeaponAttackAbility(id, null);
     expect(sheet.toDocument().equipment.weapons[0]?.attack).toBeNull();
-  });
-
-  it("sets speed from the header, into the abilities section's field", () => {
-    const sheet = newSheet();
-    toSheetActions(sheet).vitals.setSpeed(25);
-    expect(sheet.toDocument().abilitiesAndSkills.speed).toBe(25);
   });
 
   it("sets initiative from the header, into the abilities section's field", () => {
