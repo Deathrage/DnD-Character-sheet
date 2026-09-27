@@ -23,7 +23,7 @@ export default defineConfig(({ mode }) => ({
       // `/__/` is Firebase Hosting's reserved path; the sign-in redirect lands on
       // `/__/auth/handler`, which must reach the network, not the cached app shell.
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,png,webmanifest,woff2}'],
         navigateFallbackDenylist: [/^\/__\//],
       },
     }),

@@ -555,8 +555,15 @@ live in `docs/BACKLOG.md` — add new ones there, not here:
 - **`equipment.weapons` and `equipment.other` have no `moveTo` between them** (spec §10). Add it
   as `NamedItemBO.moveTo` with a different target type if moving a weapon to "other" is ever
   wanted.
-- The screens are the wireframe's. They have never been reviewed on a real phone, only in
-  Storybook's viewport toolbar — except once, which is how this was found: `viewport-fit=cover`
+- The screens' layout is the wireframe's; the look is not (2026-09-27, "ink and brass" — the
+  header of `src/ui/styles.css` says why). Dark and light, chosen by the device or overridden
+  from the list's menu (System / Light / Dark, `src/ui/theme.ts`, `data-theme` on `<html>`),
+  Alegreya and Alegreya Sans bundled from `src/ui/fonts/` rather than
+  fetched, so offline keeps working and the privacy page stays true. Change colours through the
+  `:root` tokens: the dark block and the two identical light blocks (why two: the comment above
+  them).
+- The screens have never been reviewed on a real phone, only in Storybook's viewport toolbar and
+  a browser at phone width — except once, which is how this was found: `viewport-fit=cover`
   lets Chrome on Android draw the installed app under the system navigation bar, so `100dvh`
   reaches under it and the list's add button was half hidden. Seen on a phone with three-button
   navigation, and only after a reload (pull-to-refresh, or Reload in the update strip) — a fresh

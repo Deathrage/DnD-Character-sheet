@@ -7,7 +7,18 @@
          not a layout bug. -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#6d6ff0" />
+    <meta
+      name="theme-color"
+      content="#1b1d2e"
+      media="(prefers-color-scheme: dark)"
+      data-scheme="dark"
+    />
+    <meta
+      name="theme-color"
+      content="#f7f6f3"
+      media="(prefers-color-scheme: light)"
+      data-scheme="light"
+    />
     <!--
       Relative, like everything else here, because vite.config.ts sets `base: ''` so the build
       works from any directory. The manifest exists to make the app installable: installing is the

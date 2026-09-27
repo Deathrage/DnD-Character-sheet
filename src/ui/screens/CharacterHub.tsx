@@ -3,6 +3,7 @@ import { Counters } from './Counters.js';
 import { Equipment } from './Equipment.js';
 import { FeatsAndTraits } from './FeatsAndTraits.js';
 import { HubGrid } from './HubGrid.js';
+import { summariseSections } from './hubSummary.js';
 import { Inventory } from './Inventory.js';
 import { JournalAndNotes } from './JournalAndNotes.js';
 import { SpellList } from './SpellList.js';
@@ -105,6 +106,7 @@ export function CharacterHub({
       {section === null ? (
         <HubGrid
           onOpen={onSectionChange}
+          summaries={summariseSections(data)}
           onExport={onExport}
           onOpenRawJson={onOpenRawJson}
           {...(wiredSections ? { wired: wiredSections } : {})}

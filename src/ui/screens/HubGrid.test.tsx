@@ -41,3 +41,26 @@ describe('HubGrid upload button', () => {
     expect(screen.queryByText(HINT)).toBeNull();
   });
 });
+
+describe('HubGrid contents', () => {
+  it('says what each section holds, named by the title with the line as its description', () => {
+    grid({ summaries: { inventory: '7 items · 45 gp' } });
+    const inventory = screen.getByRole('button', { name: 'Inventory' });
+    expect(inventory.getAttribute('aria-describedby')).toBeTruthy();
+    expect(document.getElementById(inventory.getAttribute('aria-describedby')!)?.textContent).toBe(
+      '7 items · 45 gp',
+    );
+  });
+
+  it("falls back to the section's own subtitle without a summary", () => {
+    grid({ summaries: {} });
+    expect(screen.getByText('coins & items')).toBeTruthy();
+  });
+
+  it('opens the section it names', () => {
+    const onOpen = vi.fn();
+    grid({ onOpen });
+    fireEvent.click(screen.getByRole('button', { name: 'Spell List' }));
+    expect(onOpen).toHaveBeenCalledWith('spells');
+  });
+});

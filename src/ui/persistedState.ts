@@ -14,13 +14,20 @@ export function usePersistedState<T>(key: string, initial: T): [T, (value: T) =>
     value,
     (next) => {
       setValue(next);
-      try {
-        localStorage.setItem(key, JSON.stringify(next));
-      } catch {
-        // Still works for this mount; it just will not be remembered.
-      }
+      writePersisted(key, next);
     },
   ];
+}
+
+/** The stored value outside React — for a setting that must be applied before the first render. */
+export const readPersisted = read;
+
+export function writePersisted<T>(key: string, value: T): void {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // Still works for this mount; it just will not be remembered.
+  }
 }
 
 function read<T>(key: string, initial: T): T {

@@ -2,8 +2,10 @@ import { useId, useState, type ReactNode } from 'react';
 import { Portrait } from '../components/Portrait.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import { Avatar } from '../components/Avatar.js';
+import { ICONS } from '../components/icons.js';
 import { formatWhen } from '../format.js';
 import type { LegalPage } from '../route.js';
+import { chooseTheme, storedTheme, THEMES } from '../theme.js';
 import type { CharacterRow, CloudView, InstallView } from '../types.js';
 import { CloudTerms } from './Legal.js';
 
@@ -226,6 +228,9 @@ export function CharacterList({
             </ul>
           )}
           <ul className="mgroup">
+            <ThemeChoice />
+          </ul>
+          <ul className="mgroup">
             <MenuItem
               icon={ICONS.privacy}
               label="Privacy Policy"
@@ -278,40 +283,44 @@ export function CharacterList({
   );
 }
 
-const ICONS = {
-  account: (
-    <svg viewBox="0 0 24 24">
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21a8 8 0 0 1 16 0" />
-    </svg>
-  ),
-  cloud: (
-    <svg viewBox="0 0 24 24">
-      <path d="M7 19a5 5 0 0 1-.6-9.96A6 6 0 0 1 18 10a4.5 4.5 0 0 1-.5 9z" />
-    </svg>
-  ),
-  import: (
-    <svg viewBox="0 0 24 24">
-      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M12 11v6M9 14l3 3 3-3" />
-    </svg>
-  ),
-  install: (
-    <svg viewBox="0 0 24 24">
-      <rect x="7" y="2" width="10" height="20" rx="2" />
-      <path d="M12 7v6M9.5 10.5 12 13l2.5-2.5M11 18h2" />
-    </svg>
-  ),
-  privacy: (
-    <svg viewBox="0 0 24 24">
-      <path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z" />
-    </svg>
-  ),
-  terms: (
-    <svg viewBox="0 0 24 24">
-      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h6" />
-    </svg>
-  ),
-};
+/**
+ * System, Light or Dark, as one row of the menu. It stays open on a choice, unlike the other
+ * rows: the new look is applied at once, behind the dialog, so the player can see it before
+ * leaving. Native radios, so arrow keys move between the three for free.
+ */
+function ThemeChoice() {
+  const [theme, setTheme] = useState(storedTheme);
+  const id = useId();
+  return (
+    <li className="macct">
+      <span className="mico" aria-hidden="true">
+        {ICONS.theme}
+      </span>
+      <span className="mtext">
+        <span className="mlabel" id={id}>
+          Appearance
+        </span>
+      </span>
+      <span className="seg" role="radiogroup" aria-labelledby={id}>
+        {THEMES.map(({ value, label }) => (
+          <label key={value}>
+            <input
+              type="radio"
+              name={`${id}theme`}
+              value={value}
+              checked={theme === value}
+              onChange={() => {
+                setTheme(value);
+                chooseTheme(value);
+              }}
+            />
+            {label}
+          </label>
+        ))}
+      </span>
+    </li>
+  );
+}
 
 /**
  * One row of the list menu. Named by its label alone; the line under it is the description, so a

@@ -12,9 +12,31 @@ commit or PR that shipped it, rather than deleting it.
 
 ## Candidates
 
-- **Automatic cloud sync.** A coarse trigger (on `pagehide`, or every few minutes) for the cloud
-  backup shipped on branch `feature/cloud-backup` (PR pending) — never local autosave's debounce,
-  because Firestore bills per write.
+- **Automatic cloud sync.** An "Auto sync" checkbox per character. Each synced character has one
+  cloud entry tagged _Auto sync_ that rewrites itself; the dated versions stay the history a player
+  saves on purpose. Editing on the laptop and finding the change on the phone is the point.
+  - _One slot, not new versions._ Layout v2 keeps a player's whole cloud in one 1 MiB document;
+    a version every few minutes of a session would fill it within months. The slot needs layout 3
+    (a shipped layout is never edited). Its portrait is stored by hash, like a version's.
+  - _Never blind last-writer-wins._ Each device remembers its base, the slot stamp it last synced
+    from (upload time plus a device id). Local unchanged, cloud changed: replace the local copy
+    silently. Local changed, cloud unchanged: upload. Both changed: the existing Replace / Keep
+    both dialog. Silently replacing in the last case would drop a device's edits (the one promise).
+  - _The base lives beside the document, not in it_, like portraits: a small IndexedDB store keyed
+    by character id, so a `DB_VERSION` bump. In the document it would need a schema bump and would
+    leak into exported files.
+  - _Triggers._ Upload at most every few minutes and on `pagehide`, never on autosave's debounce:
+    Firestore bills per write, and Spark's ~20k writes/day are shared by every player. Notice
+    other devices with an `onSnapshot` listener on `cloud/{uid}`, not polling.
+  - _An open sheet._ A remote change applies only while autosave has nothing pending, and swaps the
+    sheet under the UI; otherwise it is the both-changed case.
+  - _The checkbox is stored in the cloud_, per character, so a newly signed-in device knows what to
+    pull.
+  - _Edges._ The slot is pinned at the top of the versions list and cannot be deleted while sync is
+    on. Restoring a dated version while syncing makes it the new slot, which then reaches the
+    other devices; the restore dialog says so. Turning sync off freezes the slot into an ordinary
+    dated version, so nothing disappears. Deleting the character locally keeps the slot, or a
+    delete on one device would wipe it everywhere.
 - **Online features as a paid subscription.** Remote backup and cross-device sync would be part of
   a paid subscription, behind user authentication. The local app stays complete and free without
   an account: signing out or lapsing must never lock a player out of characters on their device.
@@ -52,6 +74,14 @@ commit or PR that shipped it, rather than deleting it.
   offer to delete its feat. Needs a schema version bump — read `src/data/schema/README.md` first.
   A dangling link must fail validation (the one promise).
 
+- **Death saving throws.** When current hit points reach 0, open death saving throws next to the
+  hit points: three success and three failure boxes the player ticks. Nothing is stored for them
+  today, so a schema version bump (read `src/data/schema/README.md` first).
+  - _Not a rule._ Showing them is a reaction to a number the player typed. The app never rolls,
+    never ticks a box itself, never marks the character dead at three failures, and never clears
+    the boxes on its own when HP rises above 0. The player clears them.
+  - Open: whether the section can also be opened by hand at HP above 0 (for example, a player who
+    tracks HP somewhere else).
 - **Item weight.** A `weight` on inventory items (per unit) and equipment; the inventory shows the
   total, derived and never stored like `level` (add it to the spec §1 exception list). No units,
   no coin weight, no encumbrance — those are rules. Open: default `0` vs "not entered".

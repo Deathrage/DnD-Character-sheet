@@ -48,9 +48,10 @@ describe('CharacterList menu: install', () => {
     (install) => {
       withInstall(install);
       expect(screen.queryByRole('button', { name: 'Install to phone' })).toBeNull();
-      // Nor an empty section where it was: no account here, so only import and legal remain.
+      // Nor an empty section where it was: no account here, so only import, appearance and legal
+      // remain.
       const menu = screen.getByRole('dialog', { name: 'Menu' });
-      expect(within(menu).getAllByRole('list')).toHaveLength(2);
+      expect(within(menu).getAllByRole('list')).toHaveLength(3);
     },
   );
 });
@@ -136,5 +137,41 @@ describe('CharacterList menu: legal', () => {
   it('has no cloud note without a cloud', () => {
     list();
     expect(screen.queryByText(/By using cloud backup you accept/)).toBeNull();
+  });
+});
+
+describe('CharacterList menu: appearance', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    delete document.documentElement.dataset.theme;
+  });
+
+  const choice = (name: string) =>
+    within(screen.getByRole('radiogroup', { name: 'Appearance' })).getByRole('radio', { name });
+
+  it('follows the device until a theme is chosen', () => {
+    list();
+    expect((choice('System') as HTMLInputElement).checked).toBe(true);
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+  });
+
+  it('applies the chosen theme at once and remembers it', () => {
+    list();
+    fireEvent.click(choice('Dark'));
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(localStorage.getItem('ui:theme')).toBe('"dark"');
+
+    fireEvent.click(choice('Light'));
+    expect(document.documentElement.dataset.theme).toBe('light');
+
+    fireEvent.click(choice('System'));
+    expect(document.documentElement.dataset.theme).toBeUndefined();
+    expect(localStorage.getItem('ui:theme')).toBe('"system"');
+  });
+
+  it('opens on the remembered theme', () => {
+    localStorage.setItem('ui:theme', '"light"');
+    list();
+    expect((choice('Light') as HTMLInputElement).checked).toBe(true);
   });
 });

@@ -1,24 +1,172 @@
 /*
- * The visual language of docs/start/Wireframe.html, lifted token-for-token. The wireframe is a
- * project input and the authority on how this app looks (spec §7: plain CSS and custom
- * properties, no component framework), so class names and values match it rather than being
- * reinvented. What is NOT lifted is the `.overlay`/`.dialog` pair: the dialog is now a native
- * <dialog> with two presentations (spec §7, `ResponsiveDialog`). The `.phone` frame is lifted,
- * but as `.app` on a wide viewport rather than as a wrapper: the screens were only ever laid out
- * for a phone, and stretched across a desktop window they read as a sparse form.
+ * "Ink and brass": a character sheet for a dim table. The screens' structure still follows
+ * docs/start/Wireframe.html (spec §7: plain CSS and custom properties, no component framework),
+ * so the class names are the wireframe's; the look is not. Dark ink by default, because the sheet
+ * is read at night between rolls, with a light vellum variant. The device picks between them
+ * unless the player chose one in the list's menu.
+ *
+ * Brass is the one accent and means "press or edit this". Blood red is for hit points and for
+ * danger, nothing else. Numbers are set in Alegreya with lining, tabular figures — they are what
+ * the sheet is for — and labels in small caps, the way a printed 5e sheet sets them.
+ *
+ * The fonts are bundled, not fetched from Google: the app must start offline, and the privacy
+ * page promises no third-party requests beyond Firebase. OFL licence in ./fonts/OFL.txt.
  */
 
+@font-face {
+  font-family: 'Alegreya';
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('./fonts/alegreya-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Alegreya';
+  font-weight: 400 800;
+  font-display: swap;
+  src: url('./fonts/alegreya-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Alegreya Sans';
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/alegreya-sans-400-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Alegreya Sans';
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/alegreya-sans-400-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Alegreya Sans';
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/alegreya-sans-500-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Alegreya Sans';
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/alegreya-sans-500-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Alegreya Sans';
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fonts/alegreya-sans-700-latin.woff2') format('woff2');
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Alegreya Sans';
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fonts/alegreya-sans-700-latin-ext.woff2') format('woff2');
+  unicode-range:
+    U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+
 :root {
-  --stage: #e9e9ec;
-  --ink: #2b2b30;
-  --ink-2: #8a8a92;
-  --line: #d3d3d9;
-  --fill: #e6e6ea;
-  --fill-2: #f1f1f4;
-  --accent: #6d6ff0;
-  --accent-soft: #ecedfe;
-  --paper: #ffffff;
+  color-scheme: dark;
+  --stage: #11121c;
+  --paper: #1b1d2e;
+  /* A raised surface: tiles, cards, grouped rows. */
+  --fill-2: #22253a;
+  /* Hairlines inside a surface, and quiet badges. */
+  --fill: #2b2e46;
+  --line: #3a3e5c;
+  /* The edge of something you type into or tick: 3:1 against the well and every surface around
+     it (WCAG 1.4.11), where --line is only a divider and may be quieter. */
+  --edge: #6d7194;
+  /* A field is a well, set below the surface it sits on. */
+  --field: #141626;
+  --ink: #ece6d6;
+  --ink-2: #9c9db3;
+  /* Brass has two jobs. As a fill (buttons, the level badge, a ticked mark) it carries ink-dark
+     text; as text or a line of its own (a text button, a count, a focus ring) it must read at
+     4.5:1 against the surface. Here one brass does both; the light theme needs two. */
+  --accent: #d4a447;
+  --accent-text: var(--accent);
+  /* The brass tint behind brass text (a text button, a count, a glyph), and that tint under a
+     pointer. Stronger in the light theme, where a faint gold on a warm page reads as grey. */
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --accent-soft-hover: color-mix(in srgb, var(--accent) 26%, transparent);
+  --on-accent: #1b1d2e;
+  --danger: #e8796d;
+  --shadow: rgb(5 6 14 / 0.55);
+
+  --font-ui: 'Alegreya Sans', system-ui, sans-serif;
+  --font-display: 'Alegreya', Georgia, serif;
+  --ease: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* The light variant, a barely warm vellum: warm enough that the gold does not fight a cold page,
+   short of cream. The device's choice unless the menu picked dark, or the menu's own choice
+   (`data-theme`, set by src/ui/theme.ts). The two blocks must stay identical. `light-dark()` would
+   make them one, but Safari before 17.5 does not have it, and there every colour would fail. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    color-scheme: light;
+    --stage: #e2dfd8;
+    --paper: #f7f6f3;
+    --fill-2: #efede8;
+    --fill: #e6e3dc;
+    --line: #d4d0c7;
+    --edge: #86827a;
+    --field: #ffffff;
+    --ink: #1d2034;
+    --ink-2: #5f5c66;
+    --accent: #c29030;
+    --accent-text: #76500c;
+    --accent-soft: color-mix(in srgb, var(--accent) 26%, transparent);
+    --accent-soft-hover: color-mix(in srgb, var(--accent) 36%, transparent);
+    --on-accent: #1d2034;
+    --danger: #b3261e;
+    --shadow: rgb(38 33 24 / 0.16);
+  }
+}
+:root[data-theme='light'] {
+  color-scheme: light;
+  --stage: #e2dfd8;
+  --paper: #f7f6f3;
+  --fill-2: #efede8;
+  --fill: #e6e3dc;
+  --line: #d4d0c7;
+  --edge: #86827a;
+  --field: #ffffff;
+  --ink: #1d2034;
+  --ink-2: #5f5c66;
+  --accent: #c29030;
+  --accent-text: #76500c;
+  --accent-soft: color-mix(in srgb, var(--accent) 26%, transparent);
+  --accent-soft-hover: color-mix(in srgb, var(--accent) 36%, transparent);
+  --on-accent: #1d2034;
   --danger: #b3261e;
+  --shadow: rgb(38 33 24 / 0.16);
 }
 
 *,
@@ -32,7 +180,61 @@ body {
   margin: 0;
   background: var(--stage);
   color: var(--ink);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+  scrollbar-color: var(--line) transparent;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
+/* Every pressable thing answers a press the same way: a small settle, never a jump. */
+button {
+  transition:
+    background-color 150ms var(--ease),
+    border-color 150ms var(--ease),
+    color 150ms var(--ease),
+    transform 120ms var(--ease),
+    filter 150ms var(--ease);
+}
+button:not(:disabled):active {
+  transform: translateY(1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  button {
+    transition: none;
+  }
+  button:not(:disabled):active {
+    transform: none;
+  }
+}
+
+/* One focus ring for everything that has no better-placed one of its own. */
+:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 2px;
+}
+
+/* The printed sheet's label: small caps, tracked a little, quieter than the value it names. */
+.tile .tl,
+.dlabel,
+.abhead,
+.statbox .lbl,
+.hdrow .lab,
+.coin .cl {
+  font-family: var(--font-ui);
+  font-variant-caps: all-small-caps;
+  text-transform: none;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--ink-2);
 }
 
 /* The app fills its host: a phone viewport, a desktop window, or a Storybook frame. */
@@ -67,29 +269,33 @@ body {
   height: auto;
 }
 
-/* Wider than a phone: the wireframe's phone frame, centred on the stage. Same breakpoint as the
-   dialog, so the sheet-vs-modal switch and the frame agree on what "a phone" is. The height is
-   capped rather than the wireframe's fixed 780px so the frame still fits a short laptop screen. */
+/* Wider than a phone: the sheet as a single leaf lying on the table, centred on the stage. Same
+   breakpoint as the dialog, so the sheet-vs-modal switch and the frame agree on what "a phone"
+   is. The height is capped so the leaf still fits a short laptop screen. */
 @media (min-width: 640px) {
   body {
     display: flex;
     align-items: center;
     min-height: 100dvh;
+    background:
+      radial-gradient(ellipse 60% 70% at 50% 45%, var(--fill-2), transparent 70%), var(--stage);
   }
   #root {
     width: 100%;
   }
   .app {
-    max-width: 390px;
+    max-width: 420px;
     margin: 0 auto;
-    height: min(844px, calc(100dvh - 48px));
+    height: min(880px, calc(100dvh - 48px));
     border: 1px solid var(--line);
-    border-radius: 30px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border-radius: 22px;
+    box-shadow:
+      0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent) inset,
+      0 24px 60px -12px var(--shadow);
   }
-  /* The frame's 24px of stage above and below is padding, so it shrinks to what the strip leaves
+  /* The leaf's 24px of stage above and below is padding, so it shrinks to what the strip leaves
      rather than to a fixed share of the window. The strip cancels the 24px to sit flush under
-     whatever inset remains. The stage, not paper, shows around the frame. */
+     whatever inset remains. The stage, not paper, shows around the leaf. */
   #root {
     box-sizing: border-box;
     padding-block: calc(24px + env(safe-area-inset-top, 0px))
@@ -100,7 +306,7 @@ body {
     margin: -24px 0 24px;
   }
   #root > .app {
-    flex: 0 1 844px;
+    flex: 0 1 880px;
     width: 100%;
     margin: auto;
   }
@@ -109,22 +315,25 @@ body {
 /* ---------- character list ---------- */
 .lhead {
   flex: 0 0 auto;
-  padding: 12px 18px 8px;
+  padding: 18px 20px 10px;
 }
 .lhead h1 {
   margin: 0;
-  font-size: 26px;
-  letter-spacing: -0.02em;
+  font-family: var(--font-display);
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.015em;
 }
 .lhead .sub {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-2);
-  margin-top: 2px;
+  margin-top: 4px;
 }
 .llist {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: 6px 14px 90px;
+  padding: 8px 14px 100px;
   margin: 0;
   list-style: none;
 }
@@ -134,33 +343,49 @@ body {
   text-align: left;
   font: inherit;
   color: inherit;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 13px 15px;
+  border: 1px solid transparent;
+  border-radius: 18px;
+  padding: 14px 15px;
   margin-bottom: 10px;
   cursor: pointer;
-  background: var(--paper);
-}
-.ccard:active {
   background: var(--fill-2);
 }
+.ccard:hover {
+  border-color: var(--line);
+}
+.ccard:active {
+  background: var(--fill);
+}
 .ccard .cn {
-  font-size: 17px;
+  font-family: var(--font-display);
+  font-size: 19px;
   font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ccard .cc {
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--ink-2);
   margin-top: 3px;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .ccard .chp {
-  font-size: 12.5px;
-  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--danger);
   margin-top: 8px;
-  font-variant-numeric: tabular-nums;
+}
+.ccard .cid {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ccard.damaged {
-  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 9%, var(--paper));
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent);
 }
 /* The row actions sit over the card's right edge, stacked so the class line keeps its width. */
 .llist > li {
@@ -195,13 +420,13 @@ body {
   height: 20px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.8;
+  stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 .cicon:hover,
 .cicon:active {
-  background: var(--fill-2);
+  background: var(--fill);
   color: var(--ink);
 }
 .cicon.cdel:hover,
@@ -209,36 +434,39 @@ body {
   color: var(--danger);
 }
 .cicon:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-text);
   outline-offset: 1px;
 }
 .ccard.damaged .cn {
   color: var(--danger);
 }
+/* The one way to make something new: a brass seal in the corner, squared off like a die face
+   rather than the generic circle. */
 .fab {
   position: absolute;
   right: 18px;
-  bottom: 20px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
+  bottom: 22px;
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border: none;
-  font-size: 28px;
+  font-size: 30px;
+  font-weight: 500;
   line-height: 1;
-  box-shadow: 0 6px 18px rgba(109, 111, 240, 0.45);
+  box-shadow: 0 10px 24px -6px color-mix(in srgb, var(--accent) 55%, transparent);
   cursor: pointer;
   z-index: 10;
 }
-.fab:active {
-  opacity: 0.9;
+.fab:hover {
+  filter: brightness(1.08);
 }
 
 /* ---------- hub vitals ---------- */
 .vitals {
   flex: 0 0 auto;
-  padding: 8px 16px 12px;
+  padding: 10px 16px 12px;
   border-bottom: 1px solid var(--line);
   background: var(--paper);
 }
@@ -250,19 +478,26 @@ body {
 .back,
 .close,
 .vtoggle {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  border: 1px solid var(--line);
-  background: var(--paper);
+  border: 0;
+  background: var(--fill-2);
   color: var(--ink-2);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 20px;
+  line-height: 1;
   cursor: pointer;
   flex: 0 0 auto;
-  padding: 0;
+  padding: 0 0 2px;
+}
+.back:hover,
+.close:hover,
+.vtoggle:hover {
+  background: var(--fill);
+  color: var(--ink);
 }
 .vname {
   /* An input styled as the heading it replaced: the name is edited in place. */
@@ -271,9 +506,13 @@ body {
   color: inherit;
   background: transparent;
   border: 0;
+  border-bottom: 1px dashed transparent;
+  border-radius: 0;
   padding: 0;
-  font-size: 19px;
+  font-family: var(--font-display);
+  font-size: 24px;
   font-weight: 800;
+  line-height: 1.15;
   letter-spacing: -0.01em;
   flex: 1 1 auto;
   min-width: 0;
@@ -281,38 +520,49 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.vname:hover {
+  border-bottom-color: var(--line);
+}
+.vname:focus {
+  outline: none;
+  border-bottom-color: var(--accent-text);
+}
 .lvpill {
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--on-accent);
   background: var(--accent);
-  border-radius: 20px;
-  padding: 3px 9px;
+  border-radius: 7px;
+  padding: 1px 8px 2px;
   flex: 0 0 auto;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .classbtn {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--paper);
-  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--fill-2);
+  padding: 5px 10px;
   margin: 8px 0 2px;
   cursor: pointer;
   font: inherit;
   color: inherit;
 }
+.classbtn:hover {
+  border-color: var(--line);
+}
 .classbtn:active {
-  background: var(--fill-2);
+  background: var(--fill);
 }
 .classbtn .clsum {
   flex: 1 1 auto;
   min-width: 0;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -320,149 +570,311 @@ body {
 }
 .classbtn .clsum.placeholder {
   color: var(--ink-2);
-  font-weight: 400;
+  font-style: italic;
 }
 .chev {
-  color: var(--line);
-  font-size: 18px;
+  color: var(--ink-2);
+  font-size: 20px;
+  line-height: 1;
   flex: 0 0 auto;
 }
 .tiles {
   display: grid;
-  /* HP spans the row; below it hit dice take half, armor class and initiative a quarter each. */
-  grid-template-columns: 2fr 1fr 1fr;
+  /* HP spans the row; below it the AC shield takes only its own width, and hit dice and
+     initiative share the rest two to one. */
+  grid-template-columns: minmax(0, 2fr) auto minmax(0, 1fr);
   gap: 8px;
   margin-top: 10px;
 }
 .tile {
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  padding: 7px 9px;
-  background: var(--paper);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 6px 10px 7px;
+  background: var(--fill-2);
   font: inherit;
   color: inherit;
   text-align: left;
 }
+/* Hit points: the number read and changed most, so it is the biggest thing on the sheet.
+   A wrapping row rather than a grid: sized so HP and temp share one line on a 360px phone, and on
+   anything narrower temp drops under HP instead of pushing the tile off the screen. */
 .tile.hp {
   grid-column: 1 / -1;
   display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.tile .tl {
-  font-size: 9.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--ink-2);
-  font-weight: 700;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 4px 8px;
+  padding-bottom: 8px;
 }
 .hpwrap {
   display: flex;
-  align-items: baseline;
-  gap: 3px;
+  align-items: center;
+  gap: 4px;
   margin-top: 2px;
 }
 .hp .num {
-  width: 46px;
-  font-size: 16px;
+  width: 50px;
+  font-size: 22px;
+  padding: 2px 3px;
 }
 .hp .slash {
+  font-family: var(--font-display);
+  font-size: 22px;
   color: var(--ink-2);
-  font-weight: 600;
+  padding: 0 1px;
+}
+.hp .hpwrap > .num {
+  /* Total HP: set once a level, so it is quieter than current. */
+  width: 44px;
+  font-size: 17px;
+  color: var(--ink-2);
 }
 .hp .tempbox {
-  margin-left: auto;
   text-align: right;
 }
+.hp .tempbox .tl {
+  margin-bottom: 2px;
+}
 .hp .tempbox .num {
-  width: 44px;
+  width: 42px;
+  font-size: 17px;
 }
 .tile .tval {
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: 18px;
   font-weight: 800;
   margin-top: 2px;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .hdtile {
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.3;
-  margin-top: 2px;
+  font-size: 16px;
+  line-height: 1.25;
+  margin-top: 3px;
 }
 .tile.btn {
   cursor: pointer;
 }
+.tile.btn:hover {
+  border-color: var(--line);
+}
 .tile.btn:active {
+  background: var(--fill);
+}
+/* Armor class sits in a shield, as it does on the printed sheet. The shield is two masked layers:
+   the outer one in the line colour is the rim, the inner one the face. */
+.tile.ac {
+  position: relative;
+  isolation: isolate;
+  background: none;
+  text-align: center;
+  /* Narrower than the row is tall, as a shield is: the width is fixed, the height is the row's. */
+  width: 60px;
+  padding: 4px 6px 13px;
+}
+.tile.ac::before,
+.tile.ac::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M50 0 C66 7 84 8 100 6 V52 C100 76 78 92 50 100 C22 92 0 76 0 52 V6 C16 8 34 7 50 0 Z'/%3E%3C/svg%3E")
+    center / 100% 100% no-repeat;
+}
+.tile.ac::before {
+  inset: 0;
+  background: var(--line);
+}
+.tile.ac::after {
+  inset: 1.5px;
   background: var(--fill-2);
 }
+/* Boxed like every other number in the header: inside the shield it is still a field to type in. */
+.tile.ac .num {
+  width: 100%;
+  max-width: 48px;
+  font-size: 19px;
+  padding: 2px;
+}
 
-/* ---------- hub grid ---------- */
+/* ---------- hub contents ---------- */
 .bottom {
   flex: 1 1 auto;
   overflow-y: auto;
   min-height: 0;
 }
-.menu {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  padding: 14px 16px 22px;
-  margin: 0;
+/* The sheet's sections as a rulebook's contents: one raised group, a row per section, the line
+   under each title saying what the section holds. The hairline between rows starts past the
+   glyph, as in the list's menu, so the two read as one kind of thing. */
+.contents {
+  margin: 14px 16px 18px;
+  padding: 0;
   list-style: none;
+  background: var(--fill-2);
+  border-radius: 18px;
+  overflow: hidden;
 }
-.mtile {
-  display: block;
+/* The paperwork group under the contents, plainly apart from it. Its lines wrap rather than
+   truncate: one of them is the reason Upload cannot be pressed, and a cut-off reason is none. */
+/* The rule between what the sheet holds and what can be done with it. */
+.hubrule {
+  margin: 4px 16px 18px;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.paperwork {
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+.paperwork:last-child {
+  margin-bottom: 28px;
+}
+.paperwork .centry .ms {
+  white-space: normal;
+  line-height: 1.3;
+}
+.contents > li + li {
+  position: relative;
+}
+.contents > li + li::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 66px; /* the row's padding, glyph and gap */
+  right: 0;
+  border-top: 1px solid var(--fill);
+}
+.centry {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  column-gap: 14px;
   width: 100%;
-  text-align: left;
+  min-height: 64px;
+  padding: 11px 14px;
+  border: 0;
+  background: transparent;
   font: inherit;
   color: inherit;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 14px 13px;
+  text-align: left;
   cursor: pointer;
-  background: var(--paper);
 }
-.mtile:active {
-  background: var(--fill-2);
+.centry::after {
+  content: '›';
+  color: var(--ink-2);
+  font-size: 22px;
+  line-height: 1;
+  transition:
+    color 150ms var(--ease),
+    transform 150ms var(--ease);
 }
-/* Spec §8 criterion 12: the six unwired tiles render, look inert, and navigate nowhere. */
-.mtile[aria-disabled='true'] {
+.centry:hover,
+.centry:active {
+  background: var(--fill);
+}
+.centry:hover::after {
+  color: var(--accent-text);
+  transform: translateX(2px);
+}
+/* A row in a list does not settle downward like a free-standing button: it only darkens. */
+.centry:not(:disabled):active {
+  transform: none;
+}
+.centry:focus-visible {
+  outline-offset: -2px;
+  border-radius: 18px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .centry::after {
+    transition: none;
+  }
+  .centry:hover::after {
+    transform: none;
+  }
+}
+/* Spec §8 criterion 12: the unwired entries render, look inert, and navigate nowhere. Upload
+   while signed out is a real `disabled`: its title greys, the line under it (the reason) stays
+   readable, since that line is the only place a phone shows why. */
+.centry[aria-disabled='true'] {
   cursor: default;
   opacity: 0.45;
 }
-.mtile[aria-disabled='true']:active {
-  background: var(--paper);
+.centry:disabled {
+  cursor: default;
 }
-.mtile .ico {
-  font-size: 20px;
+.centry[aria-disabled='true']:hover,
+.centry[aria-disabled='true']:active,
+.centry:disabled:hover,
+.centry:disabled:active {
+  background: transparent;
 }
-.mtile .mt {
-  font-size: 14px;
-  font-weight: 700;
-  margin-top: 8px;
+.centry[aria-disabled='true']::after,
+.centry:disabled::after {
+  visibility: hidden;
 }
-.mtile .ms {
-  font-size: 11px;
+.centry:disabled .ico {
+  background: var(--fill);
   color: var(--ink-2);
-  margin-top: 2px;
 }
-
+.centry:disabled .mt {
+  color: var(--ink-2);
+}
+.centry .ico {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 20px;
+  line-height: 1;
+}
+.centry .ico svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ctext {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.centry .mt {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.centry .ms {
+  font-size: 14px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: lining-nums tabular-nums;
+}
 /* ---------- section view ---------- */
 .sv {
-  padding: 6px 16px 26px;
+  padding: 6px 16px 28px;
 }
 .svhead {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 0 4px;
+  padding: 10px 0 6px;
   position: sticky;
   top: 0;
   background: var(--paper);
   z-index: 5;
 }
 .svhead .t {
-  font-size: 19px;
+  font-family: var(--font-display);
+  font-size: 24px;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
@@ -470,29 +882,29 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 18px 0 6px;
-  min-height: 26px;
+  margin: 22px 0 6px;
+  min-height: 28px;
   gap: 10px;
 }
 .sechead-row:first-of-type {
-  margin-top: 8px;
+  margin-top: 10px;
 }
+/* A heading inside a section reads like a chapter heading in a rulebook: the display face, with
+   the count beside it in brass. */
 .sechead {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--ink-2);
+  font-family: var(--font-display);
+  font-size: 18px;
   font-weight: 700;
+  color: var(--ink);
   margin: 0;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   cursor: pointer;
   min-width: 0;
   background: none;
   border: none;
   padding: 0;
-  font-family: inherit;
 }
 .sechead.static {
   cursor: default;
@@ -508,10 +920,15 @@ body {
   flex: 0 0 auto;
 }
 .ccount {
-  font-size: 11px;
-  color: var(--ink-2);
+  font-family: var(--font-ui);
+  font-size: 13px;
   font-weight: 700;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border-radius: 6px;
+  padding: 0 6px;
   flex: 0 0 auto;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .sec-actions {
   display: flex;
@@ -520,58 +937,68 @@ body {
   flex: 0 0 auto;
 }
 .editcat {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
-  border: 1px solid var(--line);
-  background: var(--paper);
+  border: 0;
+  background: var(--fill-2);
   color: var(--ink-2);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   padding: 0;
 }
+.editcat:hover {
+  color: var(--ink);
+  background: var(--fill);
+}
 .addmini {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 20px;
   line-height: 1;
   cursor: pointer;
   flex: 0 0 auto;
-  padding: 0;
+  padding: 0 0 2px;
+}
+.addmini:hover {
+  filter: brightness(1.08);
 }
 .txtbtn {
-  font-size: 12px;
+  font: inherit;
+  font-size: 14px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--accent-soft);
   border: none;
   border-radius: 8px;
-  padding: 6px 10px;
+  padding: 6px 11px;
   cursor: pointer;
   flex: 0 0 auto;
 }
+.txtbtn:hover {
+  background: var(--accent-soft-hover);
+}
 .empty {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--ink-2);
   font-style: italic;
-  opacity: 0.6;
-  padding: 4px 2px 6px;
+  padding: 6px 2px 8px;
 }
 .rec {
   display: flex;
   align-items: center;
   gap: 11px;
-  padding: 11px 2px;
+  padding: 12px 4px;
   border: none;
   border-top: 1px solid var(--fill);
   cursor: pointer;
@@ -592,31 +1019,35 @@ body {
   min-width: 0;
 }
 .rec .nm {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16.5px;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .rec .pv {
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-2);
-  margin-top: 3px;
+  margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .newcat {
-  margin-top: 20px;
+  margin-top: 22px;
   width: 100%;
   border: 1px dashed var(--line);
   border-radius: 12px;
-  padding: 11px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--accent);
-  background: var(--paper);
+  padding: 12px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent-text);
+  background: transparent;
   cursor: pointer;
+}
+.newcat:hover {
+  border-color: var(--accent-text);
 }
 .newcat:active {
   background: var(--accent-soft);
@@ -628,7 +1059,7 @@ body {
   color: var(--ink-2);
   background: var(--fill-2);
   border-style: solid;
-  border-color: var(--fill);
+  border-color: var(--fill-2);
   cursor: default;
 }
 .newcat:disabled:active {
@@ -641,8 +1072,8 @@ body {
   color: var(--ink);
 }
 .cicon.mbtn svg {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
 }
 /* One section per group, as a phone's settings list: the groups' edges are the separators, and
    rows inside one group are split by a hairline that starts past the icon. */
@@ -650,7 +1081,7 @@ body {
   list-style: none;
   margin: 0 0 14px;
   padding: 0;
-  border: 1px solid var(--line);
+  background: var(--fill-2);
   border-radius: 14px;
   overflow: hidden;
 }
@@ -663,7 +1094,7 @@ body {
   top: 0;
   left: 58px; /* the row's padding, icon and gap */
   right: 0;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--fill);
 }
 .mitem,
 .macct {
@@ -684,10 +1115,13 @@ body {
 }
 .mitem:hover,
 .mitem:active {
-  background: var(--fill-2);
+  background: var(--fill);
+}
+.mitem:not(:disabled):active {
+  transform: none;
 }
 .mitem:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-text);
   outline-offset: -2px;
   border-radius: 13px;
 }
@@ -700,22 +1134,23 @@ body {
   height: 32px;
   border-radius: 9px;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 .mico svg {
   width: 18px;
   height: 18px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.8;
+  stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 /* The person, not a feature: round where the feature icons are squared off. */
 .mavatar {
   border-radius: 50%;
-  font-size: 14px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
   overflow: hidden;
 }
 .mavatar img {
@@ -728,16 +1163,16 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 .mlabel {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 500;
   overflow-wrap: anywhere;
 }
 .mdesc {
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 14px;
+  line-height: 1.3;
   color: var(--ink-2);
   overflow-wrap: anywhere;
 }
@@ -753,68 +1188,118 @@ body {
   background: transparent;
 }
 .mitem:disabled .mico {
-  background: var(--fill-2);
+  background: var(--fill);
   color: var(--ink-2);
 }
 .mitem:disabled .mlabel {
   color: var(--ink-2);
 }
+/* A segmented choice: the radios stay in the page (focusable, arrow keys) but out of sight, and
+   each label is a segment. The chosen one is in brass, as every other selected state is. */
+.seg {
+  flex: 0 0 auto;
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 10px;
+  background: var(--field);
+}
+.seg label {
+  position: relative;
+  padding: 5px 10px 6px;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition:
+    background-color 150ms var(--ease),
+    color 150ms var(--ease);
+}
+.seg input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.seg label:hover {
+  color: var(--ink);
+}
+.seg label:has(:checked) {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: 700;
+}
+.seg label:has(:focus-visible) {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 1px;
+}
 .fieldError.mmsg {
   margin: -6px 0 14px;
 }
-/* The reason under a disabled button: closer to it than the next button is, so it reads as that
-   button's caption rather than a paragraph of its own. */
-.hint.btnhint {
-  margin: 6px 2px 0;
-}
 
 /* ---------- fields ---------- */
+/* A number on the sheet is written in the display face with lining, tabular figures: it is the
+   thing being read, and columns of them line up. */
 .num {
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  background: var(--paper);
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: var(--field);
   font: inherit;
+  font-family: var(--font-display);
+  font-size: 17px;
   color: var(--ink);
-  padding: 6px 4px;
+  padding: 5px 4px;
   text-align: center;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
   font-weight: 700;
   width: 100%;
+  transition:
+    border-color 150ms var(--ease),
+    box-shadow 150ms var(--ease);
 }
-.num:focus {
+.num:focus,
+.inp:focus,
+.area:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .inp {
-  border: 1px solid var(--line);
+  border: 1px solid var(--edge);
   border-radius: 8px;
-  background: var(--paper);
+  background: var(--field);
   font: inherit;
+  font-size: 16px;
   color: var(--ink);
   padding: 8px 10px;
   width: 100%;
+  transition:
+    border-color 150ms var(--ease),
+    box-shadow 150ms var(--ease);
 }
-.inp:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+/* Muted but still legible (4.5:1): an example is read, not just glimpsed. Italic so it is never
+   mistaken for a value already typed. */
+.inp::placeholder,
+.area::placeholder {
+  color: var(--ink-2);
+  opacity: 1;
+  font-style: italic;
 }
 .area {
-  border: 1px solid var(--line);
+  border: 1px solid var(--edge);
   border-radius: 8px;
-  background: var(--paper);
+  background: var(--field);
   font: inherit;
+  font-size: 16px;
   color: var(--ink);
-  padding: 9px 10px;
+  padding: 10px 11px;
   width: 100%;
   resize: vertical;
-  line-height: 1.45;
-}
-.area:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  line-height: 1.5;
+  transition:
+    border-color 150ms var(--ease),
+    box-shadow 150ms var(--ease);
 }
 /* Descriptions in a dialog grow with their text; `rows` is only the fallback where
    field-sizing is unsupported. */
@@ -827,22 +1312,25 @@ body {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12.5px;
 }
+/* An inline count, written on a line rather than boxed: a counter's "3", a hit die's "5". */
 .curinp {
-  width: 36px;
-  text-align: right;
+  width: 40px;
+  text-align: center;
   border: none;
-  border-bottom: 1.5px solid var(--line);
+  border-bottom: 1.5px solid var(--edge);
   background: transparent;
   font: inherit;
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: 19px;
   font-weight: 700;
-  color: var(--accent);
-  padding: 2px;
+  font-variant-numeric: lining-nums tabular-nums;
+  color: var(--accent-text);
+  padding: 1px 2px;
   border-radius: 0;
 }
 .curinp:focus {
   outline: none;
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--accent-text);
   box-shadow: none;
 }
 .clsrow,
@@ -850,7 +1338,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 0;
+  padding: 9px 0;
   border-top: 1px solid var(--fill);
 }
 .clsrow:first-of-type,
@@ -862,22 +1350,18 @@ body {
   min-width: 0;
 }
 .clsrow .cllv {
-  width: 40px;
-}
-.hdrow .lab {
-  font-size: 10px;
-  color: var(--ink-2);
-  font-weight: 700;
-  text-transform: uppercase;
+  width: 42px;
 }
 .hdrow .dtype {
   width: 56px;
   text-align: center;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .hdrow .curinp {
-  width: 38px;
+  width: 40px;
 }
 .hdrow .curinp.total {
   color: var(--ink-2);
@@ -890,7 +1374,11 @@ body {
   flex: 0 0 auto;
   background: none;
   border: none;
-  padding: 2px 4px;
+  border-radius: 6px;
+  padding: 4px 6px;
+}
+.delx:hover {
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
 }
 
 /* ---------- dialog: bottom sheet under 640px, centred modal at or above ---------- */
@@ -898,12 +1386,13 @@ body {
   border: 1px solid var(--line);
   background: var(--paper);
   color: var(--ink);
-  padding: 15px 16px 16px;
-  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.3);
+  padding: 16px 18px 18px;
+  box-shadow: 0 24px 60px -10px var(--shadow);
   font: inherit;
 }
 .dialog::backdrop {
-  background: rgba(25, 25, 30, 0.4);
+  background: rgb(8 9 18 / 0.6);
+  backdrop-filter: blur(2px);
 }
 
 /* Phone: anchored to the bottom edge so the sheet sits above the on-screen keyboard.
@@ -917,12 +1406,22 @@ body {
     margin: 0;
     max-height: 88dvh;
     overflow-y: auto;
-    border-radius: 18px 18px 0 0;
+    border-radius: 20px 20px 0 0;
     border-bottom: none;
     /* The sheet reaches the viewport's bottom edge, which is under the navigation bar when the
        page is edge-to-edge (see `#root`): its last row of buttons must stay above it. */
-    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-    animation: sheet-up 180ms ease-out;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    animation: sheet-up 220ms var(--ease);
+  }
+  /* The sheet's grab handle: a visual cue that this is a sheet over the page, not a new page. */
+  .dialog::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: -6px auto 10px;
+    border-radius: 2px;
+    background: var(--line);
   }
 }
 
@@ -932,7 +1431,7 @@ body {
     max-width: 560px;
     max-height: 88dvh;
     overflow-y: auto;
-    border-radius: 18px;
+    border-radius: 20px;
     margin: auto;
   }
 }
@@ -957,49 +1456,51 @@ body {
   gap: 10px;
 }
 .dhead .t {
-  font-size: 17px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-wrap: balance;
 }
 .dlabel {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-2);
-  font-weight: 700;
-  margin: 0 0 5px;
+  margin: 0 0 4px;
   display: block;
 }
 .mt12 {
   margin-top: 12px;
 }
 .dact {
-  margin-top: 16px;
+  margin-top: 18px;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   flex-wrap: wrap;
 }
-.del {
-  border: 1px solid var(--line);
-  background: var(--paper);
-  color: var(--danger);
+.del,
+.primary,
+.secondary {
   font: inherit;
-  font-weight: 600;
-  font-size: 13px;
-  padding: 8px 14px;
-  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 9px 16px;
+  border-radius: 10px;
   cursor: pointer;
+}
+.del {
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
+  background: transparent;
+  color: var(--danger);
+}
+.del:hover {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
 .primary {
   border: 1px solid var(--accent);
   background: var(--accent);
-  color: #fff;
-  font: inherit;
-  font-weight: 600;
-  font-size: 13px;
-  padding: 8px 16px;
-  border-radius: 12px;
-  cursor: pointer;
+  color: var(--on-accent);
+}
+.primary:not(:disabled):hover {
+  filter: brightness(1.08);
 }
 .primary:disabled {
   opacity: 0.4;
@@ -1007,24 +1508,26 @@ body {
 }
 .secondary {
   border: 1px solid var(--line);
-  background: var(--paper);
+  background: transparent;
   color: var(--ink);
-  font: inherit;
-  font-weight: 600;
-  font-size: 13px;
-  padding: 8px 16px;
-  border-radius: 12px;
-  cursor: pointer;
+}
+.secondary:not(:disabled):hover {
+  background: var(--fill-2);
+}
+.secondary:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 .hint {
-  font-size: 12px;
+  font-size: 14.5px;
   color: var(--ink-2);
   margin-top: 10px;
-  line-height: 1.4;
+  line-height: 1.45;
+  text-wrap: pretty;
 }
 .fieldError {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--danger);
   margin-top: 6px;
   line-height: 1.4;
@@ -1037,10 +1540,10 @@ body {
   flex: none;
   padding: 10px 16px;
   text-align: center;
-  background: var(--paper);
+  background: var(--fill-2);
   color: var(--ink);
   border-bottom: 1px solid var(--line);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 /* ---------- raw JSON editor ---------- */
@@ -1077,9 +1580,14 @@ body {
   gap: 8px;
   margin-top: 12px;
 }
+/* The field and its button as one control: the button takes the field's height. */
+.addrow .txtbtn {
+  align-self: stretch;
+  padding: 0 14px;
+}
 
 /*
- * The clickable rows — a character card, a hub tile, the hit-dice tile, a feat row — are
+ * The clickable rows — a character card, a hub entry, the hit-dice tile, a feat row — are
  * <button>s, whose content model is phrasing content only. So their stacked lines are <span>s,
  * not <div>s, and it is this rule rather than the default display that stacks them. Without it
  * they run together on one line and overflow the row.
@@ -1087,9 +1595,6 @@ body {
 .ccard .cn,
 .ccard .cc,
 .ccard .chp,
-.mtile .ico,
-.mtile .mt,
-.mtile .ms,
 .tile .tl,
 .tile .tval,
 .rec .info,
@@ -1106,32 +1611,68 @@ body {
 .stepper {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
 }
 .step {
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   flex: 0 0 auto;
   border-radius: 50%;
-  border: 1px solid var(--line);
-  background: var(--paper);
-  color: var(--ink-2);
+  border: 0;
+  background: var(--fill);
+  color: var(--ink);
   font: inherit;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1;
-  padding: 0;
+  padding: 0 0 2px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.step:active {
-  background: var(--fill-2);
+.step:not(:disabled):hover {
+  background: var(--line);
+}
+.step:not(:disabled):active {
+  background: var(--accent-soft);
+  color: var(--accent-text);
 }
 .step:disabled {
   opacity: 0.3;
   cursor: default;
+}
+
+/* ---------- tap areas ---------- */
+/* The buttons tapped mid-fight are drawn small so the header stays compact, but a finger gets 44px
+   of height to land in: an invisible layer around each. It reaches only 2px sideways, so it never
+   covers the box beside a stepper (4px away) or the button beside a category's edit (8px). */
+.step,
+.addmini,
+.editcat,
+.back,
+.close,
+.vtoggle {
+  position: relative;
+}
+.step::after,
+.addmini::after,
+.editcat::after,
+.back::after,
+.close::after,
+.vtoggle::after {
+  content: '';
+  position: absolute;
+  inset: -6px -2px;
+}
+.addmini::after,
+.editcat::after {
+  inset: -7px -2px;
+}
+.back::after,
+.close::after,
+.vtoggle::after {
+  inset: -5px;
 }
 
 /* ---------- rows with a control beside the name ---------- */
@@ -1151,20 +1692,23 @@ body {
 }
 .recopen .nm {
   display: block;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 16.5px;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .recopen .pv {
   display: block;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--ink-2);
-  margin-top: 3px;
+  margin-top: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.recopen:hover .nm {
+  color: var(--accent-text);
 }
 .rec.dim .recopen .nm {
   color: var(--ink-2);
@@ -1172,64 +1716,71 @@ body {
 
 /* ---------- spell list ---------- */
 .prep {
-  width: 15px;
-  height: 15px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  border: 2px solid var(--line);
-  background: var(--paper);
+  border: 2px solid var(--edge);
+  background: transparent;
   flex: 0 0 auto;
   cursor: pointer;
   padding: 0;
 }
+.prep:hover {
+  border-color: var(--accent-text);
+}
 .prep.on {
   background: var(--accent);
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .lvlbadge {
-  font-size: 11px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
   color: var(--ink-2);
   background: var(--fill);
-  border: 1px solid var(--line);
   border-radius: 7px;
-  padding: 2px 0;
+  padding: 1px 0 2px;
   flex: 0 0 auto;
-  width: 26px;
+  width: 28px;
   text-align: center;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 /* ---------- counters ---------- */
 .valcluster {
   display: flex;
   align-items: baseline;
-  gap: 2px;
+  gap: 3px;
   flex: 0 0 auto;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .maxlbl {
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 16px;
   color: var(--ink-2);
-  font-weight: 600;
+  font-weight: 700;
 }
 .slotblock {
-  border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 2px 12px 6px;
+  padding: 2px 14px 4px;
   background: var(--fill-2);
 }
 .slotrow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 2px;
-  border-top: 1px solid var(--line);
+  padding: 10px 2px;
+  border-top: 1px solid var(--fill);
 }
 .slotrow:first-child {
   border-top: none;
 }
 .slotlvl {
-  font-size: 15px;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: lining-nums;
 }
 .setup-row {
   display: flex;
@@ -1243,8 +1794,10 @@ body {
   border-top: none;
 }
 .setup-row .lv {
-  font-size: 15px;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: lining-nums;
 }
 .setup-row .inp {
   width: 70px;
@@ -1261,13 +1814,10 @@ body {
   text-align: center;
 }
 .coin .cl {
-  font-size: 10px;
-  font-weight: 800;
-  color: var(--ink-2);
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 .num.qty {
-  width: 44px;
+  width: 48px;
   flex: 0 0 auto;
 }
 
@@ -1278,22 +1828,28 @@ body {
   gap: 8px;
 }
 .daybtn {
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: 10px;
-  padding: 9px 13px;
+  padding: 8px 13px;
   font: inherit;
-  font-size: 13px;
+  font-family: var(--font-display);
+  font-size: 16px;
   font-weight: 700;
+  font-variant-numeric: lining-nums;
   color: inherit;
-  background: var(--paper);
+  background: var(--fill-2);
   cursor: pointer;
 }
+.daybtn:hover {
+  border-color: var(--line);
+}
 .daybtn:active {
-  background: var(--fill-2);
+  background: var(--fill);
 }
 .daybtn.newest {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--accent-text);
+  color: var(--accent-text);
+  background: var(--accent-soft);
 }
 
 /* ---------- abilities & skills ---------- */
@@ -1304,34 +1860,27 @@ body {
   margin: 8px 0 2px;
 }
 .statbox {
-  border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 9px 11px;
+  padding: 8px 10px 10px;
   background: var(--fill-2);
 }
 .statbox .lbl {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-2);
-  font-weight: 700;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .num.big {
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 800;
   text-align: left;
+  padding-left: 8px;
 }
 .abhead {
   display: grid;
   grid-template-columns: 44px 1fr 1fr 1.35fr;
   gap: 8px;
-  padding: 0 2px 6px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ink-2);
-  font-weight: 700;
+  padding: 0 2px 4px;
 }
 .abhead span {
   text-align: center;
@@ -1351,8 +1900,15 @@ body {
   border-top: none;
 }
 .abrow .an {
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 17px;
   font-weight: 800;
+  letter-spacing: 0.02em;
+}
+/* The modifier is what gets rolled, so it is the loudest box in the row. */
+.abrow > .num:nth-child(3) {
+  font-size: 19px;
+  border-color: color-mix(in srgb, var(--accent-text) 45%, var(--edge));
 }
 .savecell {
   display: flex;
@@ -1360,15 +1916,15 @@ body {
   gap: 6px;
 }
 .mk {
-  width: 24px;
-  height: 24px;
-  border-radius: 6px;
-  border: 1.5px solid var(--line);
-  background: var(--paper);
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  border: 1.5px solid var(--edge);
+  background: transparent;
   color: var(--ink-2);
   font: inherit;
-  font-size: 11px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1376,21 +1932,24 @@ body {
   flex: 0 0 auto;
   padding: 0;
 }
+.mk:hover {
+  border-color: var(--accent-text);
+}
 .mk.on {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .skrow {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 8px 2px;
+  padding: 7px 2px;
   border-top: 1px solid var(--fill);
 }
 .skrow .nm {
-  font-size: 14.5px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 500;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1404,16 +1963,18 @@ body {
   white-space: nowrap;
 }
 .skrow .ab {
-  font-size: 9.5px;
-  font-weight: 800;
+  font-variant-caps: all-small-caps;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   color: var(--ink-2);
   background: var(--fill);
   border-radius: 5px;
-  padding: 2px 5px;
+  padding: 0 5px 1px;
   flex: 0 0 auto;
 }
 .num.sk {
-  width: 54px;
+  width: 56px;
   flex: 0 0 auto;
   text-align: center;
 }
@@ -1434,30 +1995,33 @@ body {
   height: 0;
 }
 .chkrow .box {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   flex: 0 0 auto;
   border-radius: 6px;
-  border: 1.5px solid var(--line);
-  background: var(--paper);
+  border: 1.5px solid var(--edge);
+  background: var(--field);
   display: flex;
   align-items: center;
   justify-content: center;
   color: transparent;
-  font-size: 12px;
+  font-size: 13px;
+  transition:
+    background-color 150ms var(--ease),
+    border-color 150ms var(--ease);
 }
 .chkinput:checked + .box {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .chkinput:focus-visible + .box {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .chkrow .lab {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .row2 {
@@ -1469,8 +2033,11 @@ body {
   flex: 1 1 0;
   min-width: 0;
 }
+/* Disabled drops the brass, as .newcat's does: brass is what says "press me", and a faded brass
+   button reads as broken rather than as waiting for something. Grey, but still legible. */
 .txtbtn:disabled {
-  opacity: 0.4;
+  background: var(--fill);
+  color: var(--ink-2);
   cursor: default;
 }
 
@@ -1485,31 +2052,39 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   object-fit: cover;
   flex: 0 0 auto;
 }
 .portrait.empty {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
+  font-family: var(--font-display);
   font-weight: 800;
-  font-size: 18px;
+  font-size: 22px;
+  font-style: normal;
+  opacity: 1;
+  padding: 0;
 }
 /* Floated so the card's stacked lines keep flowing beside it; flow-root contains the float. */
 .ccard {
   display: flow-root;
 }
+/* On the roster each portrait is a token: the face inside a paper gap and a brass rim. */
 .ccard .portrait {
   float: left;
-  margin-right: 12px;
+  margin: 1px 14px 0 1px;
+  box-shadow:
+    0 0 0 2px var(--fill-2),
+    0 0 0 3.5px color-mix(in srgb, var(--accent) 70%, transparent);
 }
 /* Hub header: the token spans the name row and the classes row beside it. */
 .vident {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 .vident .back {
   align-self: flex-start;
@@ -1521,7 +2096,7 @@ body {
 .vidmain .classbtn {
   margin: 6px 0 0;
 }
-/* A tabletop token: the portrait inside a paper gap and an accent ring. */
+/* A tabletop token: the portrait inside a paper gap and a brass ring. */
 .token {
   border: 0;
   padding: 0;
@@ -1531,9 +2106,9 @@ body {
   flex: 0 0 auto;
 }
 .token .portrait {
-  width: 56px;
-  height: 56px;
-  font-size: 22px;
+  width: 54px;
+  height: 54px;
+  font-size: 24px;
   box-shadow:
     0 0 0 2px var(--paper),
     0 0 0 4px var(--accent);
@@ -1541,15 +2116,22 @@ body {
 /* The back button's chevron, turned to point up (collapse) or down (expand). */
 .vtoggle {
   transform: rotate(-90deg);
+  padding: 0 0 0 2px;
 }
 .compact .vtoggle {
   transform: rotate(90deg);
 }
+.vtoggle:not(:disabled):active {
+  transform: rotate(-90deg);
+}
+.compact .vtoggle:not(:disabled):active {
+  transform: rotate(90deg);
+}
 /* Collapsed vitals: a smaller token, and one summary line where the classes button was. */
 .compact .token .portrait {
-  width: 40px;
-  height: 40px;
-  font-size: 16px;
+  width: 42px;
+  height: 42px;
+  font-size: 18px;
 }
 .compact .vident .back {
   align-self: center;
@@ -1562,18 +2144,21 @@ body {
   padding: 0;
   margin-top: 2px;
   font: inherit;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14.5px;
+  font-weight: 500;
   color: var(--ink-2);
   text-align: left;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
 }
+.vsum:not(:disabled):active {
+  transform: none;
+}
 .token:focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--accent-text);
   outline-offset: 6px;
 }
 /* ---------- cloud screen ---------- */
@@ -1597,23 +2182,25 @@ body {
   gap: 2px;
 }
 .cusagev {
-  font-size: 14px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .cempty {
   margin: 0;
-  padding: 22px 18px;
+  padding: 24px 18px;
   border: 1px dashed var(--line);
   border-radius: 16px;
-  font-size: 13px;
-  line-height: 1.4;
+  font-size: 15px;
+  line-height: 1.45;
   color: var(--ink-2);
   text-align: center;
+  text-wrap: balance;
 }
 /* One character: its name over its versions, as a list card over a timeline. */
 .cchar {
-  border: 1px solid var(--line);
+  background: var(--fill-2);
   border-radius: 16px;
   margin-bottom: 12px;
   overflow: hidden;
@@ -1622,7 +2209,7 @@ body {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  padding: 13px 15px 4px;
+  padding: 14px 15px 4px;
 }
 .cctitle {
   flex: 1 1 auto;
@@ -1632,19 +2219,20 @@ body {
 .cid {
   display: block;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--ink-2);
   overflow-wrap: anywhere;
 }
 .cchead .cn {
   margin: 0;
-  font-size: 17px;
+  font-family: var(--font-display);
+  font-size: 20px;
   font-weight: 700;
   overflow-wrap: anywhere;
 }
 .cchead .cc {
   flex: 0 0 auto;
-  font-size: 12.5px;
+  font-size: 14px;
   color: var(--ink-2);
 }
 /* The versions are a sequence in time, so they hang on a rail: one dot per upload, the newest
@@ -1659,7 +2247,7 @@ body {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 9px 8px 9px 38px;
+  padding: 9px 10px 9px 38px;
 }
 .cver::before {
   content: '';
@@ -1670,7 +2258,7 @@ body {
   height: 10px;
   border-radius: 50%;
   border: 2px solid var(--line);
-  background: var(--paper);
+  background: var(--fill-2);
   z-index: 1;
 }
 .cver:first-child::before {
@@ -1697,30 +2285,30 @@ body {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 14px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
+  font-size: 16px;
+  font-weight: 500;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .cvlatest {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-text);
   background: var(--accent-soft);
-  border-radius: 20px;
-  padding: 2px 8px;
+  border-radius: 6px;
+  padding: 0 7px 1px;
 }
 .cvmeta {
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.35;
   color: var(--ink-2);
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .cvmeta > span {
   white-space: nowrap;
 }
 .cvwarn {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--danger);
 }
 .cver .txtbtn {
@@ -1734,18 +2322,21 @@ body {
   border-top: 1px solid var(--fill);
   background: transparent;
   font: inherit;
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--danger);
-  padding: 11px;
+  padding: 12px;
   cursor: pointer;
 }
 .cdelall:hover,
 .cdelall:active {
-  background: var(--fill-2);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+.cdelall:not(:disabled):active {
+  transform: none;
 }
 .cdelall:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-text);
   outline-offset: -2px;
 }
 
@@ -1763,7 +2354,7 @@ body {
   margin: 4px auto 8px;
   overflow: hidden;
   border-radius: 18px;
-  background: var(--line);
+  background: var(--field);
   cursor: grab;
   touch-action: none;
   user-select: none;
@@ -1772,7 +2363,7 @@ body {
   cursor: grabbing;
 }
 .cropper:focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--accent-text);
   outline-offset: 3px;
 }
 .cropper img {
@@ -1786,40 +2377,43 @@ body {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  box-shadow: 0 0 0 999px rgb(0 0 0 / 0.25);
+  box-shadow: 0 0 0 999px rgb(0 0 0 / 0.35);
   pointer-events: none;
 }
 .zoom {
   display: block;
   width: min(100%, 288px);
   margin: 0 auto 12px;
+  accent-color: var(--accent);
 }
 .portraitview .portrait {
   width: min(100%, 288px);
   height: auto;
   aspect-ratio: 1;
   border-radius: 18px;
-  font-size: 96px;
+  font-size: 110px;
 }
 
 /* ---------- legal pages ---------- */
 .lbody {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: 4px 18px 32px;
-  font-size: 14px;
-  line-height: 1.55;
+  padding: 4px 20px 36px;
+  font-size: 16px;
+  line-height: 1.6;
 }
 .lbody > * {
-  max-width: 68ch;
+  max-width: 66ch;
 }
 .lbody h2 {
-  margin: 22px 0 6px;
-  font-size: 16px;
+  margin: 26px 0 6px;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
 }
 .lbody p,
 .lbody ul {
-  margin: 0 0 10px;
+  margin: 0 0 12px;
 }
 .lbody ul {
   padding-left: 20px;
@@ -1829,7 +2423,12 @@ body {
 }
 .lbody a,
 .legalnote a {
-  color: var(--accent);
+  color: var(--accent-text);
+  text-underline-offset: 2px;
+}
+/* The legal page's own header puts the back button beside the title, the way the hub does. */
+.legal .lhead h1 {
+  font-size: 28px;
 }
 /* The cloud terms, as the last row of the menu's account group: aligned with the text above it. */
 .mnote {
@@ -1837,33 +2436,38 @@ body {
 }
 .mnote .legalnote {
   margin: 0;
+  font-size: 13.5px;
 }
 
 /* ---------- attack rolls: weapons (docs/superpowers/specs/2026-09-26-attack-rolls-design.md §5) */
-/* On the row: the ability as the skill rows' grey tag, the bonus bold beside it. */
+/* On the row: the ability as the skill rows' small-caps tag, the bonus in the display face. */
 .atk {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   flex: 0 0 auto;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
-.atk .ab {
-  font-size: 9.5px;
-  font-weight: 800;
+.atk .ab,
+.castchip .ab {
+  font-variant-caps: all-small-caps;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   color: var(--ink-2);
   background: var(--fill);
   border-radius: 5px;
-  padding: 2px 5px;
+  padding: 0 5px 1px;
 }
 .atk .b {
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-size: 18px;
   font-weight: 800;
 }
 /* Damage leads the preview line, in ink, so it reads before the description. */
 .recopen .pv .dmg {
   color: var(--ink);
-  font-weight: 600;
+  font-weight: 700;
 }
 /* The proficiency toggles' look (.mk), laid out as one row of choices. */
 .abpick {
@@ -1872,21 +2476,26 @@ body {
   gap: 5px;
 }
 .abpick button {
-  height: 34px;
+  height: 36px;
   border-radius: 8px;
-  border: 1.5px solid var(--line);
-  background: var(--paper);
+  border: 1.5px solid var(--edge);
+  background: transparent;
   color: var(--ink-2);
   font: inherit;
-  font-size: 11.5px;
-  font-weight: 800;
+  font-variant-caps: all-small-caps;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   padding: 0;
   cursor: pointer;
+}
+.abpick button:not(:disabled):hover {
+  border-color: var(--accent-text);
 }
 .abpick button[aria-checked='true'] {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 .abpick button:disabled {
   opacity: 0.35;
@@ -1899,10 +2508,13 @@ body {
   gap: 10px;
   margin-top: 12px;
 }
-/* A bonus or a DC in a dialog: centred and bold, as the stat reads on the sheet. */
+/* A bonus or a DC in a dialog: centred, in the display face, as the stat reads on the sheet. */
 .inp.stat {
   text-align: center;
+  font-family: var(--font-display);
+  font-size: 17px;
   font-weight: 700;
+  font-variant-numeric: lining-nums tabular-nums;
 }
 .hint.tight {
   margin-top: 6px;
@@ -1929,41 +2541,36 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   background: var(--fill-2);
   border-radius: 10px;
   padding: 6px 10px;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--ink);
   cursor: pointer;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: lining-nums tabular-nums;
 }
-.castchip .ab {
-  font-size: 9.5px;
-  font-weight: 800;
-  color: var(--ink-2);
-  background: var(--fill);
-  border-radius: 5px;
-  padding: 2px 5px;
+.castchip:hover {
+  border-color: var(--line);
 }
 .castchip .tl {
-  font-size: 9.5px;
-  text-transform: uppercase;
+  font-variant-caps: all-small-caps;
+  font-size: 13px;
   letter-spacing: 0.05em;
   color: var(--ink-2);
   font-weight: 700;
 }
 .castchip b {
-  font-size: 15px;
+  font-family: var(--font-display);
+  font-size: 18px;
   font-weight: 800;
 }
 .castchip .sep {
   color: var(--line);
 }
 .castempty {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--ink-2);
   font-style: italic;
-  opacity: 0.6;
 }

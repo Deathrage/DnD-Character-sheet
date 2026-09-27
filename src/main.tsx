@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CharacterLibraryBO, CloudBackup } from './business/index.js';
 import { App } from './ui/App.js';
+import { applyTheme, storedTheme } from './ui/theme.js';
 import { UpdatePrompt } from './ui/UpdatePrompt.js';
 import './ui/styles.css';
 
@@ -14,6 +15,9 @@ const root = document.getElementById('root');
 if (root === null) {
   throw new Error('#root is missing from index.html');
 }
+
+// Before anything renders, so a chosen theme is on the page from the first frame.
+applyTheme(storedTheme());
 
 const library = new CharacterLibraryBO();
 

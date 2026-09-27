@@ -119,11 +119,11 @@ export function VitalsHeader({ character, actions, onBack }: Props) {
           </div>
 
           <button type="button" className="tile btn" onClick={() => setDialog('hitDice')}>
-            <span className="tl">Hit Dice</span>
+            <span className="tl">Hit Dices</span>
             <span className="tval hdtile">{summariseHitDice(character)}</span>
           </button>
 
-          <div className="tile">
+          <div className="tile ac">
             {/* "AC", not "Armor Class": at a quarter of the row the long form wraps. */}
             <div className="tl">AC</div>
             <NumberField
@@ -137,7 +137,7 @@ export function VitalsHeader({ character, actions, onBack }: Props) {
               Signed: it is a modifier. Stored beside armor class and, like it, edited only here.
               It took speed's tile; speed is edited on Abilities & Skills only. */}
           <div className="tile">
-            <div className="tl">Init</div>
+            <div className="tl">Initiative</div>
             <NumberField
               label="Initiative"
               value={character.initiative}
@@ -354,11 +354,11 @@ function ClassesDialog({ open, onClose, character, actions }: DialogProps) {
 
 function HitDiceDialog({ open, onClose, character, actions }: DialogProps) {
   return (
-    <ResponsiveDialog title="Hit Dice" open={open} onClose={onClose}>
+    <ResponsiveDialog title="Hit Dices" open={open} onClose={onClose}>
       <div className="hint" style={{ marginTop: 0 }}>
         Set up each die type with its total and current count.
       </div>
-      {character.hitDices.length === 0 && <div className="empty">No hit dice yet.</div>}
+      {character.hitDices.length === 0 && <div className="empty">No hit dices yet.</div>}
       {character.hitDices.map((die) => (
         <div className="hdrow" key={die.size}>
           {/* The die size is the key of the stored record, so it is displayed, not edited:

@@ -13,6 +13,8 @@
  * instead of `void`; see `NameResult`.
  */
 
+import type { ReactNode } from 'react';
+import { ICONS } from './components/icons.js';
 import type { Crop } from './portrait.js';
 import type { AbilityKey, CoinKey, SkillKey, SpellLevel } from './reference.js';
 
@@ -351,20 +353,23 @@ export type SectionKey =
 
 export interface SectionTile {
   key: SectionKey;
-  icon: string;
+  icon: ReactNode;
   title: string;
   subtitle: string;
 }
 
-/** The hub grid, in the wireframe's order and with its glyphs. All seven always render. */
+/**
+ * The hub grid, in the player's chosen order, with the wireframe's glyphs — except inventory and
+ * counters, whose glyphs read as nothing in particular, so they draw a backpack and a stopwatch.
+ */
 export const SECTIONS: readonly SectionTile[] = [
   { key: 'journal', icon: '✎', title: 'Journal & Notes', subtitle: 'log & freeform' },
-  { key: 'inventory', icon: '◉', title: 'Inventory', subtitle: 'coins & items' },
+  { key: 'abilities', icon: '⭃', title: 'Abilities & Skills', subtitle: 'scores & skills' },
   { key: 'feats', icon: '✦', title: 'Feats & Traits', subtitle: 'by category' },
+  { key: 'inventory', icon: ICONS.backpack, title: 'Inventory', subtitle: 'coins & items' },
   { key: 'equipment', icon: '⚔', title: 'Equipment', subtitle: 'weapons & gear' },
   { key: 'spells', icon: '✧', title: 'Spell List', subtitle: 'prepared & levels' },
-  { key: 'counters', icon: '◴', title: 'Counters', subtitle: 'slots & resources' },
-  { key: 'abilities', icon: '⭃', title: 'Abilities & Skills', subtitle: 'scores & skills' },
+  { key: 'counters', icon: ICONS.stopwatch, title: 'Counters', subtitle: 'slots & resources' },
 ];
 
 /**
