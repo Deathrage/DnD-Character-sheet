@@ -2,10 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- `viewport-fit=cover` so the phone layout can reach under the notch; `styles.css` pads
-         with env(safe-area-inset-*). No `maximum-scale`: pinch-zoom is an accessibility feature,
-         not a layout bug. -->
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <!-- No `viewport-fit=cover`, on purpose. It lets Chrome on Android draw the page under the
+         system navigation bar, and in the installed app, after a reload, it did so while
+         reporting a bottom safe-area inset of 0 — so nothing could pad for the bar and the
+         bottom of every screen sat beneath it. Nothing here needs to reach under a system bar.
+         No `maximum-scale`: pinch-zoom is an accessibility feature, not a layout bug. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#6d6ff0" />
     <!--

@@ -48,15 +48,21 @@ body {
 /* The real page only (Storybook has no `#root`): a column, so the update strip above the app
    takes its height from the app instead of pushing the page into a scroll.
 
-   Padded by the safe-area insets because index.html asks for `viewport-fit=cover`, and Chrome on
-   Android honours it — in an installed app too — by extending the viewport, and so `100dvh`, under
-   the system navigation bar. Unpadded, the bottom of every screen sat beneath that bar, the list's
-   add button half hidden. The padding is paper so the strip under a translucent bar matches the
-   app; everywhere else the insets are 0 and this changes nothing. */
+   Pinned to the viewport with `position: fixed; inset: 0`, not sized by `height: 100dvh`. In the
+   installed app on Android, after a reload, `100dvh` came out taller than the window: the page
+   scrolled, and the list's add button sat below the fold until it was scrolled to. A fixed box's
+   containing block is the viewport itself, so it cannot disagree with what is on screen, and
+   nothing is left in the flow to scroll.
+
+   Padded by the safe-area insets in case the page is ever drawn under a system bar. index.html
+   no longer asks for `viewport-fit=cover` (see there for why), so today they are 0 and this
+   changes nothing; it is kept so that re-adding `cover` does not bring the hidden bottom back.
+   The padding is paper so a strip under a translucent bar would match the app. */
 #root {
+  position: fixed;
+  inset: 0;
   display: flex;
   flex-direction: column;
-  height: 100dvh;
   padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
     env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   background: var(--paper);
@@ -71,14 +77,6 @@ body {
    dialog, so the sheet-vs-modal switch and the frame agree on what "a phone" is. The height is
    capped rather than the wireframe's fixed 780px so the frame still fits a short laptop screen. */
 @media (min-width: 640px) {
-  body {
-    display: flex;
-    align-items: center;
-    min-height: 100dvh;
-  }
-  #root {
-    width: 100%;
-  }
   .app {
     max-width: 390px;
     margin: 0 auto;
