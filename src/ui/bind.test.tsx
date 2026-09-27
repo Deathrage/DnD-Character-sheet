@@ -281,7 +281,12 @@ describe('toSheetActions', () => {
     actions.featsAndTraits.addFeat(categoryId, { name: 'Sneak Attack', description: '+3d6' });
 
     const doc = sheet.toDocument();
-    expect(doc.hitPoints).toEqual({ current: 38, total: 45, temporary: 5 });
+    expect(doc.hitPoints).toEqual({
+      current: 38,
+      total: 45,
+      temporary: 5,
+      deathSaves: { successes: 0, failures: 0 },
+    });
     expect(doc.armorClass).toBe(15);
     expect(doc.initiative).toBe(-1);
     expect(doc.classes.map((entry) => entry.name)).toEqual(['Rogue']);

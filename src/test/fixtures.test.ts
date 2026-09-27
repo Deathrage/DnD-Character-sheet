@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SCHEMAS } from '../data/schema/index.js';
-import { ID_A, v1DocFor, v2DocFor } from './fixtures.js';
+import { ID_A, v1DocFor, v2DocFor, v3DocFor } from './fixtures.js';
 
 describe('v1DocFor', () => {
   it('is a valid v1 document, so a migration test cannot pass on bad input', () => {
@@ -11,5 +11,11 @@ describe('v1DocFor', () => {
 describe('v2DocFor', () => {
   it('is a valid v2 document, so a migration test cannot pass on bad input', () => {
     expect(SCHEMAS[2]!.safeParse(v2DocFor(ID_A, 'Sable')).success).toBe(true);
+  });
+});
+
+describe('v3DocFor', () => {
+  it('is a valid v3 document, so a migration test cannot pass on bad input', () => {
+    expect(SCHEMAS[3]!.safeParse(v3DocFor(ID_A, 'Sable')).success).toBe(true);
   });
 });

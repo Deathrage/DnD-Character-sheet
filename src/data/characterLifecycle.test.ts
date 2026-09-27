@@ -21,7 +21,12 @@ describe('the character lifecycle, end to end across the data layer', () => {
       { id: ID_A, name: 'Rogue', level: 5 },
       { id: ID_B, name: 'Wizard', level: 2 },
     ];
-    created.hitPoints = { current: 38, total: 45, temporary: 5 };
+    created.hitPoints = {
+      current: 38,
+      total: 45,
+      temporary: 5,
+      deathSaves: { successes: 1, failures: 2 },
+    };
     // Deliberate leading and trailing whitespace in the longText fields, which permit it (only
     // names reject padding). A `.trim()`/`.transform()` added to a primitive later would alter
     // this VALID document somewhere along the chain, and the toEqual assertions below would
