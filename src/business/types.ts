@@ -11,6 +11,7 @@ import type { CharacterDocument } from '../data/schema/index.js';
 export type CharacterData = CharacterDocument;
 export type ClassData = CharacterDocument['classes'][number];
 export type HitPointsData = CharacterDocument['hitPoints'];
+export type DeathSavesData = HitPointsData['deathSaves'];
 export type HitDieData = CharacterDocument['hitDices'][string];
 export type JournalAndNotesData = CharacterDocument['journalAndNotes'];
 export type CoinsData = CharacterDocument['inventory']['coins'];
