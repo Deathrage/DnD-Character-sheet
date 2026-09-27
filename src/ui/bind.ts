@@ -177,6 +177,10 @@ export function toCharacterView(sheet: CharacterSheetBO): CharacterView {
       current: sheet.hitPoints.current,
       total: sheet.hitPoints.total,
       temporary: sheet.hitPoints.temporary,
+      deathSaves: {
+        successes: sheet.hitPoints.deathSaves.successes,
+        failures: sheet.hitPoints.deathSaves.failures,
+      },
     },
     hitDices: sheet.hitDices.items.map((die) => ({
       size: die.size,
@@ -343,6 +347,9 @@ function vitalsActions(sheet: CharacterSheetBO): VitalsActions {
     setCurrentHitPoints: (value) => sheet.hitPoints.setCurrent(value),
     setTotalHitPoints: (value) => sheet.hitPoints.setTotal(value),
     setTemporaryHitPoints: (value) => sheet.hitPoints.setTemporary(value),
+    setDeathSaveSuccesses: (count) => sheet.hitPoints.deathSaves.setSuccesses(count),
+    setDeathSaveFailures: (count) => sheet.hitPoints.deathSaves.setFailures(count),
+    clearDeathSaves: () => sheet.hitPoints.deathSaves.clear(),
     setArmorClass: (value) => sheet.setArmorClass(value),
     setInitiative: (value) => sheet.setInitiative(value),
     // Any failure is the file's — undecodable, or somehow still too large — so it is told to

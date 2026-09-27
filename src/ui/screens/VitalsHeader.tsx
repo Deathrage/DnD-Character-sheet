@@ -8,7 +8,7 @@ import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import type { Crop } from '../portrait.js';
 import { usePersistedState } from '../persistedState.js';
-import type { CharacterView, VitalsActions } from '../types.js';
+import type { CharacterView, DeathSavesView, HitPointsView, VitalsActions } from '../types.js';
 
 interface Props {
   character: CharacterView;
@@ -116,6 +116,9 @@ export function VitalsHeader({ character, actions, onBack }: Props) {
                 stepper
               />
             </div>
+            {showsDeathSaves(character.hitPoints) && (
+              <DeathSaves saves={character.hitPoints.deathSaves} actions={actions} />
+            )}
           </div>
 
           <button type="button" className="tile btn" onClick={() => setDialog('hitDice')}>
@@ -286,6 +289,90 @@ function PortraitDialog({ open, onClose, character, actions }: DialogProps) {
   );
 }
 
+/**
+ * At 0 hit points, which the player typed, and for as long as any box is ticked. The second half
+ * is what lets the app never clear a box itself: were the row to hide the moment hit points rose,
+ * the ticks would sit unseen until the next time the character went down. Nothing is ever ticked
+ * for the player, and three failures mark no one dead.
+ */
+function showsDeathSaves({ current, deathSaves }: HitPointsView): boolean {
+  return current === 0 || deathSaves.successes > 0 || deathSaves.failures > 0;
+}
+
+interface DeathSavesProps {
+  saves: DeathSavesView;
+  actions: VitalsActions;
+}
+
+/** Under current and temporary hit points, inside their tile: they are what 0 leads to. */
+function DeathSaves({ saves, actions }: DeathSavesProps) {
+  const ticked = saves.successes > 0 || saves.failures > 0;
+  return (
+    <div className="dsaves" role="group" aria-label="Death saves">
+      <div className="dshead">
+        <span className="tl">Death Saves</span>
+        <button
+          type="button"
+          className="txtbtn"
+          aria-label="Clear death saves"
+          disabled={!ticked}
+          onClick={actions.clearDeathSaves}
+        >
+          Clear
+        </button>
+      </div>
+      <div className="dsrow">
+        <DeathSaveBoxes
+          side="success"
+          label="Successes"
+          count={saves.successes}
+          onChange={actions.setDeathSaveSuccesses}
+        />
+        <DeathSaveBoxes
+          side="failure"
+          label="Failures"
+          count={saves.failures}
+          onChange={actions.setDeathSaveFailures}
+        />
+      </div>
+    </div>
+  );
+}
+
+interface DeathSaveBoxesProps {
+  side: 'success' | 'failure';
+  label: string;
+  count: number;
+  onChange(count: number): void;
+}
+
+/**
+ * Three boxes over one count, ticked from the first. Pressing a box ticks up to it, or unticks
+ * from it, so the box pressed always ends up the way it was pressed toward and the ticks never
+ * leave a gap: a natural 1 is two failures, one press on the second box.
+ */
+function DeathSaveBoxes({ side, label, count, onChange }: DeathSaveBoxesProps) {
+  return (
+    <div className={`dsboxes ${side}`}>
+      <span className="lab">{label}</span>
+      {[1, 2, 3].map((box) => (
+        <label key={box} className="dsbox">
+          <input
+            type="checkbox"
+            className="chkinput"
+            aria-label={`Death save ${side} ${box}`}
+            checked={box <= count}
+            onChange={(event) => onChange(event.target.checked ? box : box - 1)}
+          />
+          <span className="box" aria-hidden="true">
+            {side === 'success' ? '✓' : '✕'}
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
 function summariseHitDice({ hitDices }: CharacterView): string {
   if (hitDices.length === 0) return 'Tap to set up';
   // A no-break space inside each die, so a narrow tile wraps between dice and never splits one.
@@ -294,9 +381,11 @@ function summariseHitDice({ hitDices }: CharacterView): string {
 
 function summariseVitals({ level, hitPoints, hitDices, armorClass }: CharacterView): string {
   const temp = hitPoints.temporary > 0 ? ` +${hitPoints.temporary}` : '';
+  const { successes, failures } = hitPoints.deathSaves;
   return [
     `Lvl ${level}`,
     `HP ${hitPoints.current}/${hitPoints.total}${temp}`,
+    ...(showsDeathSaves(hitPoints) ? [`Death ✓${successes} ✕${failures}`] : []),
     ...hitDices.map((die) => `${die.current}/${die.total} d${die.size}`),
     `AC ${armorClass}`,
   ].join(' · ');

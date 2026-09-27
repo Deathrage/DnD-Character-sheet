@@ -35,6 +35,13 @@ export interface HitPointsView {
   current: number;
   total: number;
   temporary: number;
+  deathSaves: DeathSavesView;
+}
+
+/** How many of the three success boxes and the three failure boxes the player has ticked. */
+export interface DeathSavesView {
+  successes: number;
+  failures: number;
 }
 
 export interface ClassView {
@@ -70,6 +77,10 @@ export interface VitalsActions {
   setCurrentHitPoints(value: number): void;
   setTotalHitPoints(value: number): void;
   setTemporaryHitPoints(value: number): void;
+  /** A count of ticked boxes, 0 to 3. Nothing ticks or clears them but these three. */
+  setDeathSaveSuccesses(count: number): void;
+  setDeathSaveFailures(count: number): void;
+  clearDeathSaves(): void;
   setArmorClass(value: number): void;
   setInitiative(value: number): void;
   /** Crops and compresses the picked image and stores it; the message when it could not be used. */

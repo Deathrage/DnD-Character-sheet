@@ -39,7 +39,12 @@ export const sable: CharacterView = {
     { id: 'c1', name: 'Rogue (Arcane Trickster)', level: 5 },
     { id: 'c2', name: 'Wizard (Evoker)', level: 2 },
   ],
-  hitPoints: { current: 38, total: 45, temporary: 5 },
+  hitPoints: {
+    current: 38,
+    total: 45,
+    temporary: 5,
+    deathSaves: { successes: 0, failures: 0 },
+  },
   hitDices: [
     { size: 6, current: 2, total: 2 },
     { size: 8, current: 3, total: 5 },
@@ -54,7 +59,7 @@ export const blankCharacter: CharacterView = {
   name: 'Unnamed character',
   level: 0,
   classes: [],
-  hitPoints: { current: 0, total: 0, temporary: 0 },
+  hitPoints: { current: 0, total: 0, temporary: 0, deathSaves: { successes: 0, failures: 0 } },
   hitDices: [],
   armorClass: 10,
   initiative: 0,
@@ -388,7 +393,7 @@ export const abilitiesAndSkills: AbilitiesAndSkillsView = {
 
 export const sableJson = JSON.stringify(
   {
-    schemaVersion: 3,
+    schemaVersion: 4,
     id: '6d0b0f7e-3c41-4a2a-9f6f-2a1f0c9d8e77',
     name: 'Sable Nightwind',
     updatedAt: '2026-09-20T18:04:11.000Z',
@@ -396,7 +401,12 @@ export const sableJson = JSON.stringify(
       { id: 'b1f0e2a4-1111-4a2a-9f6f-2a1f0c9d8e01', name: 'Rogue (Arcane Trickster)', level: 5 },
       { id: 'b1f0e2a4-2222-4a2a-9f6f-2a1f0c9d8e02', name: 'Wizard (Evoker)', level: 2 },
     ],
-    hitPoints: { current: 38, total: 45, temporary: 5 },
+    hitPoints: {
+      current: 38,
+      total: 45,
+      temporary: 5,
+      deathSaves: { successes: 0, failures: 0 },
+    },
     hitDices: { '6': { current: 2, total: 2 }, '8': { current: 3, total: 5 } },
     armorClass: 15,
     initiative: 3,
@@ -423,6 +433,9 @@ export const noVitalsActions: VitalsActions = {
   setCurrentHitPoints: () => {},
   setTotalHitPoints: () => {},
   setTemporaryHitPoints: () => {},
+  setDeathSaveSuccesses: () => {},
+  setDeathSaveFailures: () => {},
+  clearDeathSaves: () => {},
   setArmorClass: () => {},
   setInitiative: () => {},
   setPortrait: () => Promise.resolve(null),

@@ -41,6 +41,9 @@ describe('toSheetData', () => {
     sheet.setPortrait('data:image/jpeg;base64,/9j/4AAQ');
     sheet.hitPoints.setTotal(45);
     sheet.hitPoints.setTemporary(5);
+    // Different on each side, so a view that swapped them would show.
+    sheet.hitPoints.deathSaves.setSuccesses(1);
+    sheet.hitPoints.deathSaves.setFailures(2);
     sheet.hitDices.add(8).setTotal(5);
     sheet.hitDices.add(6);
     sheet.journalAndNotes.appendDay('Arrived in Barovia.');
@@ -86,7 +89,12 @@ describe('toSheetData', () => {
         { id: doc.classes[0]?.id, name: 'Rogue', level: 5 },
         { id: doc.classes[1]?.id, name: 'Wizard', level: 2 },
       ],
-      hitPoints: { current: 38, total: 45, temporary: 5 },
+      hitPoints: {
+        current: 38,
+        total: 45,
+        temporary: 5,
+        deathSaves: { successes: 1, failures: 2 },
+      },
       // Ascending by size, which is `HitDicesBO.items`' order and not insertion order.
       hitDices: [
         { size: 6, current: 0, total: 0 },
@@ -230,6 +238,15 @@ describe('toSheetData', () => {
 });
 
 describe('toSheetActions', () => {
+  it('clears both sides of the death saves at once', () => {
+    const sheet = newSheet();
+    const actions = toSheetActions(sheet);
+    actions.vitals.setDeathSaveSuccesses(3);
+    actions.vitals.setDeathSaveFailures(2);
+    actions.vitals.clearDeathSaves();
+    expect(sheet.toDocument().hitPoints.deathSaves).toEqual({ successes: 0, failures: 0 });
+  });
+
   it('writes every section through to the document', () => {
     const sheet = newSheet();
     const actions = toSheetActions(sheet);
@@ -237,6 +254,8 @@ describe('toSheetActions', () => {
     actions.vitals.setCurrentHitPoints(38);
     actions.vitals.setTotalHitPoints(45);
     actions.vitals.setTemporaryHitPoints(5);
+    actions.vitals.setDeathSaveSuccesses(2);
+    actions.vitals.setDeathSaveFailures(1);
     actions.vitals.setArmorClass(15);
     actions.vitals.setInitiative(-1);
     actions.vitals.addClass('Rogue');
@@ -285,7 +304,7 @@ describe('toSheetActions', () => {
       current: 38,
       total: 45,
       temporary: 5,
-      deathSaves: { successes: 0, failures: 0 },
+      deathSaves: { successes: 2, failures: 1 },
     });
     expect(doc.armorClass).toBe(15);
     expect(doc.initiative).toBe(-1);

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/react';
 import { stubDialogElement } from '../../test/stubDialog.js';
-import { noVitalsActions, sable } from '../fixtures.js';
+import { blankCharacter, noVitalsActions, sable } from '../fixtures.js';
 import { VitalsHeader } from './VitalsHeader.js';
 
 beforeAll(stubDialogElement);
@@ -163,5 +163,117 @@ describe('VitalsHeader classes', () => {
     );
     fireEvent.click(screen.getByLabelText('Increase Level of Wizard'));
     expect(setClassLevel).toHaveBeenCalledWith('c1', 2);
+  });
+});
+
+describe('VitalsHeader death saves', () => {
+  const dying = (deathSaves = { successes: 0, failures: 0 }, current = 0) => ({
+    ...sable,
+    hitPoints: { ...sable.hitPoints, current, deathSaves },
+  });
+
+  function deathSaves(character: typeof sable, actions: Partial<typeof noVitalsActions> = {}) {
+    render(
+      <VitalsHeader
+        character={character}
+        actions={{ ...noVitalsActions, ...actions }}
+        onBack={() => {}}
+      />,
+    );
+  }
+
+  const box = (name: string) => screen.getByRole('checkbox', { name }) as HTMLInputElement;
+  const ticks = (side: 'success' | 'failure') =>
+    [1, 2, 3].map((index) => box(`Death save ${side} ${index}`).checked);
+
+  it('are not there above 0 hit points with nothing ticked', () => {
+    deathSaves(sable);
+    expect(screen.queryByRole('group', { name: 'Death saves' })).toBeNull();
+  });
+
+  it('open at 0 hit points, inside the hit points tile, with nothing ticked', () => {
+    deathSaves(dying());
+    const group = screen.getByRole('group', { name: 'Death saves' });
+    expect(group.closest('.tile.hp')).not.toBeNull();
+    expect(ticks('success')).toEqual([false, false, false]);
+    expect(ticks('failure')).toEqual([false, false, false]);
+  });
+
+  // The rule is exactly "current hit points are 0", so a character whose hit points were never
+  // entered shows them too.
+  it('open on a blank sheet as well, whose current hit points are 0', () => {
+    deathSaves(blankCharacter);
+    expect(screen.getByRole('group', { name: 'Death saves' })).toBeTruthy();
+  });
+
+  it('stay while any box is ticked, above 0 hit points too, so a tick is never hidden', () => {
+    deathSaves(dying({ successes: 0, failures: 1 }, 12));
+    expect(screen.getByRole('group', { name: 'Death saves' })).toBeTruthy();
+    expect(ticks('failure')).toEqual([true, false, false]);
+  });
+
+  it('show each count ticked from the first box', () => {
+    deathSaves(dying({ successes: 2, failures: 1 }));
+    expect(ticks('success')).toEqual([true, true, false]);
+    expect(ticks('failure')).toEqual([true, false, false]);
+  });
+
+  it('tick up to the box pressed', () => {
+    const setDeathSaveSuccesses = vi.fn();
+    const setDeathSaveFailures = vi.fn();
+    deathSaves(dying(), { setDeathSaveSuccesses, setDeathSaveFailures });
+    fireEvent.click(box('Death save success 2'));
+    fireEvent.click(box('Death save failure 3'));
+    expect(setDeathSaveSuccesses).toHaveBeenCalledWith(2);
+    expect(setDeathSaveFailures).toHaveBeenCalledWith(3);
+  });
+
+  it('untick from the box pressed', () => {
+    const setDeathSaveSuccesses = vi.fn();
+    deathSaves(dying({ successes: 2, failures: 0 }), { setDeathSaveSuccesses });
+    fireEvent.click(box('Death save success 2'));
+    expect(setDeathSaveSuccesses).toHaveBeenLastCalledWith(1);
+    fireEvent.click(box('Death save success 1'));
+    expect(setDeathSaveSuccesses).toHaveBeenLastCalledWith(0);
+  });
+
+  it('clear both sides when the player presses Clear', () => {
+    const clearDeathSaves = vi.fn();
+    deathSaves(dying({ successes: 1, failures: 2 }), { clearDeathSaves });
+    fireEvent.click(screen.getByRole('button', { name: 'Clear death saves' }));
+    expect(clearDeathSaves).toHaveBeenCalledOnce();
+  });
+
+  it('offer no Clear while there is nothing to clear', () => {
+    deathSaves(dying());
+    const clear = screen.getByRole('button', { name: 'Clear death saves' }) as HTMLButtonElement;
+    expect(clear.disabled).toBe(true);
+  });
+
+  // Not a rule: the app never plays the game for the player.
+  it('never tick or clear anything themselves, at 0 hit points or on the way back up', () => {
+    const setDeathSaveSuccesses = vi.fn();
+    const setDeathSaveFailures = vi.fn();
+    const clearDeathSaves = vi.fn();
+    const setCurrentHitPoints = vi.fn();
+    deathSaves(dying({ successes: 1, failures: 2 }), {
+      setDeathSaveSuccesses,
+      setDeathSaveFailures,
+      clearDeathSaves,
+      setCurrentHitPoints,
+    });
+    fireEvent.click(screen.getByLabelText('Increase Current hit points'));
+    expect(setCurrentHitPoints).toHaveBeenCalledWith(1);
+    expect(setDeathSaveSuccesses).not.toHaveBeenCalled();
+    expect(setDeathSaveFailures).not.toHaveBeenCalled();
+    expect(clearDeathSaves).not.toHaveBeenCalled();
+  });
+
+  it('are counted in the collapsed summary while they are open', () => {
+    deathSaves(dying({ successes: 1, failures: 2 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse vitals' }));
+    expect(
+      screen.getByText('Lvl 7 · HP 0/45 +5 · Death ✓1 ✕2 · 2/2 d6 · 3/5 d8 · AC 15'),
+    ).toBeTruthy();
   });
 });
