@@ -91,7 +91,7 @@ commit or PR that shipped it, rather than deleting it.
   `docs/superpowers/specs/2026-09-24-cloud-backup-design.md`.
 - **Cloud quota and portrait deduplication.** 1 MiB per player, one versioned document —
   `docs/superpowers/specs/2026-09-25-cloud-quota-design.md`.
-- **Death saving throws.** Shipped on branch `claude/death-saving-throws-msnizp` as schema v4:
+- **Death saving throws.** Shipped in PR #11 as schema v4:
   `hitPoints.deathSaves`, two counts of ticked boxes, in a row across the bottom of the hit
   points tile. The open question is settled: it cannot be opened by hand above 0 HP (typing 0 does
   it), and it stays open while any box is ticked, so a tick is never hidden. AGENTS.md's "Schema
