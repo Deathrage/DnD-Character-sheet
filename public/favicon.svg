@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- The favicon, for tab-bar sizes: the brass AC shield from the vitals header (the outline of
+       .tile.ac in src/ui/styles.css) filling the ink square, and the d20's face cut into it. No
+       facets: at 16px they blur into noise. icon.svg is the same mark with room for them. -->
+  <defs>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e2b75c" />
+      <stop offset="1" stop-color="#c29030" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="104" fill="#1b1d2e" />
+  <path
+    d="M256.0 43.0 C316.7 73.7 385.1 78.0 445.8 69.3 V270.8 C445.8 375.9 362.3 446.0 256.0 481.0 C149.7 446.0 66.2 375.9 66.2 270.8 V69.3 C126.9 78.0 195.3 73.7 256.0 43.0 Z"
+    fill="url(#brass)"
+  />
+  <path d="M256 162 L336 302 H176 Z" fill="#1b1d2e" />
+</svg>

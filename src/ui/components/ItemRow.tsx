@@ -15,7 +15,8 @@ interface Props {
 }
 
 /**
- * The wireframe's `.rec`: a name, a one-line description preview, and a chevron.
+ * The wireframe's `.rec`: a name and a one-line description preview. The wireframe's chevron is
+ * gone: it sat outside the button, beside `after`, so tapping it did nothing.
  *
  * `before` and `after` are slots rather than props like `level` or `count`, because what sits
  * beside the name is the only thing that differs across the five sections that use this row —
@@ -42,9 +43,6 @@ export function ItemRow({ name, description, lead = '', onOpen, before, after, d
         )}
       </button>
       {after}
-      <span className="chev" aria-hidden="true">
-        {'›'}
-      </span>
     </div>
   );
 }

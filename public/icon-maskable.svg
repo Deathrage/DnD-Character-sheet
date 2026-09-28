@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- The same mark for Android's maskable slot and iOS's home screen, which crop the icon to their
+       own shape: full-bleed ink, and everything inside the central safe circle (radius 40%, 205px
+       here; the shield's farthest corner is at 172px). Source of icon-maskable-512.png and
+       apple-touch-icon.png. -->
+  <defs>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e2b75c" />
+      <stop offset="1" stop-color="#c29030" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="#1b1d2e" />
+  <path
+    d="M256.0 119.5 C295.5 139.4 340.0 142.3 379.5 136.6 V267.7 C379.5 336.1 325.2 381.7 256.0 404.5 C186.8 381.7 132.5 336.1 132.5 267.7 V136.6 C172.0 142.3 216.5 139.4 256.0 119.5 Z"
+    fill="url(#brass)"
+  />
+  <path
+    d="M256.0 169.0 L323.5 208.0 L323.5 286.0 L256.0 325.0 L188.5 286.0 L188.5 208.0 Z M256.0 203.3 L256.0 169.0 M256.0 203.3 L188.5 208.0 M256.0 203.3 L323.5 208.0 M213.1 278.2 L188.5 208.0 M213.1 278.2 L188.5 286.0 M213.1 278.2 L256.0 325.0 M298.9 278.2 L323.5 208.0 M298.9 278.2 L323.5 286.0 M298.9 278.2 L256.0 325.0"
+    fill="none" stroke="#1b1d2e" stroke-width="10" stroke-linejoin="round" stroke-linecap="round"
+  />
+  <path d="M256.0 203.3 L213.1 278.2 L298.9 278.2 Z" fill="#1b1d2e" />
+</svg>

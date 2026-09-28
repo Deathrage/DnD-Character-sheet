@@ -150,6 +150,9 @@ export function CharacterList({
       {menuOpen && (
         <ResponsiveDialog title="Menu" open onClose={() => setMenuOpen(false)}>
           {/* Each group is one section; the groups' own edges are the separators. */}
+          <ul className="mgroup">
+            <ThemeChoice />
+          </ul>
           {account !== undefined && (
             <>
               <ul className="mgroup">
@@ -227,9 +230,6 @@ export function CharacterList({
               />
             </ul>
           )}
-          <ul className="mgroup">
-            <ThemeChoice />
-          </ul>
           <ul className="mgroup">
             <MenuItem
               icon={ICONS.privacy}

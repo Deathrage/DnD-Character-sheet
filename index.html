@@ -29,8 +29,12 @@
       which supplies only the service worker that lets the installed app start offline.
     -->
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="icon" href="icon-192.png" type="image/png" />
-    <link rel="apple-touch-icon" href="icon-192.png" />
+    <!-- The SVG where the browser takes one, sharp at any tab size; the PNG where it does not.
+         Every PNG icon is rendered from the SVG named in its own comment: favicon.svg, icon.svg,
+         icon-maskable.svg. Apple's is full-bleed because iOS rounds the corners itself. -->
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <title>Character Sheet</title>
   </head>
   <body>

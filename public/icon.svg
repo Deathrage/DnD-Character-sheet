@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- The app icon at launcher sizes, and the source of icon-192.png and icon-512.png: the brass
+       AC shield on ink with a d20 on it, facets and all. Rendered to PNG in a browser at the
+       exact pixel size; re-render both if this changes. -->
+  <defs>
+    <linearGradient id="brass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e2b75c" />
+      <stop offset="1" stop-color="#c29030" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#1b1d2e" />
+  <path
+    d="M256.0 94.0 C302.6 117.5 355.0 120.9 401.6 114.2 V268.7 C401.6 349.4 337.5 403.1 256.0 430.0 C174.5 403.1 110.4 349.4 110.4 268.7 V114.2 C157.0 120.9 209.4 117.5 256.0 94.0 Z"
+    fill="url(#brass)"
+  />
+  <path
+    d="M256.0 154.0 L335.7 200.0 L335.7 292.0 L256.0 338.0 L176.3 292.0 L176.3 200.0 Z M256.0 194.5 L256.0 154.0 M256.0 194.5 L176.3 200.0 M256.0 194.5 L335.7 200.0 M205.4 282.8 L176.3 200.0 M205.4 282.8 L176.3 292.0 M205.4 282.8 L256.0 338.0 M306.6 282.8 L335.7 200.0 M306.6 282.8 L335.7 292.0 M306.6 282.8 L256.0 338.0"
+    fill="none" stroke="#1b1d2e" stroke-width="11" stroke-linejoin="round" stroke-linecap="round"
+  />
+  <path d="M256.0 194.5 L205.4 282.8 L306.6 282.8 Z" fill="#1b1d2e" />
+</svg>
