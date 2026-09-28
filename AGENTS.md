@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 1251 tests across 71 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 1514 tests across 77 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -136,6 +136,32 @@ back on the next load (criterion 14).
     - a speed typed on Abilities & Skills survives a reload
     - a stored v2 document opens at +0 and is written back as v3, with `initiative` right after
       `armorClass`
+- **Schema v4: death saving throws** (2026-09-27). v3 was on `main`, so frozen; the backlog entry
+  is the design, and its one open question was the user's to answer.
+  - **What v4 adds.** `hitPoints.deathSaves`, `{ successes, failures }`, each a count of ticked
+    boxes from 0 to 3. Counts rather than three booleans a side: the boxes have no identity, and
+    booleans could store a gap no sheet shows. `HitPointsBO.deathSaves` is a `DeathSavesBO`
+    (`setSuccesses`, `setFailures`, `clear`); a fourth tick is `ABOVE_THREE`, because the schema
+    would refuse to save it.
+  - **Not a rule.** The app never ticks a box, never marks anyone dead at three failures, and never
+    clears the boxes when hit points rise. So the schema accepts ticks at any hit points, and
+    `setCurrent` touches nothing but `current`.
+  - **`migrateV3ToV4`** gives every document `{ successes: 0, failures: 0 }`, last in `hitPoints`
+    as a blank v4 has it. A v3 character stored at 0 hit points gets no failure: nothing was
+    ticked, because v3 had nowhere to tick it. `v3DocFor` is at 0 of 24 so that would show.
+  - **UI.** A Death Saves row across the bottom of the hit points tile: successes in brass,
+    failures in blood red as a line and a mark on a tint (the light theme's red is too dark to
+    fill under ink), and Clear. Pressing a box ticks up to it or unticks from it. Collapsed, the
+    summary adds `Death ✓1 ✕2` after HP.
+  - **When it shows** is exactly: current hit points are 0, or any box is ticked. The second half
+    is what makes "never clears them itself" safe; hidden the moment hit points rose, the ticks
+    would wait unseen for the next time the character went down. There is no way to open it by
+    hand above 0 (the user's choice; typing 0 does it), and no exception for a blank sheet, whose
+    0 of 0 shows the row too: that follows from the rule, and hiding it would add a condition.
+  - **Verified in Chromium** at 320px, 360px and 412px, light and dark:
+    - at 360px both groups share one line, with 8px to spare; at 320px they stack, boxes aligned
+    - ticks survive a reload, stay when hit points rise, and Clear removes the row
+    - a stored v3 document at 0 hit points is written back as v4 on the first list, nothing ticked
 - The storage-layer work the followups doc called the sharpest risk is done: `createIndexedDbRepository`
   takes an injectable `registry` and `openDb`, reports `blocked`, `blocking` and `terminated`
   through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
@@ -337,8 +363,8 @@ were arrived at _after_ getting them wrong once.
 ### Schema versions are isolated by construction
 
 Each version owns a self-contained directory under `src/data/schema/`. **Nothing is shared between
-versions.** `v2/` began as a literal copy of `v1/` and diverged (2026-09-26), and `v3/` began as a
-copy of `v2/` the same day.
+versions.** `v2/` began as a literal copy of `v1/` and diverged (2026-09-26), `v3/` began as a
+copy of `v2/` the same day, and `v4/` as a copy of `v3/` on 2026-09-27.
 
 Do not "DRY this up" by extracting shared primitives or a shared base schema. The duplication _is_
 the isolation mechanism. The migration loop validates a document _at its own version_, so a
@@ -450,7 +476,7 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
   characterSheet.ts    id, name, armorClass, initiative, the derived `level`, toDocument() (a toJS
                        copy)
   classes.ts           ClassesBO / ClassBO
-  hitPoints.ts         HitPointsBO
+  hitPoints.ts         HitPointsBO / DeathSavesBO — counts of ticked boxes, never ticked for you
   hitDices.ts          HitDicesBO / HitDieBO, keyed by die size — no id, the size is the identity
   journalAndNotes.ts   JournalAndNotesBO / JournalDayBO — append or delete-the-newest-day only
   inventory.ts         InventoryBO / CoinsBO / InventoryItemBO
@@ -491,11 +517,12 @@ index.html             the app document; vite.config.ts builds and tests it
 src/data/schema/       index.ts is the public face; README.md governs versioning
   v1/                  frozen: primitives, document, blank (factory), index — self-contained
   v2/                  frozen: v1 plus weapon attacks and spellcasting
-  v3/                  current: v2 plus the initiative bonus; blank lives here now
+  v3/                  frozen: v2 plus the initiative bonus
+  v4/                  current: v3 plus death saves; blank lives here now
 src/data/migration/    versionOf, versioned.ts (parseVersioned, the generic validate-migrate walk
                        shared by `schemaVersion` and `layoutVersion`), parseCharacter (now a thin
-                       wrapper over it), the LoadError taxonomy, v1ToV2.ts and v2ToV3.ts (the
-                       migrations, registered in migrations.ts)
+                       wrapper over it), the LoadError taxonomy, v1ToV2.ts, v2ToV3.ts and
+                       v3ToV4.ts (the migrations, registered in migrations.ts)
 src/data/serialization/ export and import (three-outcome ParseTextResult)
 src/data/repository/   the IndexedDB repository (characters + portraits stores), ListEntry, summarize,
                        portrait.ts — the portrait rule
@@ -509,8 +536,8 @@ src/data/remote/       types.ts (CloudRepository and its shapes), codec.ts, clou
                        index.ts — the only entry point (lint-enforced), parsed by parseVersioned
 src/data/characterLifecycle.test.ts   end-to-end across all four modules
 src/test/              fake-indexeddb setup
-src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, v1DocFor, v2DocFor, wipe, createOpener,
-                       putRaw — shared so the data-layer test files stop each defining their own
+src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, v1DocFor, v2DocFor, v3DocFor, wipe,
+                       createOpener, putRaw — shared so the data-layer test files stop each defining their own
 ```
 
 Tests are colocated: `foo.ts` is tested by `foo.test.ts` beside it.

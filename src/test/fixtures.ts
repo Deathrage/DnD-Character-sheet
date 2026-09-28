@@ -138,6 +138,23 @@ export function v2DocFor(id: string, name: string): Record<string, unknown> {
 }
 
 /**
+ * A complete v3 document: `v2DocFor` with the initiative v3 added, filled in (+4) rather than
+ * left at 0, right after `armorClass` where v3 keeps it. Its current hit points are 0 of 24 on
+ * purpose: a v3 → v4 migration that ticked a death save because the character was down would
+ * show up here. `fixtures.test.ts` checks it against `SCHEMAS[3]`.
+ */
+export function v3DocFor(id: string, name: string): Record<string, unknown> {
+  const v3: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(v2DocFor(id, name))) {
+    v3[key] = value;
+    if (key === 'armorClass') v3.initiative = 4;
+  }
+  v3.schemaVersion = 3;
+  v3.hitPoints = { current: 0, total: 24, temporary: 3 };
+  return v3;
+}
+
+/**
  * The tests' own opener, so the repository need not export `openDb` itself — a second connection
  * opened outside the repository is what blocks a version bump in an installed PWA. It shares the
  * real opener's `upgradeCharacterDb`, so a future change to the object store cannot silently

@@ -19,6 +19,10 @@ function fill(sheet: CharacterSheetBO): void {
   sheet.setPortrait('data:image/jpeg;base64,/9j/4AAQ');
   sheet.classes.add({ name: 'Rogue', level: 5 });
   sheet.hitPoints.setTotal(45);
+  // Both at the top of their range, so the business layer's limit is shown to agree with the
+  // schema's at the boundary, where a disagreement would make the document unsaveable.
+  sheet.hitPoints.deathSaves.setSuccesses(3);
+  sheet.hitPoints.deathSaves.setFailures(3);
   sheet.hitDices.add(8).setTotal(5);
   sheet.journalAndNotes.appendDay('Arrived in Barovia.');
   sheet.journalAndNotes.setNotes('Find the Sunsword.');

@@ -19,7 +19,7 @@
 export { CharacterSheetBO, createCharacterSheet } from './characterSheet.js';
 export { RuleViolation, type RuleCode } from './errors.js';
 export { ClassesBO, ClassBO, type NewClass } from './classes.js';
-export { HitPointsBO } from './hitPoints.js';
+export { DeathSavesBO, HitPointsBO } from './hitPoints.js';
 export { HitDicesBO, HitDieBO } from './hitDices.js';
 export { JournalAndNotesBO, JournalDayBO } from './journalAndNotes.js';
 export { InventoryBO, CoinsBO, InventoryItemBO, type NewInventoryItem } from './inventory.js';

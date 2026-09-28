@@ -10,6 +10,7 @@ export type RuleCode =
   | 'NOT_AN_INTEGER'
   | 'NEGATIVE'
   | 'BELOW_ONE'
+  | 'ABOVE_THREE'
   | 'TOO_LONG'
   | 'UNKNOWN_CATEGORY'
   | 'INVALID_DIE_SIZE'

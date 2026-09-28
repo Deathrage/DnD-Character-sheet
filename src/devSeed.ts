@@ -282,11 +282,13 @@ const seedThorne = seeder('Thorne Ironfell', (sheet) => {
   });
 });
 
-/** Barely started at all — the blank-ish end of the range. */
+/** Barely started at all — the blank-ish end of the range — and down, so death saves are open. */
 const seedWren = seeder('Wren Duskwhisper', (sheet) => {
   sheet.classes.add({ name: 'Druid (Circle of the Moon)', level: 4 });
   sheet.hitPoints.setTotal(27);
-  sheet.hitPoints.setCurrent(27);
+  sheet.hitPoints.setCurrent(0);
+  sheet.hitPoints.deathSaves.setSuccesses(1);
+  sheet.hitPoints.deathSaves.setFailures(2);
   sheet.setArmorClass(14);
   sheet.spellList.spellcasting.add('wisdom', { attackBonus: 5, saveDc: 13 });
 });

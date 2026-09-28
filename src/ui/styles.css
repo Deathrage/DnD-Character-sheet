@@ -227,6 +227,7 @@ button:not(:disabled):active {
 .abhead,
 .statbox .lbl,
 .hdrow .lab,
+.dsboxes .lab,
 .coin .cl {
   font-family: var(--font-ui);
   font-variant-caps: all-small-caps;
@@ -639,6 +640,70 @@ button:not(:disabled):active {
 .hp .tempbox .num {
   width: 42px;
   font-size: 17px;
+}
+/* Death saves: a row of their own across the bottom of the hit points tile, shown at 0 hit points
+   and while anything is ticked. Successes tick in brass, like every other box; failures in blood
+   red, which this sheet keeps for hit points and for danger. The red is a line and a mark on a
+   tint, never a fill under ink: the light theme's red is too dark to carry ink-dark text. */
+.dsaves {
+  flex: 1 0 100%;
+  border-top: 1px solid var(--line);
+  margin-top: 4px;
+  padding-top: 6px;
+}
+.dshead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.dshead .txtbtn {
+  font-size: 13px;
+  padding: 4px 10px;
+}
+/* Two groups that share one line on a 360px phone and stack on anything narrower. */
+.dsrow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 8px;
+  margin-top: 2px;
+}
+.dsboxes {
+  display: flex;
+  align-items: center;
+}
+.dsboxes .lab {
+  /* As wide as "Successes", so when the groups stack the two rows of boxes line up. */
+  min-width: 3.9em;
+}
+/* The label is the tap target: 30px square around a 24px box. */
+.dsbox {
+  position: relative;
+  display: flex;
+  padding: 3px;
+  cursor: pointer;
+}
+.dsbox .box {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1.5px solid var(--edge);
+  background: var(--field);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
+  font-size: 14px;
+  transition:
+    background-color 150ms var(--ease),
+    border-color 150ms var(--ease);
+}
+.dsboxes.failure .chkinput:checked + .box {
+  background: color-mix(in srgb, var(--danger) 18%, var(--field));
+  border-color: var(--danger);
+  color: var(--danger);
+  font-weight: 700;
 }
 .tile .tval {
   font-family: var(--font-display);

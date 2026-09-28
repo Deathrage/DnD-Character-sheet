@@ -74,14 +74,6 @@ commit or PR that shipped it, rather than deleting it.
   offer to delete its feat. Needs a schema version bump — read `src/data/schema/README.md` first.
   A dangling link must fail validation (the one promise).
 
-- **Death saving throws.** When current hit points reach 0, open death saving throws next to the
-  hit points: three success and three failure boxes the player ticks. Nothing is stored for them
-  today, so a schema version bump (read `src/data/schema/README.md` first).
-  - _Not a rule._ Showing them is a reaction to a number the player typed. The app never rolls,
-    never ticks a box itself, never marks the character dead at three failures, and never clears
-    the boxes on its own when HP rises above 0. The player clears them.
-  - Open: whether the section can also be opened by hand at HP above 0 (for example, a player who
-    tracks HP somewhere else).
 - **Item weight.** A `weight` on inventory items (per unit) and equipment; the inventory shows the
   total, derived and never stored like `level` (add it to the spec §1 exception list). No units,
   no coin weight, no encumbrance — those are rules. Open: default `0` vs "not entered".
@@ -99,3 +91,8 @@ commit or PR that shipped it, rather than deleting it.
   `docs/superpowers/specs/2026-09-24-cloud-backup-design.md`.
 - **Cloud quota and portrait deduplication.** 1 MiB per player, one versioned document —
   `docs/superpowers/specs/2026-09-25-cloud-quota-design.md`.
+- **Death saving throws.** Shipped on branch `claude/death-saving-throws-msnizp` as schema v4:
+  `hitPoints.deathSaves`, two counts of ticked boxes, in a row across the bottom of the hit
+  points tile. The open question is settled: it cannot be opened by hand above 0 HP (typing 0 does
+  it), and it stays open while any box is ticked, so a tick is never hidden. AGENTS.md's "Schema
+  v4" entry has the rest.
