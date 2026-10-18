@@ -207,7 +207,7 @@ back on the next load (criterion 14).
       back as v5 with `pactSlots` last: the list wrote it back
     - at 320px `Pact 3rd` stays on one line against the stepper at every level from 1st to 9th,
       the level `<select>` shows `9th` without clipping (its text is at most 24px of the 70px
-      field), and neither the page nor the dialog scrolls sideways; dark reads the same
+      field), and neither the page nor the dialog scrolls sideways
     - the dialog's hint, `Set slots per level. 0 hides the level.`, sits under the Spell slots
       switch at `.hint`'s default 10px margin, with the first level's hairline just below it
       (`.setup-row:first-of-type` counts the hint, a `div` too, so that row keeps its top border)

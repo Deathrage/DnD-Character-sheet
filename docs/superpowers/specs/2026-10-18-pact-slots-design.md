@@ -212,8 +212,8 @@ The build matches this design except for two details in the Counters screen.
   `Set slots per level. 0 hides the level.`, at the head of that block, under its switch, so it
   reads as the switch's caption and shows only while the switch is on. It was the first thing in
   the old dialog and had no top margin; now it follows a switch, so it has `.hint`'s default 10px.
-  Looked at in Chromium at 360px and 320px, light and dark, that spacing reads right and needed
-  no CSS.
+  Looked at in Chromium at 360px and 320px light, and 360px dark, that spacing reads right and
+  needed no CSS.
 - **The Edit button has an accessible name.** Its visible text is "Edit", as §5 says, but its
   `aria-label` is "Edit spell slots": a screen reader would otherwise meet a bare "Edit" beside
   the category buttons named "Edit category …". Added in the Counters screen's fix round.
