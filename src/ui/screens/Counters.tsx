@@ -7,8 +7,15 @@ import { NameField } from '../components/NameField.js';
 import { NumberField } from '../components/NumberField.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import { ordinalSuffix } from '../reference.js';
+import { CheckRow } from '../components/CheckRow.js';
 import { CategorySelect, locate, type Located } from './categoryPicker.js';
-import type { CategoryView, CountersActions, CountersView, CounterView } from '../types.js';
+import type {
+  CategoryView,
+  CountersActions,
+  CountersView,
+  CounterView,
+  SpellSlotView,
+} from '../types.js';
 
 interface Props {
   characterId: string;
@@ -29,8 +36,12 @@ export function Counters({ characterId, data, actions, onClose }: Props) {
   const editing = dialog?.kind === 'edit' ? locate(data, dialog.id) : undefined;
 
   // A level with no slots at all is hidden rather than shown as 0/0 — a wizard has three rows,
-  // not nine. "Set totals" is how it comes back, which is why that button is always present.
+  // not nine — and so is the pact row, for everyone but a warlock. With no slots of either kind
+  // there is no table at all, only the button that sets some up.
+  const pact = data.pactSlots;
   const visibleSlots = data.spellSlots.filter((slot) => slot.total > 0);
+  const hasSlots = pact.total > 0 || visibleSlots.length > 0;
+  const openSlots = () => setDialog({ kind: 'slots' });
 
   return (
     <>
@@ -62,58 +73,45 @@ export function Counters({ characterId, data, actions, onClose }: Props) {
           />
         )}
       >
-        <div className="sechead-row">
-          <span className="sechead static">Spell Slots</span>
-          <button type="button" className="txtbtn" onClick={() => setDialog({ kind: 'slots' })}>
-            Set totals
-          </button>
-        </div>
-        <div className="slotblock">
-          {visibleSlots.length === 0 ? (
-            <div className="empty">No spell slots yet — tap “Set totals”.</div>
-          ) : (
-            visibleSlots.map((slot) => (
-              <div className="slotrow" key={slot.level}>
-                <span className="slotlvl">
-                  {slot.level}
-                  {ordinalSuffix(slot.level)}
-                </span>
-                <span className="valcluster">
-                  <NumberField
-                    label={`Level ${slot.level} slots remaining`}
-                    className="curinp"
-                    value={slot.current}
-                    onChange={(value) => actions.setSpellSlotCurrent(slot.level, value)}
-                    stepper
-                  />
-                  <span className="maxlbl">/ {slot.total}</span>
-                </span>
-              </div>
-            ))
-          )}
-        </div>
+        {hasSlots ? (
+          <>
+            <div className="sechead-row">
+              <span className="sechead static">Spell Slots</span>
+              <button type="button" className="txtbtn" onClick={openSlots}>
+                Edit
+              </button>
+            </div>
+            <div className="slotblock">
+              {pact.total > 0 && (
+                <SlotRow
+                  name={`Pact ${pact.level}${ordinalSuffix(pact.level)}`}
+                  label="Pact slots remaining"
+                  slot={pact}
+                  onChange={actions.setPactSlotCurrent}
+                />
+              )}
+              {visibleSlots.map((slot) => (
+                <SlotRow
+                  key={slot.level}
+                  name={`${slot.level}${ordinalSuffix(slot.level)}`}
+                  label={`Level ${slot.level} slots remaining`}
+                  slot={slot}
+                  onChange={(value) => actions.setSpellSlotCurrent(slot.level, value)}
+                />
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="sechead-row">
+            <button type="button" className="txtbtn" onClick={openSlots}>
+              Set spell slots
+            </button>
+          </div>
+        )}
       </CategorizedSection>
 
       {dialog?.kind === 'slots' && (
-        <ResponsiveDialog title="Spell slot totals" open onClose={close}>
-          <div className="hint" style={{ marginTop: 0 }}>
-            Set slots per level. 0 hides the level.
-          </div>
-          {data.spellSlots.map((slot) => (
-            <div className="setup-row" key={slot.level}>
-              <span className="lv">
-                {slot.level}
-                {ordinalSuffix(slot.level)} level
-              </span>
-              <NumberField
-                label={`Level ${slot.level} slot total`}
-                className="inp"
-                value={slot.total}
-                onChange={(value) => actions.setSpellSlotTotal(slot.level, value)}
-              />
-            </div>
-          ))}
-        </ResponsiveDialog>
+        <SpellSlotsDialog data={data} actions={actions} onClose={close} />
       )}
       {dialog?.kind === 'new' && (
         <NewCounterDialog
@@ -132,6 +130,125 @@ export function Counters({ characterId, data, actions, onClose }: Props) {
         />
       )}
     </>
+  );
+}
+
+function SlotRow({
+  name,
+  label,
+  slot,
+  onChange,
+}: {
+  name: string;
+  label: string;
+  slot: SpellSlotView;
+  onChange(value: number): void;
+}) {
+  return (
+    <div className="slotrow">
+      <span className="slotlvl">{name}</span>
+      <span className="valcluster">
+        <NumberField
+          label={label}
+          className="curinp"
+          value={slot.current}
+          onChange={onChange}
+          stepper
+        />
+        <span className="maxlbl">/ {slot.total}</span>
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Both kinds of slot, each behind a switch. A switch is this dialog's state and never stored: it
+ * opens on when its kind has a slot, and switching it off sets that kind's slots to 0, so what it
+ * says always matches what the sheet shows once the dialog closes. The pact level is left as it
+ * was: at 0 slots it means nothing, and it pre-fills the next time the switch goes on.
+ */
+function SpellSlotsDialog({
+  data,
+  actions,
+  onClose,
+}: {
+  data: CountersView;
+  actions: CountersActions;
+  onClose(): void;
+}) {
+  const [pactOn, setPactOn] = useState(data.pactSlots.total > 0);
+  const [slotsOn, setSlotsOn] = useState(data.spellSlots.some((slot) => slot.total > 0));
+
+  const switchPact = (on: boolean) => {
+    setPactOn(on);
+    if (on) return;
+    actions.setPactSlotTotal(0);
+    actions.setPactSlotCurrent(0);
+  };
+  const switchSlots = (on: boolean) => {
+    setSlotsOn(on);
+    if (on) return;
+    for (const slot of data.spellSlots) {
+      actions.setSpellSlotTotal(slot.level, 0);
+      actions.setSpellSlotCurrent(slot.level, 0);
+    }
+  };
+
+  return (
+    <ResponsiveDialog title="Spell slots" open onClose={onClose}>
+      <CheckRow label="Pact magic" checked={pactOn} onChange={switchPact} />
+      {pactOn && (
+        <div>
+          <div className="setup-row">
+            <label className="lv" htmlFor="pact-level">
+              Level
+            </label>
+            <select
+              id="pact-level"
+              className="inp"
+              value={data.pactSlots.level}
+              onChange={(event) => actions.setPactSlotLevel(Number(event.target.value))}
+            >
+              {data.spellSlots.map(({ level }) => (
+                <option key={level} value={level}>
+                  {level}
+                  {ordinalSuffix(level)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="setup-row">
+            <span className="lv">Slots</span>
+            <NumberField
+              label="Pact slot total"
+              className="inp"
+              value={data.pactSlots.total}
+              onChange={actions.setPactSlotTotal}
+            />
+          </div>
+        </div>
+      )}
+      <CheckRow label="Spell slots" checked={slotsOn} onChange={switchSlots} />
+      {slotsOn && (
+        <div>
+          <div className="hint">Set slots per level. 0 hides the level.</div>
+          {data.spellSlots.map((slot) => (
+            <div className="setup-row" key={slot.level}>
+              <span className="lv">
+                {slot.level}
+                {ordinalSuffix(slot.level)} level
+              </span>
+              <NumberField
+                label={`Level ${slot.level} slot total`}
+                className="inp"
+                value={slot.total}
+                onChange={(value) => actions.setSpellSlotTotal(slot.level, value)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </ResponsiveDialog>
   );
 }
 
