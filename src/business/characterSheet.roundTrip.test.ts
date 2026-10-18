@@ -41,6 +41,10 @@ function fill(sheet: CharacterSheetBO): void {
   sheet.counters.createCategory('Class features').add({ name: 'Rage' });
   sheet.counters.add({ name: 'Inspiration' });
   sheet.counters.spellSlots[0]?.setTotal(4);
+  // Level 9, the top of its range, so the two layers' limits are shown to agree at the boundary.
+  sheet.counters.pactSlots.setLevel(9);
+  sheet.counters.pactSlots.setTotal(2);
+  sheet.counters.pactSlots.setCurrent(1);
   sheet.abilitiesAndSkills.setSpeed(30);
   sheet.abilitiesAndSkills.abilities.dexterity.setScore(18);
   sheet.abilitiesAndSkills.abilities.dexterity.setModifier(4);

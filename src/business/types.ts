@@ -28,5 +28,6 @@ export type SpellcastingData = SpellListData['spellcasting'];
 export type SpellcastingEntryData = NonNullable<SpellcastingData['intelligence']>;
 export type CountersData = CharacterDocument['counters'];
 export type SpellSlotData = CharacterDocument['counters']['spellSlots']['1'];
+export type PactSlotsData = CountersData['pactSlots'];
 export type AbilityData = CharacterDocument['abilitiesAndSkills']['abilities']['strength'];
 export type SkillData = CharacterDocument['abilitiesAndSkills']['skills']['stealth'];

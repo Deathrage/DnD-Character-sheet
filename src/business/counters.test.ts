@@ -82,3 +82,66 @@ describe('spell slots', () => {
     expect(sheet.toDocument().counters.spellSlots['5']).toEqual({ current: 0, total: 7 });
   });
 });
+
+describe('pact slots', () => {
+  it('start with none, at level 1', () => {
+    const pact = sheetFor().counters.pactSlots;
+    expect([pact.level, pact.current, pact.total]).toEqual([1, 0, 0]);
+  });
+
+  it('write their level, remaining and total to the saved document', () => {
+    const sheet = sheetFor();
+    const pact = sheet.counters.pactSlots;
+    pact.setLevel(3);
+    pact.setTotal(2);
+    pact.setCurrent(1);
+    expect(sheet.toDocument().counters.pactSlots).toEqual({ level: 3, current: 1, total: 2 });
+  });
+
+  // SpellSlotBO keeps the level it was constructed with, because an ordinary level is its key.
+  // A pact level changes, so a held object must read it from the document every time.
+  it('read the level from the document, not from when they were handed out', () => {
+    const sheet = sheetFor();
+    const held = sheet.counters.pactSlots;
+    sheet.counters.pactSlots.setLevel(5);
+    expect(held.level).toBe(5);
+  });
+
+  it('leave the ordinary slots alone', () => {
+    const sheet = sheetFor();
+    sheet.counters.pactSlots.setTotal(2);
+    expect(Object.values(sheet.toDocument().counters.spellSlots)).toEqual(
+      Array.from({ length: 9 }, () => ({ current: 0, total: 0 })),
+    );
+  });
+
+  it('accept every level from 1 to 9', () => {
+    const pact = sheetFor().counters.pactSlots;
+    for (const level of [1, 2, 3, 4, 5, 6, 7, 8, 9]) {
+      pact.setLevel(level);
+      expect(pact.level).toBe(level);
+    }
+  });
+
+  it.each([0, 10, 2.5, -1, Number.NaN])('reject level %j as INVALID_SLOT_LEVEL', (value) => {
+    expect(() => sheetFor().counters.pactSlots.setLevel(value)).toThrow(
+      expect.objectContaining({ code: 'INVALID_SLOT_LEVEL' }) as Error,
+    );
+  });
+
+  it('guard remaining and total as any slot does', () => {
+    const pact = sheetFor().counters.pactSlots;
+    expect(() => pact.setCurrent(-1)).toThrow(
+      expect.objectContaining({ code: 'NEGATIVE' }) as Error,
+    );
+    expect(() => pact.setTotal(1.5)).toThrow(
+      expect.objectContaining({ code: 'NOT_AN_INTEGER' }) as Error,
+    );
+  });
+
+  it('leave remaining alone when the total changes', () => {
+    const pact = sheetFor().counters.pactSlots;
+    pact.setTotal(2);
+    expect(pact.current).toBe(0);
+  });
+});
