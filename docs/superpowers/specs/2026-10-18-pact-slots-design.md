@@ -6,7 +6,7 @@ other slot. The app computes none of it (AGENTS.md, "What this is"): the level i
 from a warlock's class level, and nothing refills the slots on a short rest. Needs character
 schema v5.
 
-Status: **designed 2026-10-18**, on branch `feature/pact-slots`.
+Status: **built 2026-10-18** on branch `feature/pact-slots`, from `docs/superpowers/plans/2026-10-18-pact-slots.md`.
 
 ## 1. Decisions
 
@@ -202,3 +202,18 @@ Every new test is broken on purpose once to prove it bites (AGENTS.md, "Traps").
 
 Mystic Arcanum, a short-rest refill, deriving the level from warlock levels, and a second pact
 entry.
+
+## 8. Deviations
+
+The build matches this design except for two details in the Counters screen.
+
+- **The dialog's hint is the old sentence, under the Spell slots switch.** §5's sketch ended the
+  Spell slots block with a short "0 hides the level." The dialog keeps the hint it already had,
+  `Set slots per level. 0 hides the level.`, at the head of that block, under its switch, so it
+  reads as the switch's caption and shows only while the switch is on. It was the first thing in
+  the old dialog and had no top margin; now it follows a switch, so it has `.hint`'s default 10px.
+  Looked at in Chromium at 360px and 320px, light and dark, that spacing reads right and needed
+  no CSS.
+- **The Edit button has an accessible name.** Its visible text is "Edit", as §5 says, but its
+  `aria-label` is "Edit spell slots": a screen reader would otherwise meet a bare "Edit" beside
+  the category buttons named "Edit category …". Added in the Counters screen's fix round.

@@ -96,3 +96,6 @@ commit or PR that shipped it, rather than deleting it.
   points tile. The open question is settled: it cannot be opened by hand above 0 HP (typing 0 does
   it), and it stays open while any box is ticked, so a tick is never hidden. AGENTS.md's "Schema
   v4" entry has the rest.
+- **Pact slots.** Shipped on branch `feature/pact-slots` as schema v5: `counters.pactSlots`, one
+  entry whose level the player chooses, first in the Counters spell slot table. Design in
+  `docs/superpowers/specs/2026-10-18-pact-slots-design.md`.

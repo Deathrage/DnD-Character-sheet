@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 1514 tests across 77 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 1775 tests across 82 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -162,6 +162,55 @@ back on the next load (criterion 14).
     - at 360px both groups share one line, with 8px to spare; at 320px they stack, boxes aligned
     - ticks survive a reload, stay when hit points rise, and Clear removes the row
     - a stored v3 document at 0 hit points is written back as v4 on the first list, nothing ticked
+- **Schema v5: pact slots** (2026-10-18, finished 2026-10-19). v4 was on `main`, so frozen.
+  `docs/superpowers/specs/2026-10-18-pact-slots-design.md` is the design and
+  `docs/superpowers/plans/2026-10-18-pact-slots.md` the plan it was built from.
+  - **What v5 adds.** `counters.pactSlots`, `{ level, current, total }`: a warlock's Pact Magic,
+    slots that are all one level, kept apart from the nine ordinary ones. `level` is an integer
+    from 1 to 9; `current` and `total` are integers from 0 up. It is always present and last in
+    `counters`; `total: 0` means no pact slots, and nothing else records that a character is a
+    warlock. The `level: 1` in a blank document means nothing: the key is required, so it holds a
+    valid level.
+  - **Nothing is computed.** The level is not worked out from warlock class levels, a short rest
+    refills nothing, and there is no `current <= total` rule, as for the ordinary slots.
+  - **`PactSlotsBO extends SpellSlotBO`**, so `current`, `total` and their guards are inherited,
+    not copied. Only where `level` comes from differs: the document, on every read. The level the
+    parent captures at construction would go stale after `setLevel`, which is why `level` is
+    overridden. `setLevel` throws `INVALID_SLOT_LEVEL` for anything but an integer from 1 to 9,
+    one code for every rejected value, as `INVALID_DIE_SIZE` is. It is not in `PRESENTABLE` in
+    `bind.ts`: a `<select>` cannot produce a bad level. There is no `clear()` anywhere (the
+    user's choice).
+  - **`migrateV4ToV5`** gives every document `{ level: 1, current: 0, total: 0 }`, last in
+    `counters`, and reads nothing else. `v4DocFor` carries the bait: a Warlock class row and a
+    counter named "Pact Magic" at 1 of 2, so a migration that filled in pact slots from either
+    would show. The player's note stays a note.
+  - **UI.** With no slots of either kind the spell slot area is a single **Set spell slots**
+    button: no heading, no table, no empty-state text. Otherwise the **Spell Slots** heading has an
+    **Edit** button (accessible name "Edit spell slots", so it is not mistaken for the category
+    edit buttons) and the table lists the pact row, `Pact 3rd`, before the ordinary levels. The hub
+    summary puts it first too. The dialog has two switches, **Pact magic** and **Spell slots**.
+    They are dialog state, never stored: each opens on when its kind has a slot, and one turned on
+    and left at 0 is off again next time. Switching one off sets that kind's `total` and `current`
+    to 0 with no confirmation and leaves the pact level alone: at 0 slots it means nothing, and it
+    pre-fills the next switch-on. All of that is the user's choice.
+  - **Verified in Chromium** on a fresh dev seed, at 360px, 320px and 360px dark:
+    - a fighter with no slots shows only Set spell slots; Pact magic on, 3rd, 2 slots gives one
+      row `Pact 3rd 0 / 2`, because setting a total does not fill `current`; two `+` and one `−`
+      read `1 / 2`, and that survives a reload
+    - a multiclass sheet shows the pact row above `1st` and `2nd`, and the hub reads
+      `Pact 3rd 0/2 · 1st 4/4 · 2nd 1/2 · 3 more`
+    - Spell slots off leaves only the pact row, Pact magic off leaves only Set spell slots, and
+      reopening shows both switches off
+    - a v1 export (`testAssets/zahir-ibn-talaar-2026-09-24.json`) imports as v5, with `pactSlots`
+      last in `counters` in the raw-JSON screen
+    - a v4 document put straight into IndexedDB is listed undamaged, has no pact row, and reads
+      back as v5 with `pactSlots` last: the list wrote it back
+    - at 320px `Pact 3rd` stays on one line against the stepper at every level from 1st to 9th,
+      the level `<select>` shows `9th` without clipping (its text is at most 24px of the 70px
+      field), and neither the page nor the dialog scrolls sideways; dark reads the same
+    - the dialog's hint, `Set slots per level. 0 hides the level.`, sits under the Spell slots
+      switch at `.hint`'s default 10px margin, with the first level's hairline just below it
+      (`.setup-row:first-of-type` counts the hint, a `div` too, so that row keeps its top border)
 - The storage-layer work the followups doc called the sharpest risk is done: `createIndexedDbRepository`
   takes an injectable `registry` and `openDb`, reports `blocked`, `blocking` and `terminated`
   through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
@@ -364,7 +413,8 @@ were arrived at _after_ getting them wrong once.
 
 Each version owns a self-contained directory under `src/data/schema/`. **Nothing is shared between
 versions.** `v2/` began as a literal copy of `v1/` and diverged (2026-09-26), `v3/` began as a
-copy of `v2/` the same day, and `v4/` as a copy of `v3/` on 2026-09-27.
+copy of `v2/` the same day, `v4/` as a copy of `v3/` on 2026-09-27, and `v5/` as a copy of `v4/`
+on 2026-10-18.
 
 Do not "DRY this up" by extracting shared primitives or a shared base schema. The duplication _is_
 the isolation mechanism. The migration loop validates a document _at its own version_, so a
@@ -486,7 +536,8 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
   featsAndTraits.ts    FeatBO, over categorized.ts
   spellList.ts         SpellListBO / SpellBO, over categorized.ts plus spellcasting
   spellcasting.ts      SpellcastingBO / SpellcastingEntryBO, keyed by ability — no id, like hit dice
-  counters.ts          CounterBO / SpellSlotBO, over categorized.ts plus the nine fixed slots
+  counters.ts          CounterBO / SpellSlotBO / PactSlotsBO, over categorized.ts plus the nine fixed
+                       slots and the pact slots
   abilitiesAndSkills.ts AbilityBO / SkillBO, fixed key sets built once in the constructor
   errors.ts            RuleViolation, RuleCode — every rule this layer enforces, plus the
                        re-exports `ui` needs but may not import from `data`: describeLoadError,
@@ -518,11 +569,12 @@ src/data/schema/       index.ts is the public face; README.md governs versioning
   v1/                  frozen: primitives, document, blank (factory), index — self-contained
   v2/                  frozen: v1 plus weapon attacks and spellcasting
   v3/                  frozen: v2 plus the initiative bonus
-  v4/                  current: v3 plus death saves; blank lives here now
+  v4/                  frozen: v3 plus death saves
+  v5/                  current: v4 plus pact slots; blank lives here now
 src/data/migration/    versionOf, versioned.ts (parseVersioned, the generic validate-migrate walk
                        shared by `schemaVersion` and `layoutVersion`), parseCharacter (now a thin
-                       wrapper over it), the LoadError taxonomy, v1ToV2.ts, v2ToV3.ts and
-                       v3ToV4.ts (the migrations, registered in migrations.ts)
+                       wrapper over it), the LoadError taxonomy, v1ToV2.ts, v2ToV3.ts,
+                       v3ToV4.ts and v4ToV5.ts (the migrations, registered in migrations.ts)
 src/data/serialization/ export and import (three-outcome ParseTextResult)
 src/data/repository/   the IndexedDB repository (characters + portraits stores), ListEntry, summarize,
                        portrait.ts — the portrait rule
@@ -536,8 +588,8 @@ src/data/remote/       types.ts (CloudRepository and its shapes), codec.ts, clou
                        index.ts — the only entry point (lint-enforced), parsed by parseVersioned
 src/data/characterLifecycle.test.ts   end-to-end across all four modules
 src/test/              fake-indexeddb setup
-src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, v1DocFor, v2DocFor, v3DocFor, wipe,
-                       createOpener, putRaw — shared so the data-layer test files stop each defining their own
+src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, v1DocFor, v2DocFor, v3DocFor, v4DocFor,
+                       wipe, createOpener, putRaw — shared so the data-layer test files stop each defining their own
 ```
 
 Tests are colocated: `foo.ts` is tested by `foo.test.ts` beside it.
