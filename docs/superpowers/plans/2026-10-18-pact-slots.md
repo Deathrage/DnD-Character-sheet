@@ -1358,7 +1358,8 @@ Run `npm run dev` in the background and note the URL it prints (normally `http:/
 5. Reload the page, reopen Thorne → Counters: still `Pact 3rd 1 / 2`.
 6. Open Sable → Counters → Edit, switch Pact magic on, level `3rd`, slots `2`; close. Expect the pact row above `1st` and `2nd`. Screenshot `05-multiclass.png`. Go back to the hub; the Counters line starts `Pact 3rd 0/2 · 1st 4/4 · 2nd 1/2`. Screenshot `06-hub.png`.
 7. Edit again, switch Spell slots off; close. Only the pact row remains. Switch Pact magic off too; close. Only `Set spell slots` remains, and reopening shows both switches off.
-8. Import `testAssets/zahir-ibn-talaar-2026-09-24.json` (a v1 export) from the list's menu; open its raw JSON: `counters` ends with `"pactSlots": { "level": 1, "current": 0, "total": 0 }` and `schemaVersion` is 5.
+8. Import `testAssets/zahir-ibn-talaar-2026-09-24.json` (a v1 export) with "Import from .json" in the list's menu; open its raw JSON: `counters` ends with `"pactSlots": { "level": 1, "current": 0, "total": 0 }` and `schemaVersion` is 5.
+9. A **stored** v4 document (the spec's case, which import does not cover — import saves at the current version, the list writes a stored one back). With `browser_evaluate`, open IndexedDB `dnd-character-sheet` (no version argument) and `put` into the `characters` store, under a fresh uuidv4 key, a copy of one character's raw JSON from the raw-JSON screen with `schemaVersion` set to 4, `id` set to the same key, a new `name`, and `counters.pactSlots` deleted. Reload. It is listed without a damage flag, its Counters show no pact row, and reading the same key back with `browser_evaluate` shows `schemaVersion: 5` and `pactSlots` last in `counters`.
 
 - [ ] **Step 3: Repeat the look at 320px and in dark mode**
 
