@@ -155,15 +155,20 @@ function Bound({ sheet }: { sheet: CharacterSheetBO }) {
   );
 }
 
-/** Ordinary slots 1st 4/4 and 2nd 1/2, and pact slots 3rd 1/2, each when asked for. */
+/**
+ * Ordinary slots 1st 4/4 and 2nd 1/2, and pact slots 3rd 1/2, each when asked for. The ordinary
+ * ones include a hidden 3rd level at 2 of 0 — the app never clamps remaining to the total — so a
+ * switch that zeroed only the levels on show would leave it behind and be caught.
+ */
 function sheetWith({ ordinary, pact }: { ordinary: boolean; pact: boolean }): CharacterSheetBO {
   const sheet = createCharacterSheet('Sable');
   if (ordinary) {
-    const [first, second] = sheet.counters.spellSlots;
+    const [first, second, third] = sheet.counters.spellSlots;
     first?.setTotal(4);
     first?.setCurrent(4);
     second?.setTotal(2);
     second?.setCurrent(1);
+    third?.setCurrent(2);
   }
   if (pact) {
     sheet.counters.pactSlots.setLevel(3);
@@ -180,15 +185,19 @@ const stored = (sheet: CharacterSheetBO) => sheet.toDocument().counters;
 describe('The spell slots switches, end to end', () => {
   it('pact magic off: no pact row, 0 slots stored with the level kept, the switch off again', () => {
     const sheet = sheetWith({ ordinary: true, pact: true });
+    const before = stored(sheet);
     render(<Bound sheet={sheet} />);
     expect(screen.getByText('Pact 3rd')).toBeTruthy();
 
     openSlots();
     fireEvent.click(checkbox('Pact magic'));
+    expect(screen.queryByRole('combobox', { name: 'Level' })).toBeNull();
     closeDialog();
     expect(screen.queryByText(/^Pact/)).toBeNull();
     expect(remaining()).toEqual(['Level 1 slots remaining', 'Level 2 slots remaining']);
     expect(stored(sheet).pactSlots).toEqual({ level: 3, current: 0, total: 0 });
+    // A multiclass player's ordinary slots are not the pact switch's to touch.
+    expect(stored(sheet).spellSlots).toEqual(before.spellSlots);
 
     openSlots();
     expect(checkbox('Pact magic').checked).toBe(false);
@@ -202,6 +211,7 @@ describe('The spell slots switches, end to end', () => {
 
     openSlots();
     fireEvent.click(checkbox('Spell slots'));
+    expect(screen.queryByRole('textbox', { name: 'Level 1 slot total' })).toBeNull();
     closeDialog();
     expect(remaining()).toEqual(['Pact slots remaining']);
     expect(Object.values(stored(sheet).spellSlots)).toEqual(

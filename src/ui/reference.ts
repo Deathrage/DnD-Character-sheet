@@ -81,7 +81,7 @@ export function spellLevelBadge(level: SpellLevel): string {
   return level === 'c' ? 'C' : String(level);
 }
 
-export function ordinalSuffix(n: number): string {
+function ordinalSuffix(n: number): string {
   if (n % 100 > 10 && n % 100 < 14) return 'th';
   return ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th';
 }

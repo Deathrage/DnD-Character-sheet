@@ -200,7 +200,10 @@ export interface CounterView extends NamedItemView {
   total: number;
 }
 
-/** The nine spell-slot levels sit beside the categories in the document, not inside them. */
+/**
+ * One spell-slot level, or the pact slots: the same three numbers. Both sit beside the categories
+ * in the document, not inside them.
+ */
 export interface SpellSlotView {
   level: number;
   current: number;
