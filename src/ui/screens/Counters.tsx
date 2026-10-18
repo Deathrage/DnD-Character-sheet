@@ -77,7 +77,12 @@ export function Counters({ characterId, data, actions, onClose }: Props) {
           <>
             <div className="sechead-row">
               <span className="sechead static">Spell Slots</span>
-              <button type="button" className="txtbtn" onClick={openSlots}>
+              <button
+                type="button"
+                className="txtbtn"
+                aria-label="Edit spell slots"
+                onClick={openSlots}
+              >
                 Edit
               </button>
             </div>
