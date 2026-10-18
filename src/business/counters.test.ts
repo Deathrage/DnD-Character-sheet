@@ -54,6 +54,14 @@ describe('spell slots', () => {
     expect(spellSlots['4']).toEqual({ current: 0, total: 0 });
   });
 
+  it('leaves remaining alone when the total changes', () => {
+    const slot = sheetFor().counters.spellSlots[2];
+    slot?.setTotal(2);
+    slot?.setCurrent(2);
+    slot?.setTotal(1);
+    expect(slot?.current).toBe(2);
+  });
+
   // The nine are fixed, so `spellSlots` must hand back a view built on demand rather than an
   // array a caller could grow or shrink. Asserting the absence of an `addSpellSlot` method used
   // to stand here, but no such method ever existed or could: that assertion could not fail.
@@ -142,6 +150,8 @@ describe('pact slots', () => {
   it('leave remaining alone when the total changes', () => {
     const pact = sheetFor().counters.pactSlots;
     pact.setTotal(2);
-    expect(pact.current).toBe(0);
+    pact.setCurrent(2);
+    pact.setTotal(1);
+    expect(pact.current).toBe(2);
   });
 });

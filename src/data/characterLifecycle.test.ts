@@ -27,6 +27,8 @@ describe('the character lifecycle, end to end across the data layer', () => {
       temporary: 5,
       deathSaves: { successes: 1, failures: 2 },
     };
+    // A non-blank pact entry, so a hop that drops or defaults it fails the toEqual assertions.
+    created.counters.pactSlots = { level: 3, current: 1, total: 2 };
     // Deliberate leading and trailing whitespace in the longText fields, which permit it (only
     // names reject padding). A `.trim()`/`.transform()` added to a primitive later would alter
     // this VALID document somewhere along the chain, and the toEqual assertions below would
