@@ -5,6 +5,7 @@ import { ID_A, ID_B, docFor } from '../../test/fixtures.js';
 import { migrateV1ToV2 } from '../migration/v1ToV2.js';
 import { migrateV2ToV3 } from '../migration/v2ToV3.js';
 import { migrateV3ToV4 } from '../migration/v3ToV4.js';
+import { migrateV4ToV5 } from '../migration/v4ToV5.js';
 import { CURRENT, type CharacterDocument } from '../schema/index.js';
 import {
   bytesToPortrait,
@@ -37,7 +38,7 @@ describe('codec', () => {
     // `parseCharacter` migrates a stored document.
     expect(decoded).toEqual({
       ok: true,
-      doc: migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(zahir))),
+      doc: migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(zahir)))),
       portrait: null,
     });
   });

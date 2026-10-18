@@ -24,6 +24,8 @@ export function docFor(id: string, name: string): CharacterDocument {
 
 export const V1_WEAPON_ID = '66666666-6666-4666-8666-666666666666';
 export const V1_OTHER_ID = '77777777-7777-4777-8777-777777777777';
+export const V4_WARLOCK_ID = '88888888-8888-4888-8888-888888888888';
+export const V4_PACT_COUNTER_ID = '99999999-9999-4999-8999-999999999999';
 
 /**
  * A complete v1 document, written out by hand. `createCharacter` makes the current version, and
@@ -152,6 +154,39 @@ export function v3DocFor(id: string, name: string): Record<string, unknown> {
   v3.schemaVersion = 3;
   v3.hitPoints = { current: 0, total: 24, temporary: 3 };
   return v3;
+}
+
+/**
+ * A complete v4 document: `v3DocFor` with the death saves v4 added, ticked (one success, two
+ * failures) rather than left at 0, plus a Warlock class and a counter the player named "Pact
+ * Magic". Those two are bait: a v4 → v5 migration that filled in pact slots from either would
+ * show up here. `fixtures.test.ts` checks it against `SCHEMAS[4]`.
+ */
+export function v4DocFor(id: string, name: string): Record<string, unknown> {
+  const v3 = v3DocFor(id, name) as {
+    classes: object[];
+    hitPoints: object;
+    counters: { uncategorized: object[] };
+  };
+  return {
+    ...v3,
+    schemaVersion: 4,
+    classes: [...v3.classes, { id: V4_WARLOCK_ID, name: 'Warlock', level: 5 }],
+    hitPoints: { ...v3.hitPoints, deathSaves: { successes: 1, failures: 2 } },
+    counters: {
+      ...v3.counters,
+      uncategorized: [
+        ...v3.counters.uncategorized,
+        {
+          id: V4_PACT_COUNTER_ID,
+          name: 'Pact Magic',
+          description: 'Two 3rd-level slots, back on a short rest.',
+          current: 1,
+          total: 2,
+        },
+      ],
+    },
+  };
 }
 
 /**
