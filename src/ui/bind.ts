@@ -261,6 +261,7 @@ function spellListView(sheet: CharacterSheetBO): SpellListView {
 }
 
 function countersView(sheet: CharacterSheetBO): CountersView {
+  const pact = sheet.counters.pactSlots;
   return {
     ...categorizedView(sheet.counters, (counter) => ({
       ...namedItemView(counter),
@@ -272,11 +273,7 @@ function countersView(sheet: CharacterSheetBO): CountersView {
       current: slot.current,
       total: slot.total,
     })),
-    pactSlots: {
-      level: sheet.counters.pactSlots.level,
-      current: sheet.counters.pactSlots.current,
-      total: sheet.counters.pactSlots.total,
-    },
+    pactSlots: { level: pact.level, current: pact.current, total: pact.total },
   };
 }
 
