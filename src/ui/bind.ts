@@ -23,6 +23,7 @@ import {
   RuleViolation,
   WeaponBO,
   type RuleCode,
+  type SpellSlotBO,
   type StorageFailure,
   type StorageGate,
 } from '../business/index.js';
@@ -58,6 +59,7 @@ import type {
   SpellLevel,
   SpellListActions,
   SpellListView,
+  SpellSlotView,
   VitalsActions,
   WeaponView,
 } from './types.js';
@@ -260,20 +262,22 @@ function spellListView(sheet: CharacterSheetBO): SpellListView {
   };
 }
 
+/** One shape for both kinds of slot: a `PactSlotsBO` is a `SpellSlotBO`. */
+const slotView = ({ level, current, total }: SpellSlotBO): SpellSlotView => ({
+  level,
+  current,
+  total,
+});
+
 function countersView(sheet: CharacterSheetBO): CountersView {
-  const pact = sheet.counters.pactSlots;
   return {
     ...categorizedView(sheet.counters, (counter) => ({
       ...namedItemView(counter),
       current: counter.current,
       total: counter.total,
     })),
-    spellSlots: sheet.counters.spellSlots.map((slot) => ({
-      level: slot.level,
-      current: slot.current,
-      total: slot.total,
-    })),
-    pactSlots: { level: pact.level, current: pact.current, total: pact.total },
+    spellSlots: sheet.counters.spellSlots.map(slotView),
+    pactSlots: slotView(sheet.counters.pactSlots),
   };
 }
 

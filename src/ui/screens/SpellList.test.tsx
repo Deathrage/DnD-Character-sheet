@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { vi } from 'vitest';
+import { spyActions } from '../../test/spyActions.js';
 import { stubDialogElement } from '../../test/stubDialog.js';
 import { noSpellListActions, spellList } from '../fixtures.js';
 import type { SpellcastingView, SpellListActions } from '../types.js';
@@ -8,12 +8,6 @@ import { SpellList } from './SpellList.js';
 
 beforeAll(stubDialogElement);
 beforeEach(() => localStorage.clear());
-
-/** Every action a spy, so a test can assert exactly what the screen asked for. */
-const spyActions = () =>
-  Object.fromEntries(
-    Object.keys(noSpellListActions).map((key) => [key, vi.fn(() => null)]),
-  ) as unknown as { [K in keyof SpellListActions]: ReturnType<typeof vi.fn> } & SpellListActions;
 
 const renderWith = (
   spellcasting: SpellcastingView[],
@@ -49,7 +43,7 @@ describe('Spellcasting on the Spell List', () => {
   });
 
   it('adds one ability first: used ones disabled, Create waiting for a pick', () => {
-    const actions = spyActions();
+    const actions = spyActions(noSpellListActions);
     renderWith([INT, CHA], actions);
     fireEvent.click(screen.getByRole('button', { name: '+ Add' }));
 
@@ -80,7 +74,7 @@ describe('Spellcasting on the Spell List', () => {
   });
 
   it('edits and deletes an entry from its chip', () => {
-    const actions = spyActions();
+    const actions = spyActions(noSpellListActions);
     renderWith([INT], actions);
     fireEvent.click(screen.getByRole('button', { name: /^Intelligence spellcasting/ }));
 

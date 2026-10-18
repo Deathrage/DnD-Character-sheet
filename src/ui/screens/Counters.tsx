@@ -6,7 +6,7 @@ import { ItemRow } from '../components/ItemRow.js';
 import { NameField } from '../components/NameField.js';
 import { NumberField } from '../components/NumberField.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
-import { ordinalSuffix } from '../reference.js';
+import { ordinal } from '../reference.js';
 import { CheckRow } from '../components/CheckRow.js';
 import { CategorySelect, locate, type Located } from './categoryPicker.js';
 import type {
@@ -39,9 +39,23 @@ export function Counters({ characterId, data, actions, onClose }: Props) {
   // not nine — and so is the pact row, for everyone but a warlock. With no slots of either kind
   // there is no table at all, only the button that sets some up.
   const pact = data.pactSlots;
-  const visibleSlots = data.spellSlots.filter((slot) => slot.total > 0);
-  const hasSlots = pact.total > 0 || visibleSlots.length > 0;
-  const openSlots = () => setDialog({ kind: 'slots' });
+  const rows = [
+    {
+      key: 'pact',
+      name: `Pact ${ordinal(pact.level)}`,
+      label: 'Pact slots remaining',
+      slot: pact,
+      onChange: actions.setPactSlotCurrent,
+    },
+    ...data.spellSlots.map((slot) => ({
+      key: String(slot.level),
+      name: ordinal(slot.level),
+      label: `Level ${slot.level} slots remaining`,
+      slot,
+      onChange: (value: number) => actions.setSpellSlotCurrent(slot.level, value),
+    })),
+  ].filter((row) => row.slot.total > 0);
+  const hasSlots = rows.length > 0;
 
   return (
     <>
@@ -73,44 +87,22 @@ export function Counters({ characterId, data, actions, onClose }: Props) {
           />
         )}
       >
-        {hasSlots ? (
-          <>
-            <div className="sechead-row">
-              <span className="sechead static">Spell Slots</span>
-              <button
-                type="button"
-                className="txtbtn"
-                aria-label="Edit spell slots"
-                onClick={openSlots}
-              >
-                Edit
-              </button>
-            </div>
-            <div className="slotblock">
-              {pact.total > 0 && (
-                <SlotRow
-                  name={`Pact ${pact.level}${ordinalSuffix(pact.level)}`}
-                  label="Pact slots remaining"
-                  slot={pact}
-                  onChange={actions.setPactSlotCurrent}
-                />
-              )}
-              {visibleSlots.map((slot) => (
-                <SlotRow
-                  key={slot.level}
-                  name={`${slot.level}${ordinalSuffix(slot.level)}`}
-                  label={`Level ${slot.level} slots remaining`}
-                  slot={slot}
-                  onChange={(value) => actions.setSpellSlotCurrent(slot.level, value)}
-                />
-              ))}
-            </div>
-          </>
-        ) : (
-          <div className="sechead-row">
-            <button type="button" className="txtbtn" onClick={openSlots}>
-              Set spell slots
-            </button>
+        <div className="sechead-row">
+          {hasSlots && <span className="sechead static">Spell Slots</span>}
+          <button
+            type="button"
+            className="txtbtn"
+            aria-label={hasSlots ? 'Edit spell slots' : undefined}
+            onClick={() => setDialog({ kind: 'slots' })}
+          >
+            {hasSlots ? 'Edit' : 'Set spell slots'}
+          </button>
+        </div>
+        {hasSlots && (
+          <div className="slotblock">
+            {rows.map(({ key, ...row }) => (
+              <SlotRow key={key} {...row} />
+            ))}
           </div>
         )}
       </CategorizedSection>
@@ -216,8 +208,7 @@ function SpellSlotsDialog({
             >
               {data.spellSlots.map(({ level }) => (
                 <option key={level} value={level}>
-                  {level}
-                  {ordinalSuffix(level)}
+                  {ordinal(level)}
                 </option>
               ))}
             </select>
@@ -239,10 +230,7 @@ function SpellSlotsDialog({
           <div className="hint">Set slots per level. 0 hides the level.</div>
           {data.spellSlots.map((slot) => (
             <div className="setup-row" key={slot.level}>
-              <span className="lv">
-                {slot.level}
-                {ordinalSuffix(slot.level)} level
-              </span>
+              <span className="lv">{ordinal(slot.level)} level</span>
               <NumberField
                 label={`Level ${slot.level} slot total`}
                 className="inp"

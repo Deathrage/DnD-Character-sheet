@@ -81,31 +81,24 @@ describe('summariseSections', () => {
     expect(summariseSections({ ...empty, spellList }).spells).toBe('2 of 3 prepared');
   });
 
+  /** Two levels in use, a third at 0, and two other counters. */
+  const inUse = {
+    categories: [],
+    uncategorized: [counter, counter],
+    spellSlots: [
+      { level: 1, current: 4, total: 4 },
+      { level: 2, current: 1, total: 2 },
+      { level: 3, current: 0, total: 0 },
+    ],
+  };
+
   it('shows the spell slots in use, then the other counters', () => {
-    const counters = {
-      categories: [],
-      uncategorized: [counter, counter],
-      spellSlots: [
-        { level: 1, current: 4, total: 4 },
-        { level: 2, current: 1, total: 2 },
-        { level: 3, current: 0, total: 0 },
-      ],
-      pactSlots: { level: 3, current: 0, total: 0 },
-    };
+    const counters = { ...inUse, pactSlots: { level: 3, current: 0, total: 0 } };
     expect(summariseSections({ ...empty, counters }).counters).toBe('1st 4/4 · 2nd 1/2 · 2 more');
   });
 
   it('puts pact slots first, then the ordinary levels', () => {
-    const counters = {
-      categories: [],
-      uncategorized: [counter, counter],
-      spellSlots: [
-        { level: 1, current: 4, total: 4 },
-        { level: 2, current: 1, total: 2 },
-        { level: 3, current: 0, total: 0 },
-      ],
-      pactSlots: { level: 3, current: 1, total: 2 },
-    };
+    const counters = { ...inUse, pactSlots: { level: 3, current: 1, total: 2 } };
     expect(summariseSections({ ...empty, counters }).counters).toBe(
       'Pact 3rd 1/2 · 1st 4/4 · 2nd 1/2 · 2 more',
     );

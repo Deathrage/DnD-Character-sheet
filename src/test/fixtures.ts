@@ -24,8 +24,8 @@ export function docFor(id: string, name: string): CharacterDocument {
 
 export const V1_WEAPON_ID = '66666666-6666-4666-8666-666666666666';
 export const V1_OTHER_ID = '77777777-7777-4777-8777-777777777777';
-export const V4_WARLOCK_ID = '88888888-8888-4888-8888-888888888888';
-export const V4_PACT_COUNTER_ID = '99999999-9999-4999-8999-999999999999';
+const V4_WARLOCK_ID = '88888888-8888-4888-8888-888888888888';
+const V4_PACT_COUNTER_ID = '99999999-9999-4999-8999-999999999999';
 
 /**
  * A complete v1 document, written out by hand. `createCharacter` makes the current version, and

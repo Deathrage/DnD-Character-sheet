@@ -54,14 +54,6 @@ describe('spell slots', () => {
     expect(spellSlots['4']).toEqual({ current: 0, total: 0 });
   });
 
-  it('leaves remaining alone when the total changes', () => {
-    const slot = sheetFor().counters.spellSlots[2];
-    slot?.setTotal(2);
-    slot?.setCurrent(2);
-    slot?.setTotal(1);
-    expect(slot?.current).toBe(2);
-  });
-
   // The nine are fixed, so `spellSlots` must hand back a view built on demand rather than an
   // array a caller could grow or shrink. Asserting the absence of an `addSpellSlot` method used
   // to stand here, but no such method ever existed or could: that assertion could not fail.
@@ -74,13 +66,6 @@ describe('spell slots', () => {
 
     expect(sheet.counters.spellSlots).toHaveLength(9);
     expect(Object.keys(sheet.toDocument().counters.spellSlots)).toHaveLength(9);
-  });
-
-  it('rejects a negative value', () => {
-    const slot = sheetFor().counters.spellSlots[0];
-    expect(() => slot?.setCurrent(-1)).toThrow(
-      expect.objectContaining({ code: 'NEGATIVE' }) as Error,
-    );
   });
 
   it('writes through a SpellSlotBO to the saved document', () => {
@@ -136,22 +121,29 @@ describe('pact slots', () => {
       expect.objectContaining({ code: 'INVALID_SLOT_LEVEL' }) as Error,
     );
   });
+});
 
-  it('guard remaining and total as any slot does', () => {
-    const pact = sheetFor().counters.pactSlots;
-    expect(() => pact.setCurrent(-1)).toThrow(
+// What both kinds share, stated once: a pact slot is a spell slot whose level it chooses.
+describe.each([
+  ['an ordinary level', () => sheetFor().counters.spellSlots[2]!],
+  ['pact slots', () => sheetFor().counters.pactSlots],
+])('%s, like any slot,', (_kind, slotOf) => {
+  it('rejects a negative or fractional count', () => {
+    const slot = slotOf();
+    expect(() => slot.setCurrent(-1)).toThrow(
       expect.objectContaining({ code: 'NEGATIVE' }) as Error,
     );
-    expect(() => pact.setTotal(1.5)).toThrow(
+    expect(() => slot.setTotal(1.5)).toThrow(
       expect.objectContaining({ code: 'NOT_AN_INTEGER' }) as Error,
     );
   });
 
-  it('leave remaining alone when the total changes', () => {
-    const pact = sheetFor().counters.pactSlots;
-    pact.setTotal(2);
-    pact.setCurrent(2);
-    pact.setTotal(1);
-    expect(pact.current).toBe(2);
+  // No `current <= total` rule: the app never clamps what the player has left.
+  it('leaves remaining alone when the total changes', () => {
+    const slot = slotOf();
+    slot.setTotal(2);
+    slot.setCurrent(2);
+    slot.setTotal(1);
+    expect(slot.current).toBe(2);
   });
 });

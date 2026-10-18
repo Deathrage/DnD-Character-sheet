@@ -61,7 +61,7 @@ export function createCharacter({ name, id, now }: CreateCharacterInput): Charac
       spellSlots: Object.fromEntries(
         SPELL_SLOT_LEVELS.map((level) => [level, zero()]),
       ) as CharacterDocument['counters']['spellSlots'],
-      pactSlots: { level: 1, current: 0, total: 0 },
+      pactSlots: { level: 1, ...zero() },
     },
 
     abilitiesAndSkills: {

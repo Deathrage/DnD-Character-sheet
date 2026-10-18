@@ -74,7 +74,7 @@ export type SpellLevel = (typeof SPELL_LEVELS)[number];
 
 /** `Cantrip`, `1st Level`, `2nd Level`, … for a select; `C`, `1`, `2`, … for the row badge. */
 export function spellLevelName(level: SpellLevel): string {
-  return level === 'c' ? 'Cantrip' : `${level}${ordinalSuffix(level)} Level`;
+  return level === 'c' ? 'Cantrip' : `${ordinal(level)} Level`;
 }
 
 export function spellLevelBadge(level: SpellLevel): string {
@@ -84,4 +84,9 @@ export function spellLevelBadge(level: SpellLevel): string {
 export function ordinalSuffix(n: number): string {
   if (n % 100 > 10 && n % 100 < 14) return 'th';
   return ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th';
+}
+
+/** `3rd`: the number and its suffix, as every slot and spell level label writes it. */
+export function ordinal(n: number): string {
+  return `${n}${ordinalSuffix(n)}`;
 }

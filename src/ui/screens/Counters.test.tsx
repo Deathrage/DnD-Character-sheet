@@ -1,20 +1,15 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/react';
-import { useState } from 'react';
-import { vi } from 'vitest';
+import { createCharacterSheet, type CharacterSheetBO } from '../../business/index.js';
+import { spyActions } from '../../test/spyActions.js';
 import { stubDialogElement } from '../../test/stubDialog.js';
+import { useSheet } from '../bind.js';
 import { counters, noCountersActions } from '../fixtures.js';
-import type { CountersActions, CountersView, SpellSlotView } from '../types.js';
+import type { CountersActions, CountersView } from '../types.js';
 import { Counters } from './Counters.js';
 
 beforeAll(stubDialogElement);
 beforeEach(() => localStorage.clear());
-
-/** Every action a spy, so a test can assert exactly what the screen asked for. */
-const spyActions = () =>
-  Object.fromEntries(
-    Object.keys(noCountersActions).map((key) => [key, vi.fn(() => null)]),
-  ) as unknown as { [K in keyof CountersActions]: ReturnType<typeof vi.fn> } & CountersActions;
 
 const NO_SLOTS = counters.spellSlots.map((slot) => ({ ...slot, current: 0, total: 0 }));
 const NO_PACT = { level: 1, current: 0, total: 0 };
@@ -37,35 +32,9 @@ const remaining = () =>
     .map((input) => input.getAttribute('aria-label'));
 
 const checkbox = (name: string) => screen.getByRole('checkbox', { name }) as HTMLInputElement;
-
-/**
- * A Counters whose actions really change what it renders, so a test can run a switch end to end:
- * turn it off, close the dialog, look at the sheet, open the dialog again. The spies cannot, which
- * is why a switch's effect once showed up only in pieces. Updates are functional because one
- * switch fires eighteen actions in a single handler.
- */
-function StatefulCounters({ initial }: { initial: Partial<CountersView> }) {
-  const [data, setData] = useState<CountersView>({ ...counters, ...initial });
-  const setPact = (change: Partial<SpellSlotView>) =>
-    setData((d) => ({ ...d, pactSlots: { ...d.pactSlots, ...change } }));
-  const setSlot = (level: number, change: Partial<SpellSlotView>) =>
-    setData((d) => ({
-      ...d,
-      spellSlots: d.spellSlots.map((slot) =>
-        slot.level === level ? { ...slot, ...change } : slot,
-      ),
-    }));
-  const actions: CountersActions = {
-    ...noCountersActions,
-    setPactSlotLevel: (level) => setPact({ level }),
-    setPactSlotCurrent: (current) => setPact({ current }),
-    setPactSlotTotal: (total) => setPact({ total }),
-    setSpellSlotCurrent: (level, current) => setSlot(level, { current }),
-    setSpellSlotTotal: (level, total) => setSlot(level, { total }),
-  };
-  return <Counters characterId="c" data={data} actions={actions} onClose={() => {}} />;
-}
-
+const levelSelect = () => screen.getByRole('combobox', { name: 'Level' }) as HTMLSelectElement;
+const openSlots = (name = 'Edit spell slots') =>
+  fireEvent.click(screen.getByRole('button', { name }));
 const closeDialog = () => fireEvent.click(screen.getByRole('button', { name: 'Close' }));
 
 describe('Spell slots on Counters', () => {
@@ -108,7 +77,7 @@ describe('Spell slots on Counters', () => {
   });
 
   it('ticks a pact slot off through its own action', () => {
-    const actions = spyActions();
+    const actions = spyActions(noCountersActions);
     renderWith({ pactSlots: PACT }, actions);
     fireEvent.click(screen.getByRole('button', { name: 'Decrease Pact slots remaining' }));
     expect(actions.setPactSlotCurrent).toHaveBeenCalledWith(0);
@@ -119,11 +88,11 @@ describe('Spell slots on Counters', () => {
 describe('The spell slots dialog', () => {
   it('opens each switch on when its kind has slots', () => {
     renderWith({ spellSlots: NO_SLOTS, pactSlots: PACT });
-    fireEvent.click(screen.getByRole('button', { name: 'Edit spell slots' }));
+    openSlots();
 
     expect(checkbox('Pact magic').checked).toBe(true);
     expect(checkbox('Spell slots').checked).toBe(false);
-    expect((screen.getByRole('combobox', { name: 'Level' }) as HTMLSelectElement).value).toBe('3');
+    expect(levelSelect().value).toBe('3');
     expect(screen.getByRole('textbox', { name: 'Pact slot total' })).toBeTruthy();
     expect(screen.queryByRole('textbox', { name: 'Level 1 slot total' })).toBeNull();
   });
@@ -132,7 +101,7 @@ describe('The spell slots dialog', () => {
   // is nothing to say it was on.
   it('opens both switches off for a character with no slots', () => {
     renderWith({ spellSlots: NO_SLOTS, pactSlots: NO_PACT });
-    fireEvent.click(screen.getByRole('button', { name: 'Set spell slots' }));
+    openSlots('Set spell slots');
 
     expect(checkbox('Pact magic').checked).toBe(false);
     expect(checkbox('Spell slots').checked).toBe(false);
@@ -140,9 +109,9 @@ describe('The spell slots dialog', () => {
   });
 
   it('switching a kind on only shows its fields', () => {
-    const actions = spyActions();
+    const actions = spyActions(noCountersActions);
     renderWith({ spellSlots: NO_SLOTS, pactSlots: NO_PACT }, actions);
-    fireEvent.click(screen.getByRole('button', { name: 'Set spell slots' }));
+    openSlots('Set spell slots');
     fireEvent.click(checkbox('Pact magic'));
     fireEvent.click(checkbox('Spell slots'));
 
@@ -153,12 +122,11 @@ describe('The spell slots dialog', () => {
   });
 
   it('sets the pact level and the number of pact slots', () => {
-    const actions = spyActions();
+    const actions = spyActions(noCountersActions);
     renderWith({ pactSlots: PACT }, actions);
-    fireEvent.click(screen.getByRole('button', { name: 'Edit spell slots' }));
+    openSlots();
 
-    const level = screen.getByRole('combobox', { name: 'Level' }) as HTMLSelectElement;
-    expect(Array.from(level.options).map((option) => option.textContent)).toEqual([
+    expect(Array.from(levelSelect().options).map((option) => option.textContent)).toEqual([
       '1st',
       '2nd',
       '3rd',
@@ -169,7 +137,7 @@ describe('The spell slots dialog', () => {
       '8th',
       '9th',
     ]);
-    fireEvent.change(level, { target: { value: '5' } });
+    fireEvent.change(levelSelect(), { target: { value: '5' } });
     fireEvent.change(screen.getByRole('textbox', { name: 'Pact slot total' }), {
       target: { value: '3' },
     });
@@ -177,78 +145,89 @@ describe('The spell slots dialog', () => {
     expect(actions.setPactSlotLevel).toHaveBeenCalledWith(5);
     expect(actions.setPactSlotTotal).toHaveBeenCalledWith(3);
   });
-
-  it('switching pact magic off zeroes its slots and leaves its level', () => {
-    const actions = spyActions();
-    renderWith({ pactSlots: PACT }, actions);
-    fireEvent.click(screen.getByRole('button', { name: 'Edit spell slots' }));
-    fireEvent.click(checkbox('Pact magic'));
-
-    expect(actions.setPactSlotTotal).toHaveBeenCalledWith(0);
-    expect(actions.setPactSlotCurrent).toHaveBeenCalledWith(0);
-    expect(actions.setPactSlotLevel).not.toHaveBeenCalled();
-    expect(actions.setSpellSlotTotal).not.toHaveBeenCalled();
-    expect(screen.queryByRole('combobox', { name: 'Level' })).toBeNull();
-  });
-
-  it('switching spell slots off zeroes all nine levels and nothing else', () => {
-    const actions = spyActions();
-    renderWith({ pactSlots: PACT }, actions);
-    fireEvent.click(screen.getByRole('button', { name: 'Edit spell slots' }));
-    fireEvent.click(checkbox('Spell slots'));
-
-    const allNine = [1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => [level, 0]);
-    expect(actions.setSpellSlotTotal.mock.calls).toEqual(allNine);
-    expect(actions.setSpellSlotCurrent.mock.calls).toEqual(allNine);
-    expect(actions.setPactSlotTotal).not.toHaveBeenCalled();
-    expect(screen.queryByRole('textbox', { name: 'Level 1 slot total' })).toBeNull();
-  });
 });
 
-// A switch off must leave nothing of its kind on the sheet, and reopening must show it off; a
-// switch on and left at 0 must change nothing at all. All three run against real state.
+/** Counters over a real sheet, bound the way the app binds it. */
+function Bound({ sheet }: { sheet: CharacterSheetBO }) {
+  const { data, actions } = useSheet(sheet);
+  return (
+    <Counters characterId="c" data={data.counters} actions={actions.counters} onClose={() => {}} />
+  );
+}
+
+/** Ordinary slots 1st 4/4 and 2nd 1/2, and pact slots 3rd 1/2, each when asked for. */
+function sheetWith({ ordinary, pact }: { ordinary: boolean; pact: boolean }): CharacterSheetBO {
+  const sheet = createCharacterSheet('Sable');
+  if (ordinary) {
+    const [first, second] = sheet.counters.spellSlots;
+    first?.setTotal(4);
+    first?.setCurrent(4);
+    second?.setTotal(2);
+    second?.setCurrent(1);
+  }
+  if (pact) {
+    sheet.counters.pactSlots.setLevel(3);
+    sheet.counters.pactSlots.setTotal(2);
+    sheet.counters.pactSlots.setCurrent(1);
+  }
+  return sheet;
+}
+
+const stored = (sheet: CharacterSheetBO) => sheet.toDocument().counters;
+
+// A switch off must leave nothing of its kind on the sheet or in the document, and reopening must
+// show it off; a switch on and left at 0 must change nothing at all.
 describe('The spell slots switches, end to end', () => {
-  it('pact magic off: no pact row, the switch is off on reopening, and the level is kept', () => {
-    render(<StatefulCounters initial={{ pactSlots: PACT }} />);
+  it('pact magic off: no pact row, 0 slots stored with the level kept, the switch off again', () => {
+    const sheet = sheetWith({ ordinary: true, pact: true });
+    render(<Bound sheet={sheet} />);
     expect(screen.getByText('Pact 3rd')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit spell slots' }));
+    openSlots();
     fireEvent.click(checkbox('Pact magic'));
     closeDialog();
     expect(screen.queryByText(/^Pact/)).toBeNull();
     expect(remaining()).toEqual(['Level 1 slots remaining', 'Level 2 slots remaining']);
+    expect(stored(sheet).pactSlots).toEqual({ level: 3, current: 0, total: 0 });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit spell slots' }));
+    openSlots();
     expect(checkbox('Pact magic').checked).toBe(false);
     fireEvent.click(checkbox('Pact magic'));
-    expect((screen.getByRole('combobox', { name: 'Level' }) as HTMLSelectElement).value).toBe('3');
+    expect(levelSelect().value).toBe('3');
   });
 
-  it('spell slots off: no ordinary rows, and the switch is off on reopening', () => {
-    render(<StatefulCounters initial={{ pactSlots: PACT }} />);
+  it('spell slots off: no ordinary rows, all nine stored as 0, the switch off again', () => {
+    const sheet = sheetWith({ ordinary: true, pact: true });
+    render(<Bound sheet={sheet} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit spell slots' }));
+    openSlots();
     fireEvent.click(checkbox('Spell slots'));
     closeDialog();
     expect(remaining()).toEqual(['Pact slots remaining']);
+    expect(Object.values(stored(sheet).spellSlots)).toEqual(
+      Array.from({ length: 9 }, () => ({ current: 0, total: 0 })),
+    );
+    expect(stored(sheet).pactSlots).toEqual({ level: 3, current: 1, total: 2 });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Edit spell slots' }));
+    openSlots();
     expect(checkbox('Spell slots').checked).toBe(false);
     expect(checkbox('Pact magic').checked).toBe(true);
   });
 
-  it('pact magic on and left at 0: no row, only the button, and the switch is off again', () => {
-    render(<StatefulCounters initial={{ spellSlots: NO_SLOTS, pactSlots: NO_PACT }} />);
+  it('pact magic on and left at 0: nothing stored, only the button, the switch off again', () => {
+    const sheet = sheetWith({ ordinary: false, pact: false });
+    const before = stored(sheet);
+    render(<Bound sheet={sheet} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Set spell slots' }));
+    openSlots('Set spell slots');
     fireEvent.click(checkbox('Pact magic'));
     expect(checkbox('Pact magic').checked).toBe(true);
     closeDialog();
-    expect(screen.queryByText(/^Pact/)).toBeNull();
     expect(remaining()).toEqual([]);
     expect(screen.queryByRole('button', { name: 'Edit spell slots' })).toBeNull();
+    expect(stored(sheet)).toEqual(before);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Set spell slots' }));
+    openSlots('Set spell slots');
     expect(checkbox('Pact magic').checked).toBe(false);
   });
 });

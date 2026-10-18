@@ -15,22 +15,13 @@ const NONE = { level: 1, current: 0, total: 0 };
 describe('migrateV4ToV5', () => {
   it('adds empty pact slots to counters and changes nothing else', () => {
     const v4 = v4DocFor(ID_A, 'Sable');
-    const v5 = migrateV4ToV5(v4) as Migrated;
-
-    expect(v5.schemaVersion).toBe(5);
-    expect(v5.counters.pactSlots).toEqual(NONE);
-
     // Everything the migration does not touch comes through as it was, the death saves v4 added
     // included.
-    const untouched = (doc: Record<string, unknown>) => {
-      const rest: Record<string, unknown> = { ...doc };
-      delete rest.schemaVersion;
-      const counters = { ...(rest.counters as Record<string, unknown>) };
-      delete counters.pactSlots;
-      rest.counters = counters;
-      return rest;
-    };
-    expect(untouched(v5)).toEqual(untouched(v4));
+    expect(migrateV4ToV5(v4)).toEqual({
+      ...v4,
+      schemaVersion: 5,
+      counters: { ...(v4.counters as object), pactSlots: NONE },
+    });
   });
 
   it('reads neither a Warlock class nor a counter named Pact Magic', () => {

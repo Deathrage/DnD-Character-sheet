@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { vi } from 'vitest';
+import { spyActions } from '../../test/spyActions.js';
 import { stubDialogElement } from '../../test/stubDialog.js';
 import { equipment, noEquipmentActions } from '../fixtures.js';
 import type { EquipmentActions } from '../types.js';
@@ -50,12 +50,6 @@ describe('Equipment blocks', () => {
   });
 });
 
-/** Every action a spy, so a test can assert exactly what the screen asked for. */
-const spyActions = () =>
-  Object.fromEntries(
-    Object.keys(noEquipmentActions).map((key) => [key, vi.fn(() => null)]),
-  ) as unknown as { [K in keyof EquipmentActions]: ReturnType<typeof vi.fn> } & EquipmentActions;
-
 const renderWith = (actions: EquipmentActions) =>
   render(<Equipment characterId="c" data={equipment} actions={actions} onClose={() => {}} />);
 
@@ -103,7 +97,7 @@ describe('the weapon dialogs', () => {
   });
 
   it('clear the attack when None is picked', () => {
-    const actions = spyActions();
+    const actions = spyActions(noEquipmentActions);
     renderWith(actions);
     open('Rapier');
     fireEvent.click(screen.getByRole('radio', { name: 'None' }));
@@ -112,7 +106,7 @@ describe('the weapon dialogs', () => {
 
   // Saving per keystroke would trim the space after "1d8+3" before "piercing" could follow it.
   it('save damage on blur, never per keystroke, so a typed space survives', () => {
-    const actions = spyActions();
+    const actions = spyActions(noEquipmentActions);
     renderWith(actions);
     open('Rapier');
     const damage = screen.getByLabelText('Damage');
@@ -135,7 +129,7 @@ describe('the weapon dialogs', () => {
   });
 
   it('create a weapon with its attack, trimming the damage', () => {
-    const actions = spyActions();
+    const actions = spyActions(noEquipmentActions);
     renderWith(actions);
     fireEvent.click(screen.getByRole('button', { name: 'Add entry to Weapons' }));
     expect(screen.getByText('New weapon')).toBeTruthy();
@@ -157,7 +151,7 @@ describe('the weapon dialogs', () => {
   });
 
   it('create other equipment with no attack at all', () => {
-    const actions = spyActions();
+    const actions = spyActions(noEquipmentActions);
     renderWith(actions);
     fireEvent.click(screen.getByRole('button', { name: 'Add entry to Other Equipment' }));
     expect(screen.getByText('New equipment')).toBeTruthy();

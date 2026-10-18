@@ -166,15 +166,11 @@ const deathSaves = z.object({ successes: deathSaveCount, failures: deathSaveCoun
  * `spellSlots` has: the rules stop at 5th, but the app does not enforce rules. `total: 0` is "no
  * pact slots", as it is for an ordinary level, so the key is always present and a character
  * without Pact Magic carries `{ level: 1, current: 0, total: 0 }`. `current` is not checked
- * against `total`, as `currentAndTotal` does not (spec §3.2). Spelled out rather than extended
- * from `currentAndTotal`, so the keys read in the order the blank document writes them.
+ * against `total`, as `currentAndTotal` does not (spec §3.2). `level` comes first, as the blank
+ * document writes it.
  */
 const pactSlots = z
-  .object({
-    level: z.number().int().min(1).max(9),
-    current: nonNegativeInt,
-    total: nonNegativeInt,
-  })
+  .object({ level: z.number().int().min(1).max(9), ...currentAndTotal.shape })
   .strict();
 
 const fixedKeys = <Key extends string, Value extends z.ZodType>(

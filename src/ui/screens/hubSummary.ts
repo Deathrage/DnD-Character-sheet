@@ -1,5 +1,5 @@
 import { formatSigned } from '../format.js';
-import { COINS, ordinalSuffix } from '../reference.js';
+import { COINS, ordinal } from '../reference.js';
 import type { CategorizedView, SectionKey } from '../types.js';
 import type { SheetData } from './CharacterHub.js';
 
@@ -21,13 +21,11 @@ export function summariseSections(data: SheetData): Record<SectionKey, string> {
   const spells = all(spellList);
   const { pactSlots: pact } = counters;
   const slots = [
-    ...(pact.total > 0
-      ? [`Pact ${pact.level}${ordinalSuffix(pact.level)} ${pact.current}/${pact.total}`]
-      : []),
-    ...counters.spellSlots
-      .filter((slot) => slot.total > 0)
-      .map((slot) => `${slot.level}${ordinalSuffix(slot.level)} ${slot.current}/${slot.total}`),
-  ];
+    { name: `Pact ${ordinal(pact.level)}`, slot: pact },
+    ...counters.spellSlots.map((slot) => ({ name: ordinal(slot.level), slot })),
+  ]
+    .filter(({ slot }) => slot.total > 0)
+    .map(({ name, slot }) => `${name} ${slot.current}/${slot.total}`);
   const otherCounters = all(counters).length;
 
   return {
