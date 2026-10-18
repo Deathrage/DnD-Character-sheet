@@ -19,9 +19,15 @@ export function summariseSections(data: SheetData): Record<SectionKey, string> {
   );
   const gear = equipment.weapons.length + equipment.other.length;
   const spells = all(spellList);
-  const slots = counters.spellSlots
-    .filter((slot) => slot.total > 0)
-    .map((slot) => `${slot.level}${ordinalSuffix(slot.level)} ${slot.current}/${slot.total}`);
+  const { pactSlots: pact } = counters;
+  const slots = [
+    ...(pact.total > 0
+      ? [`Pact ${pact.level}${ordinalSuffix(pact.level)} ${pact.current}/${pact.total}`]
+      : []),
+    ...counters.spellSlots
+      .filter((slot) => slot.total > 0)
+      .map((slot) => `${slot.level}${ordinalSuffix(slot.level)} ${slot.current}/${slot.total}`),
+  ];
   const otherCounters = all(counters).length;
 
   return {

@@ -209,6 +209,8 @@ export interface SpellSlotView {
 
 export interface CountersView extends CategorizedView<CounterView> {
   spellSlots: SpellSlotView[];
+  /** A warlock's Pact Magic: one entry whose level the player chose. `total: 0` is none. */
+  pactSlots: SpellSlotView;
 }
 
 export interface CountersActions extends CategoryActions {
@@ -224,6 +226,9 @@ export interface CountersActions extends CategoryActions {
   removeCounter(id: string): void;
   setSpellSlotCurrent(level: number, value: number): void;
   setSpellSlotTotal(level: number, value: number): void;
+  setPactSlotLevel(level: number): void;
+  setPactSlotCurrent(value: number): void;
+  setPactSlotTotal(value: number): void;
 }
 
 // ---------------------------------------------------------------------------

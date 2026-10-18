@@ -20,6 +20,7 @@ const empty: SheetData = {
     categories: [],
     uncategorized: [],
     spellSlots: [1, 2, 3].map((level) => ({ level, current: 0, total: 0 })),
+    pactSlots: { level: 1, current: 0, total: 0 },
   },
 };
 
@@ -89,8 +90,30 @@ describe('summariseSections', () => {
         { level: 2, current: 1, total: 2 },
         { level: 3, current: 0, total: 0 },
       ],
+      pactSlots: { level: 3, current: 0, total: 0 },
     };
     expect(summariseSections({ ...empty, counters }).counters).toBe('1st 4/4 · 2nd 1/2 · 2 more');
+  });
+
+  it('puts pact slots first, then the ordinary levels', () => {
+    const counters = {
+      categories: [],
+      uncategorized: [counter, counter],
+      spellSlots: [
+        { level: 1, current: 4, total: 4 },
+        { level: 2, current: 1, total: 2 },
+        { level: 3, current: 0, total: 0 },
+      ],
+      pactSlots: { level: 3, current: 1, total: 2 },
+    };
+    expect(summariseSections({ ...empty, counters }).counters).toBe(
+      'Pact 3rd 1/2 · 1st 4/4 · 2nd 1/2 · 2 more',
+    );
+  });
+
+  it('shows a warlock with nothing else as pact slots alone', () => {
+    const counters = { ...empty.counters, pactSlots: { level: 5, current: 0, total: 3 } };
+    expect(summariseSections({ ...empty, counters }).counters).toBe('Pact 5th 0/3');
   });
 
   it('shows the numbers read every session on abilities', () => {

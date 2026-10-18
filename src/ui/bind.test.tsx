@@ -66,6 +66,9 @@ describe('toSheetData', () => {
     sheet.counters.add({ name: 'Inspiration' }).setTotal(1);
     sheet.counters.spellSlots[1]?.setTotal(2);
     sheet.counters.spellSlots[1]?.setCurrent(1);
+    sheet.counters.pactSlots.setLevel(3);
+    sheet.counters.pactSlots.setTotal(2);
+    sheet.counters.pactSlots.setCurrent(1);
     sheet.abilitiesAndSkills.setProficiencyBonus(3);
     sheet.abilitiesAndSkills.setPassivePerception(14);
     sheet.abilitiesAndSkills.setSpeed(30);
@@ -191,6 +194,7 @@ describe('toSheetData', () => {
     ]);
     expect(data.counters.spellSlots).toHaveLength(9);
     expect(data.counters.spellSlots[1]).toEqual({ level: 2, current: 1, total: 2 });
+    expect(data.counters.pactSlots).toEqual({ level: 3, current: 1, total: 2 });
 
     expect(data.abilitiesAndSkills.proficiencyBonus).toBe(3);
     expect(data.abilitiesAndSkills.passivePerception).toBe(14);
@@ -291,6 +295,9 @@ describe('toSheetActions', () => {
     actions.counters.addCounter(null, { name: 'Inspiration', description: '', total: 1 });
     actions.counters.setSpellSlotTotal(2, 2);
     actions.counters.setSpellSlotCurrent(2, 1);
+    actions.counters.setPactSlotLevel(4);
+    actions.counters.setPactSlotTotal(2);
+    actions.counters.setPactSlotCurrent(1);
     actions.abilitiesAndSkills.setSpeed(30);
     actions.abilitiesAndSkills.setAbilityScore('dexterity', 17);
     actions.abilitiesAndSkills.setSavingThrowProficient('dexterity', true);
@@ -331,6 +338,7 @@ describe('toSheetActions', () => {
       total: 1,
     });
     expect(doc.counters.spellSlots['2']).toEqual({ current: 1, total: 2 });
+    expect(doc.counters.pactSlots).toEqual({ level: 4, current: 1, total: 2 });
     expect(doc.abilitiesAndSkills.speed).toBe(30);
     expect(doc.abilitiesAndSkills.abilities.dexterity).toMatchObject({
       score: 17,

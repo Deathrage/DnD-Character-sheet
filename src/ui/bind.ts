@@ -272,6 +272,11 @@ function countersView(sheet: CharacterSheetBO): CountersView {
       current: slot.current,
       total: slot.total,
     })),
+    pactSlots: {
+      level: sheet.counters.pactSlots.level,
+      current: sheet.counters.pactSlots.current,
+      total: sheet.counters.pactSlots.total,
+    },
   };
 }
 
@@ -529,6 +534,9 @@ function countersActions(sheet: CharacterSheetBO): CountersActions {
     removeCounter: (id) => counter(id).remove(),
     setSpellSlotCurrent: (level, value) => slot(level).setCurrent(value),
     setSpellSlotTotal: (level, value) => slot(level).setTotal(value),
+    setPactSlotLevel: (level) => bo.pactSlots.setLevel(level),
+    setPactSlotCurrent: (value) => bo.pactSlots.setCurrent(value),
+    setPactSlotTotal: (value) => bo.pactSlots.setTotal(value),
   };
 }
 

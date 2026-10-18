@@ -304,6 +304,7 @@ export const counters: CountersView = {
     { level: 2, current: 1, total: 2 },
     ...[3, 4, 5, 6, 7, 8, 9].map((level) => ({ level, current: 0, total: 0 })),
   ],
+  pactSlots: { level: 1, current: 0, total: 0 },
   categories: [
     {
       id: 'cc1',
@@ -393,7 +394,7 @@ export const abilitiesAndSkills: AbilitiesAndSkillsView = {
 
 export const sableJson = JSON.stringify(
   {
-    schemaVersion: 4,
+    schemaVersion: 5,
     id: '6d0b0f7e-3c41-4a2a-9f6f-2a1f0c9d8e77',
     name: 'Sable Nightwind',
     updatedAt: '2026-09-20T18:04:11.000Z',
@@ -517,6 +518,9 @@ export const noCountersActions: CountersActions = {
   removeCounter: () => {},
   setSpellSlotCurrent: () => {},
   setSpellSlotTotal: () => {},
+  setPactSlotLevel: () => {},
+  setPactSlotCurrent: () => {},
+  setPactSlotTotal: () => {},
   createCategory: () => null,
   renameCategory: () => null,
   removeCategory: () => {},

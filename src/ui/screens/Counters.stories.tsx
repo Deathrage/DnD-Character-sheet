@@ -20,6 +20,7 @@ export const Empty: Story = {
       categories: [],
       uncategorized: [],
       spellSlots: [1, 2, 3, 4, 5, 6, 7, 8, 9].map((level) => ({ level, current: 0, total: 0 })),
+      pactSlots: { level: 1, current: 0, total: 0 },
     },
   },
 };
