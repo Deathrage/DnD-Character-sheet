@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { NameResult } from '../types.js';
-import { selectAllOnFocus } from './selectOnFocus.js';
+import { useSelectOnFocus } from './selectOnFocus.js';
 
 interface Props {
   label: string;
@@ -9,8 +9,8 @@ interface Props {
   placeholder?: string;
   className?: string;
   /**
-   * Selects the whole name when the field gains focus, so typing replaces it. Opt-in: a list
-   * row's name is as often corrected as replaced, and there a tap should place the caret.
+   * Selects the whole name when a click or tap focuses the field, so typing replaces it. Opt-in:
+   * a list row's name is as often corrected as replaced, and there a tap should place the caret.
    */
   selectOnFocus?: boolean;
 }
@@ -37,6 +37,7 @@ export function NameField({
 }: Props) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const selectOnPress = useSelectOnFocus(selectOnFocus);
 
   const commit = () => {
     if (draft === null || draft === value) {
@@ -60,7 +61,7 @@ export function NameField({
           setDraft(event.target.value);
           setError(null);
         }}
-        onFocus={selectAllOnFocus(selectOnFocus)}
+        {...selectOnPress}
         onBlur={commit}
         onKeyDown={(event) => {
           if (event.key === 'Enter') commit();

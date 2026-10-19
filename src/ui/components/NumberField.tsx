@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { selectAllOnFocus } from './selectOnFocus.js';
+import { useSelectOnFocus } from './selectOnFocus.js';
 
 interface Props {
   label: string;
@@ -17,8 +17,8 @@ interface Props {
   min?: number;
   className?: string;
   /**
-   * Selects the whole value when the field gains focus, so typing replaces it. On by default,
-   * unlike `NameField`'s: a number is retyped, almost never edited a digit at a time.
+   * Selects the whole value when a click or tap focuses the field, so typing replaces it. On by
+   * default, unlike `NameField`'s: a number is retyped, almost never edited a digit at a time.
    */
   selectOnFocus?: boolean;
 }
@@ -47,6 +47,7 @@ export function NumberField({
   selectOnFocus = true,
 }: Props) {
   const [draft, setDraft] = useState<string | null>(null);
+  const selectOnPress = useSelectOnFocus(selectOnFocus);
 
   /**
    * Steps from `value`, never from the draft text. A tap is a committed number, so it starts
@@ -75,7 +76,7 @@ export function NumberField({
         const parsed = parse(text, signed);
         if (parsed !== null && (signed || parsed >= min)) onChange(parsed);
       }}
-      onFocus={selectAllOnFocus(selectOnFocus)}
+      {...selectOnPress}
       onBlur={() => setDraft(null)}
     />
   );

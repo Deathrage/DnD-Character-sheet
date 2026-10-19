@@ -30,7 +30,8 @@ export const Numbers: Story = {
         </div>
         <div className="hint" style={{ marginTop: 6 }}>
           Committed value: <b>{hp}</b>. Clear the box: the value does not change, and tabbing away
-          restores it — an empty field is a keystroke, not a zero.
+          restores it — an empty field is a keystroke, not a zero. Click into the box and the whole
+          value is selected, so typing replaces it; a second click places the caret.
         </div>
 
         <div className="sechead-row">
@@ -81,7 +82,9 @@ export const Names: Story = {
         />
         <div className="hint">
           Committed value: <b>{name}</b>. Type <code>Wizard (Evoker)</code> and blur to see a
-          rejection: the message appears and the text you typed stays put.
+          rejection: the message appears and the text you typed stays put. A click places the caret:
+          a name is selected on a click only where <code>selectOnFocus</code> is on, as on the
+          character name.
         </div>
       </div>
     );

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/react';
+import { press } from '../../test/press.js';
 import { NumberField } from './NumberField.js';
 
 /**
@@ -93,17 +94,33 @@ describe('NumberField', () => {
     expect(onChange.mock.calls).toEqual([[-3], [3]]);
   });
 
-  it('selects the whole value on focus, sign included, so typing replaces it', () => {
+  it('selects the whole value when a press focuses it, sign included, so typing replaces it', () => {
     render(<NumberField label="Initiative" value={3} onChange={() => {}} signed />);
     const input = screen.getByLabelText<HTMLInputElement>('Initiative');
-    fireEvent.focus(input);
+    press(input);
     expect([input.selectionStart, input.selectionEnd]).toEqual([0, '+3'.length]);
   });
 
-  it('selects nothing on focus when selectOnFocus is off', () => {
-    render(<NumberField label="Current" value={38} onChange={() => {}} selectOnFocus={false} />);
+  it('leaves a press on a field that already has focus to place the caret', () => {
+    render(<NumberField label="Current" value={38} onChange={() => {}} />);
+    const input = screen.getByLabelText<HTMLInputElement>('Current');
+    press(input);
+    input.setSelectionRange(1, 1);
+    press(input);
+    expect([input.selectionStart, input.selectionEnd]).toEqual([1, 1]);
+  });
+
+  it("selects nothing on focus alone: Tab is the browser's, and so is the window coming back", () => {
+    render(<NumberField label="Current" value={38} onChange={() => {}} />);
     const input = screen.getByLabelText<HTMLInputElement>('Current');
     fireEvent.focus(input);
+    expect(input.selectionStart).toBe(input.selectionEnd);
+  });
+
+  it('selects nothing when selectOnFocus is off', () => {
+    render(<NumberField label="Current" value={38} onChange={() => {}} selectOnFocus={false} />);
+    const input = screen.getByLabelText<HTMLInputElement>('Current');
+    press(input);
     expect(input.selectionStart).toBe(input.selectionEnd);
   });
 });
