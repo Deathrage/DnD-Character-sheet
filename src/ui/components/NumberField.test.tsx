@@ -92,4 +92,18 @@ describe('NumberField', () => {
 
     expect(onChange.mock.calls).toEqual([[-3], [3]]);
   });
+
+  it('selects the whole value on focus, sign included, so typing replaces it', () => {
+    render(<NumberField label="Initiative" value={3} onChange={() => {}} signed />);
+    const input = screen.getByLabelText<HTMLInputElement>('Initiative');
+    fireEvent.focus(input);
+    expect([input.selectionStart, input.selectionEnd]).toEqual([0, '+3'.length]);
+  });
+
+  it('selects nothing on focus when selectOnFocus is off', () => {
+    render(<NumberField label="Current" value={38} onChange={() => {}} selectOnFocus={false} />);
+    const input = screen.getByLabelText<HTMLInputElement>('Current');
+    fireEvent.focus(input);
+    expect(input.selectionStart).toBe(input.selectionEnd);
+  });
 });

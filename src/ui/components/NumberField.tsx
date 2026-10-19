@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { selectAllOnFocus } from './selectOnFocus.js';
 
 interface Props {
   label: string;
@@ -15,6 +16,11 @@ interface Props {
   /** The lowest value an unsigned field accepts; typed text below it never reaches `onChange`. */
   min?: number;
   className?: string;
+  /**
+   * Selects the whole value when the field gains focus, so typing replaces it. On by default,
+   * unlike `NameField`'s: a number is retyped, almost never edited a digit at a time.
+   */
+  selectOnFocus?: boolean;
 }
 
 /**
@@ -38,6 +44,7 @@ export function NumberField({
   stepper = false,
   className = 'num',
   min = 0,
+  selectOnFocus = true,
 }: Props) {
   const [draft, setDraft] = useState<string | null>(null);
 
@@ -68,6 +75,7 @@ export function NumberField({
         const parsed = parse(text, signed);
         if (parsed !== null && (signed || parsed >= min)) onChange(parsed);
       }}
+      onFocus={selectAllOnFocus(selectOnFocus)}
       onBlur={() => setDraft(null)}
     />
   );

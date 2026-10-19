@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { NameResult } from '../types.js';
+import { selectAllOnFocus } from './selectOnFocus.js';
 
 interface Props {
   label: string;
@@ -59,9 +60,7 @@ export function NameField({
           setDraft(event.target.value);
           setError(null);
         }}
-        onFocus={(event) => {
-          if (selectOnFocus) event.currentTarget.select();
-        }}
+        onFocus={selectAllOnFocus(selectOnFocus)}
         onBlur={commit}
         onKeyDown={(event) => {
           if (event.key === 'Enter') commit();
