@@ -50,6 +50,7 @@ export function VitalsHeader({ character, actions, onBack }: Props) {
               className="vname"
               value={character.name}
               onCommit={actions.renameCharacter}
+              selectOnFocus
             />
             <button
               type="button"

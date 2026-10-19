@@ -7,6 +7,11 @@ interface Props {
   onCommit(value: string): NameResult;
   placeholder?: string;
   className?: string;
+  /**
+   * Selects the whole name when the field gains focus, so typing replaces it. Opt-in: a list
+   * row's name is as often corrected as replaced, and there a tap should place the caret.
+   */
+  selectOnFocus?: boolean;
 }
 
 /**
@@ -21,7 +26,14 @@ interface Props {
  *
  * A rejected commit keeps the text, so nothing the player typed is thrown away by the error.
  */
-export function NameField({ label, value, onCommit, placeholder, className = 'inp' }: Props) {
+export function NameField({
+  label,
+  value,
+  onCommit,
+  placeholder,
+  className = 'inp',
+  selectOnFocus = false,
+}: Props) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,6 +58,9 @@ export function NameField({ label, value, onCommit, placeholder, className = 'in
         onChange={(event) => {
           setDraft(event.target.value);
           setError(null);
+        }}
+        onFocus={(event) => {
+          if (selectOnFocus) event.currentTarget.select();
         }}
         onBlur={commit}
         onKeyDown={(event) => {

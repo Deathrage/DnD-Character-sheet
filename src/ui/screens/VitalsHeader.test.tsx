@@ -22,6 +22,15 @@ function header(portrait: string | null) {
   return removePortrait;
 }
 
+describe('VitalsHeader name', () => {
+  it('selects the whole name on focus, so typing replaces it', () => {
+    header(null);
+    const name = screen.getByRole('textbox', { name: 'Character name' }) as HTMLInputElement;
+    fireEvent.focus(name);
+    expect([name.selectionStart, name.selectionEnd]).toEqual([0, sable.name.length]);
+  });
+});
+
 describe('VitalsHeader portrait', () => {
   it('opens a large view with Change and Remove', () => {
     header(PORTRAIT);
