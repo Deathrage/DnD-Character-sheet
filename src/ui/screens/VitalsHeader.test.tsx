@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/react';
+import { press } from '../../test/press.js';
 import { stubDialogElement } from '../../test/stubDialog.js';
 import { blankCharacter, noVitalsActions, sable } from '../fixtures.js';
 import { VitalsHeader } from './VitalsHeader.js';
@@ -21,6 +22,15 @@ function header(portrait: string | null) {
   );
   return removePortrait;
 }
+
+describe('VitalsHeader name', () => {
+  it('selects the whole name when a press focuses it, so typing replaces it', () => {
+    header(null);
+    const name = screen.getByRole('textbox', { name: 'Character name' }) as HTMLInputElement;
+    press(name);
+    expect([name.selectionStart, name.selectionEnd]).toEqual([0, sable.name.length]);
+  });
+});
 
 describe('VitalsHeader portrait', () => {
   it('opens a large view with Change and Remove', () => {

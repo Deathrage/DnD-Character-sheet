@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { NameResult } from '../types.js';
+import { useSelectOnFocus } from './selectOnFocus.js';
 
 interface Props {
   label: string;
@@ -7,6 +8,11 @@ interface Props {
   onCommit(value: string): NameResult;
   placeholder?: string;
   className?: string;
+  /**
+   * Selects the whole name when a click or tap focuses the field, so typing replaces it. Opt-in:
+   * a list row's name is as often corrected as replaced, and there a tap should place the caret.
+   */
+  selectOnFocus?: boolean;
 }
 
 /**
@@ -21,9 +27,17 @@ interface Props {
  *
  * A rejected commit keeps the text, so nothing the player typed is thrown away by the error.
  */
-export function NameField({ label, value, onCommit, placeholder, className = 'inp' }: Props) {
+export function NameField({
+  label,
+  value,
+  onCommit,
+  placeholder,
+  className = 'inp',
+  selectOnFocus = false,
+}: Props) {
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const selectOnPress = useSelectOnFocus(selectOnFocus);
 
   const commit = () => {
     if (draft === null || draft === value) {
@@ -49,6 +63,7 @@ export function NameField({ label, value, onCommit, placeholder, className = 'in
           setDraft(event.target.value);
           setError(null);
         }}
+        {...selectOnPress}
         onBlur={commit}
         onKeyDown={(event) => {
           if (event.key === 'Enter') commit();
