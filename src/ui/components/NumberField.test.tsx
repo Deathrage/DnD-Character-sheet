@@ -94,6 +94,19 @@ describe('NumberField', () => {
     expect(onChange.mock.calls).toEqual([[-3], [3]]);
   });
 
+  it('turns autofill off, signed or not', () => {
+    // Both, because they differ in `inputMode`, and the signed one is where it was seen.
+    render(
+      <>
+        <NumberField label="Score" value={10} onChange={() => {}} />
+        <NumberField label="Modifier" value={0} onChange={() => {}} signed />
+      </>,
+    );
+
+    expect(screen.getByLabelText('Score').getAttribute('autocomplete')).toBe('off');
+    expect(screen.getByLabelText('Modifier').getAttribute('autocomplete')).toBe('off');
+  });
+
   it('selects the whole value when a press focuses it, sign included, so typing replaces it', () => {
     render(<NumberField label="Initiative" value={3} onChange={() => {}} signed />);
     const input = screen.getByLabelText<HTMLInputElement>('Initiative');

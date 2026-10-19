@@ -54,6 +54,8 @@ export function NameField({
     <span className="nameField">
       <input
         className={className}
+        // Chrome's autofill bar, as in `NumberField`: a spell or a class is not an address.
+        autoComplete="off"
         aria-label={label}
         placeholder={placeholder}
         value={draft ?? value}

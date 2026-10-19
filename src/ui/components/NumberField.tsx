@@ -68,6 +68,9 @@ export function NumberField({
       // anything it considers invalid — which is exactly the draft text this component exists
       // to keep hold of.
       inputMode={signed ? 'text' : 'numeric'}
+      // Chrome on Android otherwise puts its autofill bar — saved passwords, cards, addresses —
+      // above the keyboard on every field, and nothing on a character sheet is one of those.
+      autoComplete="off"
       aria-label={label}
       value={draft ?? format(value, signed)}
       onChange={(event) => {
