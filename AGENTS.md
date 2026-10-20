@@ -221,8 +221,8 @@ back on the next load (criterion 14).
     count.
   - **Stackable first**, like the attack's ability. `WeaponBO.setStackable(true)` creates the
     count at 0 and keeps one already there; `false` clears it. `setCount` checks the number
-    first, then throws `NOT_STACKABLE` on a weapon with no count. `stackable` is a derived
-    getter.
+    first, then throws `NOT_STACKABLE` on a weapon with no count. There is no `stackable`
+    getter: a caller reads `count !== null`, as it reads `attack === null`.
   - **`migrateV5ToV6`** gives every weapon `count: null` and reads nothing else. `v5DocFor`
     carries the bait: a weapon "Javelins" described as "5 javelins" and an inventory item
     "Javelins" counting 5. A migration that read either would show.

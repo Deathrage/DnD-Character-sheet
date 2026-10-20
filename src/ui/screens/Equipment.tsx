@@ -58,8 +58,9 @@ export function Equipment({ characterId, data, actions, onClose }: Props) {
       : undefined;
 
   const row = (item: EquipmentItemView) => {
-    const attack = isWeapon(item) ? item.attack : null;
-    const count = isWeapon(item) ? item.count : null;
+    const weapon = isWeapon(item) ? item : null;
+    const attack = weapon?.attack ?? null;
+    const count = weapon?.count ?? null;
     return (
       <ItemRow
         key={item.id}
@@ -240,7 +241,7 @@ function NewEquipmentDialog({
   const [attuned, setAttuned] = useState(false);
   const [equipped, setEquipped] = useState(false);
   const [attack, setAttack] = useState<WeaponAttackView | null>(null);
-  // Mirrors `WeaponBO.setStackable`: ticking starts at 0, unticking forgets the count.
+  // Ticking starts at 0, unticking forgets the count, as `WeaponBO.setStackable` does.
   const [count, setCount] = useState<number | null>(null);
 
   // Mirrors `WeaponBO.setAttackAbility`: a first pick starts at +0 with no damage, a change keeps
@@ -289,7 +290,7 @@ function NewEquipmentDialog({
       {weapon && (
         <StackFields
           count={count}
-          onStackable={(stackable) => setCount(stackable ? (count ?? 0) : null)}
+          onStackable={(stackable) => setCount(stackable ? 0 : null)}
           onCount={setCount}
         />
       )}

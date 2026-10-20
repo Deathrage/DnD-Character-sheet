@@ -371,7 +371,8 @@ describe('toSheetActions', () => {
     expect(sheet.toDocument().equipment.weapons[0]?.attack).toBeNull();
   });
 
-  it('makes a weapon stackable and not, through its actions', () => {
+  // The by-id test below ticks Stackable and sets a count; this is the untick it does not do.
+  it('makes a weapon not stackable again through its action', () => {
     const sheet = newSheet();
     const actions = toSheetActions(sheet);
     actions.equipment.addWeapon({
@@ -385,9 +386,6 @@ describe('toSheetActions', () => {
     const id = toSheetData(sheet).equipment.weapons[0]?.id ?? '';
 
     actions.equipment.setWeaponStackable(id, true);
-    expect(toSheetData(sheet).equipment.weapons[0]?.count).toBe(0);
-    actions.equipment.setWeaponCount(id, 6);
-    expect(toSheetData(sheet).equipment.weapons[0]?.count).toBe(6);
     actions.equipment.setWeaponStackable(id, false);
     expect(sheet.toDocument().equipment.weapons[0]?.count).toBeNull();
   });

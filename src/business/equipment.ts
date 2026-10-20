@@ -176,18 +176,12 @@ export class WeaponBO extends EquipmentItemBO<WeaponData> {
     return this.node.count;
   }
 
-  /** Derived, never stored: a weapon is stackable exactly when it has a count. */
-  get stackable(): boolean {
-    return this.node.count !== null;
-  }
-
   /**
    * On creates the count at 0; a weapon that already has one keeps it. Off clears it, with no
    * confirmation, as clearing the attack ability does.
    */
   setStackable(value: boolean): void {
-    if (!value) this.node.count = null;
-    else if (this.node.count === null) this.node.count = 0;
+    this.node.count = value ? (this.node.count ?? 0) : null;
   }
 
   /** The value is checked first, so a bad number reads as that even when not stackable. */

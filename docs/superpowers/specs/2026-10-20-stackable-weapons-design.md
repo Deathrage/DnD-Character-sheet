@@ -166,7 +166,12 @@ inventory item.
 
 ## 8. Deviations
 
-The build matches this design except for one detail of §6.
+The build matches this design except for one detail of §4 and one of §6.
+
+- **`WeaponBO` has no `stackable` getter.** §4 listed one. It was built, then removed in the
+  cleanup pass, because only tests read it: the UI asks `count !== null` itself, and the attack
+  has no `hasAttack` getter either. One definition of "stackable" is the count, with no second
+  one to disagree with it.
 
 - **The dev seed's stackable weapon is a Dagger, not Javelins.** The seed already had a weapon
   named `Dagger (x2)`: a count written into the name because there was nowhere else to put it.
