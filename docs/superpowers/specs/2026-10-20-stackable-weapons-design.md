@@ -6,7 +6,7 @@ count, kept on the weapon row the way an inventory item keeps its count. The pla
 computes none of it (AGENTS.md, "What this is"): throwing a javelin decrements nothing, and a
 description such as "5 javelins" is never read. Needs character schema v6.
 
-Status: **approved 2026-10-20**, to be built from `docs/superpowers/plans/2026-10-20-stackable-weapons.md`.
+Status: **built 2026-10-20** on branch `ccr-42a01b68-ir3yil`, from `docs/superpowers/plans/2026-10-20-stackable-weapons.md`.
 
 ## 1. Decisions
 
@@ -163,3 +163,13 @@ Every new test is broken on purpose once to prove it bites (AGENTS.md, "Traps").
 
 A count on other equipment, decrementing on an attack, and linking a weapon's count to an
 inventory item.
+
+## 8. Deviations
+
+The build matches this design except for one detail of §6.
+
+- **The dev seed's stackable weapon is a Dagger, not Javelins.** The seed already had a weapon
+  named `Dagger (x2)`: a count written into the name because there was nowhere else to put it.
+  It is now `Dagger` with a count of 2, which shows the feature doing the job that name was
+  doing, without adding a fourth weapon to Sable. The story fixtures in `src/ui/fixtures.ts` do
+  the same.

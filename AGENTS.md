@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 1783 tests across 83 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 2044 tests across 87 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -211,6 +211,36 @@ back on the next load (criterion 14).
     - the dialog's hint, `Set slots per level. 0 hides the level.`, sits under the Spell slots
       switch at `.hint`'s default 10px margin, with the first level's hairline just below it
       (`.setup-row:first-of-type` counts the hint, a `div` too, so that row keeps its top border)
+- **Schema v6: stackable weapons** (2026-10-20). v5 was on `main`, so frozen.
+  `docs/superpowers/specs/2026-10-20-stackable-weapons-design.md` is the design and
+  `docs/superpowers/plans/2026-10-20-stackable-weapons.md` the plan it was built from.
+  - **What v6 adds.** `equipment.weapons[].count`, `number | null`: how many of a weapon the
+    player carries (javelins, daggers, darts). It is a required key, last in the weapon. `null`
+    means not stackable and 0 means a stack with none left. Nothing stores "stackable": it is
+    `count !== null`, so the two cannot disagree (the user's design). Other equipment has no
+    count.
+  - **Stackable first**, like the attack's ability. `WeaponBO.setStackable(true)` creates the
+    count at 0 and keeps one already there; `false` clears it. `setCount` checks the number
+    first, then throws `NOT_STACKABLE` on a weapon with no count. `stackable` is a derived
+    getter.
+  - **`migrateV5ToV6`** gives every weapon `count: null` and reads nothing else. `v5DocFor`
+    carries the bait: a weapon "Javelins" described as "5 javelins" and an inventory item
+    "Javelins" counting 5. A migration that read either would show.
+  - **UI.** A stackable weapon's row shows its count as an editable field, inventory's
+    `num qty`, between the name and the attack badge, so the badge keeps the far right.
+    Both weapon dialogs have a **Stackable** checkbox directly under the name, with **Count**
+    beside it while ticked. Unticking clears the count with no confirmation. The row order, the
+    dialog placement and the lack of a confirmation were all the user's choices. `.stackrow` is
+    41px tall either way, the count field's height, so ticking moves nothing below it.
+  - **Verified in Chromium** on a fresh dev seed, at 360px, 320px light and dark, and 360px
+    dark:
+    - Stackable on the Rapier shows Count at 0. 5 survives a reload, and so does a 3 typed into
+      the row. Unticking removes the field from the dialog and the row, and that survives a
+      reload too.
+    - a new stackable weapon with a long name, a count and an attack: the name ellipsises at
+      161px of a 288px row at 320px, and neither the page nor the dialog scrolls sideways
+    - a v5 document put straight into IndexedDB is listed undamaged and reads back as v6, with
+      `count: null` last on every weapon: the list wrote it back
 - The storage-layer work the followups doc called the sharpest risk is done: `createIndexedDbRepository`
   takes an injectable `registry` and `openDb`, reports `blocked`, `blocking` and `terminated`
   through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
@@ -413,8 +443,8 @@ were arrived at _after_ getting them wrong once.
 
 Each version owns a self-contained directory under `src/data/schema/`. **Nothing is shared between
 versions.** `v2/` began as a literal copy of `v1/` and diverged (2026-09-26), `v3/` began as a
-copy of `v2/` the same day, `v4/` as a copy of `v3/` on 2026-09-27, and `v5/` as a copy of `v4/`
-on 2026-10-18.
+copy of `v2/` the same day, `v4/` as a copy of `v3/` on 2026-09-27, `v5/` as a copy of `v4/`
+on 2026-10-18, and `v6/` as a copy of `v5/` on 2026-10-20.
 
 Do not "DRY this up" by extracting shared primitives or a shared base schema. The duplication _is_
 the isolation mechanism. The migration loop validates a document _at its own version_, so a
@@ -530,8 +560,8 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
   hitDices.ts          HitDicesBO / HitDieBO, keyed by die size — no id, the size is the identity
   journalAndNotes.ts   JournalAndNotesBO / JournalDayBO — append or delete-the-newest-day only
   inventory.ts         InventoryBO / CoinsBO / InventoryItemBO
-  equipment.ts         EquipmentBO / EquipmentItemBO / WeaponBO (the attack roll, ability first),
-                       plus derived (never stored) attuned/equipped
+  equipment.ts         EquipmentBO / EquipmentItemBO / WeaponBO (the attack roll, ability first;
+                       the count, stackable first), plus derived (never stored) attuned/equipped
   categorized.ts       CategorizedBO / CategoryBO / CategorizedItemBO, shared by the three below
   featsAndTraits.ts    FeatBO, over categorized.ts
   spellList.ts         SpellListBO / SpellBO, over categorized.ts plus spellcasting
@@ -570,11 +600,13 @@ src/data/schema/       index.ts is the public face; README.md governs versioning
   v2/                  frozen: v1 plus weapon attacks and spellcasting
   v3/                  frozen: v2 plus the initiative bonus
   v4/                  frozen: v3 plus death saves
-  v5/                  current: v4 plus pact slots; blank lives here now
+  v5/                  frozen: v4 plus pact slots
+  v6/                  current: v5 plus weapon counts; blank lives here now
 src/data/migration/    versionOf, versioned.ts (parseVersioned, the generic validate-migrate walk
                        shared by `schemaVersion` and `layoutVersion`), parseCharacter (now a thin
                        wrapper over it), the LoadError taxonomy, v1ToV2.ts, v2ToV3.ts,
-                       v3ToV4.ts and v4ToV5.ts (the migrations, registered in migrations.ts)
+                       v3ToV4.ts, v4ToV5.ts and v5ToV6.ts (the migrations, registered in
+                       migrations.ts)
 src/data/serialization/ export and import (three-outcome ParseTextResult)
 src/data/repository/   the IndexedDB repository (characters + portraits stores), ListEntry, summarize,
                        portrait.ts — the portrait rule
@@ -588,7 +620,7 @@ src/data/remote/       types.ts (CloudRepository and its shapes), codec.ts, clou
                        index.ts — the only entry point (lint-enforced), parsed by parseVersioned
 src/data/characterLifecycle.test.ts   end-to-end across all four modules
 src/test/              fake-indexeddb setup
-src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, v1DocFor, v2DocFor, v3DocFor, v4DocFor,
+src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, v1DocFor, v2DocFor, v3DocFor, v4DocFor, v5DocFor,
                        wipe, createOpener, putRaw — shared so the data-layer test files stop each defining their own
 ```
 
