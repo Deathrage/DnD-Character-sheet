@@ -381,11 +381,10 @@ describe('toSheetActions', () => {
       attuned: false,
       equipped: false,
       attack: null,
-      count: null,
+      count: 4,
     });
     const id = toSheetData(sheet).equipment.weapons[0]?.id ?? '';
 
-    actions.equipment.setWeaponStackable(id, true);
     actions.equipment.setWeaponStackable(id, false);
     expect(sheet.toDocument().equipment.weapons[0]?.count).toBeNull();
   });

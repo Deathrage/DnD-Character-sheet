@@ -2591,8 +2591,9 @@ button:not(:disabled):active {
   gap: 28px;
 }
 /* Stackable, and its count beside it while ticked, under a weapon's name (stackable weapons spec
-   §5). The row reserves the field's height either way, so ticking does not push the dialog down:
-   one value sets both, so a change to `.inp` cannot make them disagree. */
+   §5). The row reserves the field's height either way, so ticking does not push the dialog down.
+   One value sets both, so the two cannot disagree; it is `.inp.stat`'s natural height, so a change
+   to `.inp`'s padding or type size wants it revisited, or Count will differ from Attack bonus. */
 .stackrow {
   --count-height: 41px;
   display: flex;

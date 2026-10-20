@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 2044 tests across 87 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 2045 tests across 87 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -232,8 +232,11 @@ back on the next load (criterion 14).
     beside it while ticked. Unticking clears the count with no confirmation. The row order, the
     dialog placement and the lack of a confirmation were all the user's choices. `.stackrow` is
     41px tall either way, the count field's height, so ticking moves nothing below it.
-  - **Verified in Chromium** on a fresh dev seed, at 360px, 320px light and dark, and 360px
-    dark:
+  - **Tests.** `characterLifecycle.test.ts` carries a weapon at count 0 through export, import,
+    save, list and get, as v4 and v5 put their fields there: 0, because a hop that reads it as "no
+    count" is the likeliest slip, and the Equipment row has its own count-0 test for the same
+    reason.
+  - **Verified in Chromium** on a fresh dev seed, at 360px and 320px, light and dark:
     - Stackable on the Rapier shows Count at 0. 5 survives a reload, and so does a 3 typed into
       the row. Unticking removes the field from the dialog and the row, and that survives a
       reload too.

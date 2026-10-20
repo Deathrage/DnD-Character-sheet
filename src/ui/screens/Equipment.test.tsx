@@ -191,6 +191,22 @@ describe('weapon count', () => {
     expect(actions.setWeaponCount).toHaveBeenCalledWith('e3', 1);
   });
 
+  // 0 is "none left", which is still a stack: the row keeps its field rather than reading 0 as
+  // "no count".
+  it('keeps the count on the row at 0', () => {
+    const spent = { ...equipment.weapons[2]!, count: 0 };
+    render(
+      <Equipment
+        characterId="c"
+        data={{ ...equipment, weapons: [spent], attuned: [], equipped: [] }}
+        actions={noEquipmentActions}
+        onClose={() => {}}
+      />,
+    );
+    const count = within(rowOf('Dagger')).getByLabelText('Dagger count') as HTMLInputElement;
+    expect(count.value).toBe('0');
+  });
+
   it('opens the edit dialog with Stackable ticked and the count beside it', () => {
     renderWith(noEquipmentActions);
     open('Dagger');

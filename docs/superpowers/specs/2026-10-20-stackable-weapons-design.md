@@ -61,7 +61,7 @@ outside the version directories that a bump touches.
 get count(): number | null
 
 /** Derived, never stored: a weapon is stackable exactly when it has a count. */
-get stackable(): boolean
+get stackable(): boolean   // not built: removed in the cleanup pass, see §8
 
 /** On creates the count at 0, or keeps the one there is; off clears it. */
 setStackable(value: boolean): void
