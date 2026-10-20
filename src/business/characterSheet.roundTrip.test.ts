@@ -32,6 +32,9 @@ function fill(sheet: CharacterSheetBO): void {
   rapier.setAttackAbility('dexterity');
   rapier.setAttackBonus(6);
   rapier.setAttackDamage('1d8+3 piercing');
+  const javelin = sheet.equipment.addWeapon({ name: 'Javelin' });
+  javelin.setStackable(true);
+  javelin.setCount(5);
   sheet.equipment.addOther({ name: 'Cloak', attuned: true });
   sheet.featsAndTraits.createCategory('Combat').add({ name: 'Sneak Attack' });
   sheet.featsAndTraits.add({ name: 'Darkvision' });

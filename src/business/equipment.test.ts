@@ -233,4 +233,73 @@ describe('WeaponBO', () => {
     expect(sheet.equipment.equipped[0]).toBeInstanceOf(WeaponBO);
     expect(sheet.equipment.attuned[0]).toBeInstanceOf(WeaponBO);
   });
+
+  it('starts with no count: not stackable', () => {
+    const javelin = sheetFor().equipment.addWeapon({ name: 'Javelin' });
+    expect([javelin.count, javelin.stackable]).toEqual([null, false]);
+  });
+
+  it('creates the count at 0 when made stackable, and keeps a count it already has', () => {
+    const sheet = sheetFor();
+    const javelin = sheet.equipment.addWeapon({ name: 'Javelin' });
+    javelin.setStackable(true);
+    expect([javelin.count, javelin.stackable]).toEqual([0, true]);
+    javelin.setCount(4);
+    javelin.setStackable(true);
+    expect(javelin.count).toBe(4);
+    expect(sheet.toDocument().equipment.weapons[0]?.count).toBe(4);
+  });
+
+  it('clears the count when made not stackable', () => {
+    const sheet = sheetFor();
+    const javelin = sheet.equipment.addWeapon({ name: 'Javelin', count: 4 });
+    javelin.setStackable(false);
+    expect([javelin.count, javelin.stackable]).toEqual([null, false]);
+    expect(sheet.toDocument().equipment.weapons[0]?.count).toBeNull();
+  });
+
+  // 0 is "none left", which is still a stack: only null is "not stackable".
+  it('stays stackable at a count of 0', () => {
+    const javelin = sheetFor().equipment.addWeapon({ name: 'Javelin', count: 1 });
+    javelin.setCount(0);
+    expect([javelin.count, javelin.stackable]).toEqual([0, true]);
+  });
+
+  it('refuses a count on a weapon that is not stackable (NOT_STACKABLE)', () => {
+    const javelin = sheetFor().equipment.addWeapon({ name: 'Javelin' });
+    expect(code(() => javelin.setCount(3))).toBe('NOT_STACKABLE');
+    expect(javelin.count).toBeNull();
+  });
+
+  it.each([
+    [-1, 'NEGATIVE'],
+    [1.5, 'NOT_AN_INTEGER'],
+  ])('reports a count of %j as %s, even on a weapon that is not stackable', (value, expected) => {
+    const sheet = sheetFor();
+    const stackable = sheet.equipment.addWeapon({ name: 'Javelin', count: 2 });
+    const single = sheet.equipment.addWeapon({ name: 'Rapier' });
+    expect(code(() => stackable.setCount(value))).toBe(expected);
+    expect(code(() => single.setCount(value))).toBe(expected);
+    expect(stackable.count).toBe(2);
+  });
+
+  it('adds a weapon with a count, last in the stored weapon', () => {
+    const sheet = sheetFor();
+    sheet.equipment.addWeapon({ name: 'Javelin', count: 5 });
+    const stored = sheet.toDocument().equipment.weapons[0]!;
+    expect(stored.count).toBe(5);
+    expect(Object.keys(stored).at(-1)).toBe('count');
+  });
+
+  it('adds nothing when the new count is invalid', () => {
+    const sheet = sheetFor();
+    expect(code(() => sheet.equipment.addWeapon({ name: 'Javelin', count: -1 }))).toBe('NEGATIVE');
+    expect(sheet.equipment.weapons).toEqual([]);
+  });
+
+  it('never gives other equipment a count key', () => {
+    const sheet = sheetFor();
+    sheet.equipment.addOther({ name: 'Cloak' });
+    expect(sheet.toDocument().equipment.other[0]).not.toHaveProperty('count');
+  });
 });

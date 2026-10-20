@@ -19,6 +19,7 @@ export type RuleCode =
   | 'UNKNOWN_ABILITY'
   | 'DUPLICATE_SPELLCASTING'
   | 'NO_ATTACK'
+  | 'NOT_STACKABLE'
   | 'GONE';
 
 export class RuleViolation extends Error {
