@@ -29,6 +29,18 @@ describe('the character lifecycle, end to end across the data layer', () => {
     };
     // A non-blank pact entry, so a hop that drops or defaults it fails the toEqual assertions.
     created.counters.pactSlots = { level: 3, current: 1, total: 2 };
+    // A stackable weapon with none left: 0, not null, so a hop that reads 0 as "no count" fails.
+    created.equipment.weapons = [
+      {
+        id: '5a5a5a5a-5a5a-4a5a-8a5a-5a5a5a5a5a5a',
+        name: 'Javelin',
+        description: '',
+        attuned: false,
+        equipped: false,
+        attack: null,
+        count: 0,
+      },
+    ];
     // Deliberate leading and trailing whitespace in the longText fields, which permit it (only
     // names reject padding). A `.trim()`/`.transform()` added to a primitive later would alter
     // this VALID document somewhere along the chain, and the toEqual assertions below would

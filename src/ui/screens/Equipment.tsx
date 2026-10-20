@@ -58,7 +58,9 @@ export function Equipment({ characterId, data, actions, onClose }: Props) {
       : undefined;
 
   const row = (item: EquipmentItemView) => {
-    const attack = isWeapon(item) ? item.attack : null;
+    const weapon = isWeapon(item) ? item : null;
+    const attack = weapon?.attack ?? null;
+    const count = weapon?.count ?? null;
     return (
       <ItemRow
         key={item.id}
@@ -67,14 +69,27 @@ export function Equipment({ characterId, data, actions, onClose }: Props) {
         lead={attack?.damage ?? ''}
         onOpen={() => setDialog({ kind: 'edit', id: item.id })}
         after={
-          attack !== null && (
-            // Short and fixed-width, so it never squeezes the name; the damage goes in the
-            // preview line, which cuts off long text (spec §5.2).
-            <span className="atk">
-              <span className="ab">{abilityOf(attack.ability).short}</span>
-              <span className="b">{formatSigned(attack.attackBonus)}</span>
-            </span>
-          )
+          <>
+            {count !== null && (
+              // Editable on the row, as an inventory item's count is: it is what changes when a
+              // javelin is thrown, and opening a dialog per throw is friction per use. Before the
+              // attack, so the attack keeps the far right whether or not there is a count.
+              <NumberField
+                label={`${item.name} count`}
+                className="num qty"
+                value={count}
+                onChange={(value) => actions.setWeaponCount(item.id, value)}
+              />
+            )}
+            {attack !== null && (
+              // Short and fixed-width, so it never squeezes the name; the damage goes in the
+              // preview line, which cuts off long text (spec §5.2).
+              <span className="atk">
+                <span className="ab">{abilityOf(attack.ability).short}</span>
+                <span className="b">{formatSigned(attack.attackBonus)}</span>
+              </span>
+            )}
+          </>
         }
       />
     );
@@ -182,6 +197,35 @@ function AttackFields({
   );
 }
 
+/**
+ * Stackable and, while it is ticked, the count — directly under the name in both weapon dialogs
+ * (stackable weapons spec §5). Stackable is not stored anywhere: it is `count !== null`. Unticking
+ * clears the count with no confirmation, as picking None clears the attack.
+ */
+function StackFields({
+  count,
+  onStackable,
+  onCount,
+}: {
+  count: number | null;
+  onStackable(stackable: boolean): void;
+  onCount(count: number): void;
+}) {
+  return (
+    <div className="stackrow">
+      <CheckRow label="Stackable" checked={count !== null} onChange={onStackable} />
+      {count !== null && (
+        <span className="stackcount">
+          <span className="dlabel" aria-hidden="true">
+            Count
+          </span>
+          <NumberField label="Count" className="inp stat" value={count} onChange={onCount} />
+        </span>
+      )}
+    </div>
+  );
+}
+
 function NewEquipmentDialog({
   slot,
   actions,
@@ -197,6 +241,8 @@ function NewEquipmentDialog({
   const [attuned, setAttuned] = useState(false);
   const [equipped, setEquipped] = useState(false);
   const [attack, setAttack] = useState<WeaponAttackView | null>(null);
+  // Ticking starts at 0, unticking forgets the count, as `WeaponBO.setStackable` does.
+  const [count, setCount] = useState<number | null>(null);
 
   // Mirrors `WeaponBO.setAttackAbility`: a first pick starts at +0 with no damage, a change keeps
   // both, and None clears them — so the dialog behaves exactly like editing afterwards.
@@ -213,6 +259,7 @@ function NewEquipmentDialog({
       actions.addWeapon({
         ...item,
         attack: attack === null ? null : { ...attack, damage: attack.damage.trim() },
+        count,
       });
     } else {
       actions.addOther(item);
@@ -240,6 +287,13 @@ function NewEquipmentDialog({
         value={name}
         onChange={(event) => setName(event.target.value)}
       />
+      {weapon && (
+        <StackFields
+          count={count}
+          onStackable={(stackable) => setCount(stackable ? 0 : null)}
+          onCount={setCount}
+        />
+      )}
       {weapon && (
         <AttackFields
           attack={attack}
@@ -320,6 +374,13 @@ function EditEquipmentDialog({
         value={item.name}
         onCommit={(name) => actions.renameEquipment(item.id, name)}
       />
+      {weapon && (
+        <StackFields
+          count={weapon.count}
+          onStackable={(stackable) => actions.setWeaponStackable(weapon.id, stackable)}
+          onCount={(value) => actions.setWeaponCount(weapon.id, value)}
+        />
+      )}
       {weapon && (
         <AttackFields
           attack={weapon.attack}

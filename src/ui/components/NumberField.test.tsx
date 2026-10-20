@@ -23,6 +23,58 @@ describe('NumberField', () => {
     expect(onChange.mock.calls).toEqual([[4], [45]]);
   });
 
+  // `/^\d+$/` matches any run of digits, and `Number` rounds a long one to an integer the schema
+  // cannot store. The setter refuses it, so it must not get there on a keystroke.
+  it('does not call onChange for a whole number too large to store', () => {
+    const onChange = vi.fn();
+    render(<NumberField label="Gold" value={84} onChange={onChange} />);
+    const input = screen.getByLabelText<HTMLInputElement>('Gold');
+
+    fireEvent.change(input, { target: { value: String(Number.MAX_SAFE_INTEGER) } });
+    fireEvent.change(input, { target: { value: '12345678901234567890' } });
+    expect(onChange.mock.calls).toEqual([[Number.MAX_SAFE_INTEGER]]);
+    // The typed text stays, as half-typed text does, until blur shows the stored value.
+    expect(input.value).toBe('12345678901234567890');
+  });
+
+  it('does not call onChange for a signed number too large to store either way', () => {
+    const onChange = vi.fn();
+    render(<NumberField label="Modifier" value={0} onChange={onChange} signed />);
+    const input = screen.getByLabelText('Modifier');
+
+    fireEvent.change(input, { target: { value: '-12345678901234567890' } });
+    fireEvent.change(input, { target: { value: '+12345678901234567890' } });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('cannot step past the largest integer it can store', () => {
+    const onChange = vi.fn();
+    render(
+      <NumberField label="Current" value={Number.MAX_SAFE_INTEGER} onChange={onChange} stepper />,
+    );
+
+    expect(screen.getByLabelText<HTMLButtonElement>('Increase Current').disabled).toBe(true);
+    fireEvent.click(screen.getByLabelText('Increase Current'));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('cannot step a signed field past the smallest integer it can store', () => {
+    const onChange = vi.fn();
+    render(
+      <NumberField
+        label="Modifier"
+        value={-Number.MAX_SAFE_INTEGER}
+        onChange={onChange}
+        signed
+        stepper
+      />,
+    );
+
+    expect(screen.getByLabelText<HTMLButtonElement>('Decrease Modifier').disabled).toBe(true);
+    fireEvent.click(screen.getByLabelText('Decrease Modifier'));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('shows the draft while typing, and the stored value again after blur', () => {
     // The parent ignores onChange, so `value` stays 38 — which is what a rejected or
     // uncommitted edit looks like from the field's point of view.

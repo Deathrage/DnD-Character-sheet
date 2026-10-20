@@ -1,7 +1,14 @@
 import type { AbilityKey } from './abilitiesAndSkills.js';
 import { createId } from './createId.js';
 import { RuleViolation } from './errors.js';
-import { abilityKey, damageText, integer, longText, trimmedName } from './guards.js';
+import {
+  abilityKey,
+  damageText,
+  integer,
+  longText,
+  nonNegativeInt,
+  trimmedName,
+} from './guards.js';
 import { NamedItemBO } from './namedItem.js';
 import { pushAndRead } from './observableList.js';
 import type { EquipmentItemData, WeaponAttackData, WeaponData } from './types.js';
@@ -23,6 +30,8 @@ export interface WeaponAttack {
 export interface NewWeapon extends NewEquipmentItem {
   /** Absent or `null`: no attack roll entered yet. */
   attack?: WeaponAttack | null;
+  /** Absent or `null`: not stackable. */
+  count?: number | null;
 }
 
 export class EquipmentBO {
@@ -42,10 +51,15 @@ export class EquipmentBO {
     return this.#other.map((node) => new EquipmentItemBO(node, this.#other));
   }
 
-  addWeapon({ attack = null, ...init }: NewWeapon): WeaponBO {
-    // Checked before anything is pushed, so a bad attack leaves no half-made weapon behind.
-    const checked = attack === null ? null : weaponAttack(attack);
-    const node = pushAndRead(this.#weapons, { ...equipmentNode(init), attack: checked });
+  addWeapon({ attack = null, count = null, ...init }: NewWeapon): WeaponBO {
+    // Checked before anything is pushed, so a bad attack or count leaves no half-made weapon.
+    const checkedAttack = attack === null ? null : weaponAttack(attack);
+    const checkedCount = count === null ? null : nonNegativeInt(count);
+    const node = pushAndRead(this.#weapons, {
+      ...equipmentNode(init),
+      attack: checkedAttack,
+      count: checkedCount,
+    });
     return new WeaponBO(node, this.#weapons);
   }
 
@@ -120,6 +134,9 @@ export class EquipmentItemBO<
  * A weapon carries the attack roll the player enters — the ability, the bonus, the damage — and
  * the app checks none of it against anything. Choosing an ability is what creates the attack, so
  * nothing else can be set before one is chosen, and clearing the ability clears the rest.
+ *
+ * It may also carry a count, for a weapon the player has several of. The count works the same
+ * way: making the weapon stackable creates it, and only then can it be set.
  */
 export class WeaponBO extends EquipmentItemBO<WeaponData> {
   /** `null` when no attack roll has been entered. A copy: the stored object never leaves. */
@@ -152,6 +169,28 @@ export class WeaponBO extends EquipmentItemBO<WeaponData> {
   setAttackDamage(value: string): void {
     const damage = damageText(value);
     this.#requireAttack().damage = damage;
+  }
+
+  /** `null` when the weapon is not stackable; 0 is a stackable weapon with none left. */
+  get count(): number | null {
+    return this.node.count;
+  }
+
+  /**
+   * On creates the count at 0; a weapon that already has one keeps it. Off clears it, with no
+   * confirmation, as clearing the attack ability does.
+   */
+  setStackable(value: boolean): void {
+    this.node.count = value ? (this.node.count ?? 0) : null;
+  }
+
+  /** The value is checked first, so a bad number reads as that even when not stackable. */
+  setCount(value: number): void {
+    const count = nonNegativeInt(value);
+    if (this.node.count === null) {
+      throw new RuleViolation('NOT_STACKABLE', `make ${this.name} stackable first`);
+    }
+    this.node.count = count;
   }
 
   #requireAttack(): WeaponAttackData {

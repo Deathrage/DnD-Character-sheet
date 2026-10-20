@@ -83,6 +83,25 @@ describe('integer', () => {
       expect.objectContaining({ code: 'NOT_AN_INTEGER' }) as Error,
     );
   });
+
+  // Zod 4's `.int()` accepts safe integers only, so these are the edges the schema draws.
+  it.each([Number.MAX_SAFE_INTEGER, -Number.MAX_SAFE_INTEGER])(
+    'accepts %j, the safe edge',
+    (value) => {
+      expect(integer(value)).toBe(value);
+    },
+  );
+
+  // Integers all, so NOT_AN_INTEGER would be false of them; stored, they would make the document
+  // one the schema rejects, and autosave refuses the whole character.
+  it.each([Number.MAX_SAFE_INTEGER + 1, -Number.MAX_SAFE_INTEGER - 1, 1e19, -1e19])(
+    'rejects %j as UNSAFE_INTEGER',
+    (value) => {
+      expect(() => integer(value)).toThrow(
+        expect.objectContaining({ code: 'UNSAFE_INTEGER' }) as Error,
+      );
+    },
+  );
 });
 
 describe('nonNegativeInt', () => {
@@ -99,6 +118,12 @@ describe('nonNegativeInt', () => {
   it('rejects a non-integer as NOT_AN_INTEGER, so the codes stay distinguishable', () => {
     expect(() => nonNegativeInt(1.5)).toThrow(
       expect.objectContaining({ code: 'NOT_AN_INTEGER' }) as Error,
+    );
+  });
+
+  it('rejects a negative unsafe integer as UNSAFE_INTEGER, the check that comes first', () => {
+    expect(() => nonNegativeInt(-1e19)).toThrow(
+      expect.objectContaining({ code: 'UNSAFE_INTEGER' }) as Error,
     );
   });
 

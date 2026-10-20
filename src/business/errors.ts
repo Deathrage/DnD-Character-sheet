@@ -8,6 +8,7 @@ export type RuleCode =
   | 'EMPTY_NAME'
   | 'DUPLICATE_DIE'
   | 'NOT_AN_INTEGER'
+  | 'UNSAFE_INTEGER'
   | 'NEGATIVE'
   | 'BELOW_ONE'
   | 'ABOVE_THREE'
@@ -19,6 +20,7 @@ export type RuleCode =
   | 'UNKNOWN_ABILITY'
   | 'DUPLICATE_SPELLCASTING'
   | 'NO_ATTACK'
+  | 'NOT_STACKABLE'
   | 'GONE';
 
 export class RuleViolation extends Error {

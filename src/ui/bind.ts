@@ -220,6 +220,7 @@ const equipmentItemView = (item: EquipmentItemBO): EquipmentItemView => ({
 const weaponView = (item: WeaponBO): WeaponView => ({
   ...equipmentItemView(item),
   attack: item.attack,
+  count: item.count,
 });
 
 /** The derived lists mix both kinds; a weapon there keeps its attack, so its row can show it. */
@@ -449,6 +450,8 @@ function equipmentActions(sheet: CharacterSheetBO): EquipmentActions {
     setWeaponAttackAbility: (id, ability) => weapon(id).setAttackAbility(ability),
     setWeaponAttackBonus: (id, value) => weapon(id).setAttackBonus(value),
     setWeaponAttackDamage: (id, damage) => attempt(() => weapon(id).setAttackDamage(damage)),
+    setWeaponStackable: (id, stackable) => weapon(id).setStackable(stackable),
+    setWeaponCount: (id, count) => weapon(id).setCount(count),
   };
 }
 

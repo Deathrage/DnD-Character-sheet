@@ -1881,6 +1881,7 @@ button:not(:disabled):active {
 .coin .cl {
   margin-bottom: 2px;
 }
+/* The count on a row: an inventory item's, and a stackable weapon's on Equipment. */
 .num.qty {
   width: 48px;
   flex: 0 0 auto;
@@ -2588,6 +2589,33 @@ button:not(:disabled):active {
 .chkpair {
   display: flex;
   gap: 28px;
+}
+/* Stackable, and its count beside it while ticked, under a weapon's name (stackable weapons spec
+   §5). The row reserves the field's height either way, so ticking does not push the dialog down.
+   One value sets both, so the two cannot disagree; it is `.inp.stat`'s natural height, so a change
+   to `.inp`'s padding or type size wants it revisited, or Count will differ from Attack bonus. */
+.stackrow {
+  --count-height: 41px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: var(--count-height);
+  margin-top: 12px;
+}
+.stackrow .chkrow {
+  margin-top: 0;
+}
+.stackcount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stackcount .dlabel {
+  margin: 0;
+}
+.stackcount .inp {
+  width: 72px;
+  height: var(--count-height);
 }
 /* A weapon's key facts now sit in its attack, so its description starts shorter. It still grows
    with its text (field-sizing: content), up to the same 60dvh as every other description. */

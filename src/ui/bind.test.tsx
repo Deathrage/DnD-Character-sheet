@@ -54,6 +54,7 @@ describe('toSheetData', () => {
       name: 'Rapier',
       equipped: true,
       attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8+3 piercing' },
+      count: 3,
     });
     sheet.equipment.addOther({ name: 'Cloak', attuned: true });
     sheet.featsAndTraits.createCategory('Rogue').add({ name: 'Sneak Attack', description: '+3d6' });
@@ -126,6 +127,7 @@ describe('toSheetData', () => {
         attuned: false,
         equipped: true,
         attack: doc.equipment.weapons[0]?.attack,
+        count: 3,
       },
     ]);
     expect(doc.equipment.weapons[0]?.attack).toEqual({
@@ -277,6 +279,7 @@ describe('toSheetActions', () => {
       attuned: false,
       equipped: true,
       attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8+3 piercing' },
+      count: 2,
     });
     actions.equipment.addOther({
       name: 'Cloak',
@@ -327,6 +330,7 @@ describe('toSheetActions', () => {
       name: 'Rapier',
       equipped: true,
       attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8+3 piercing' },
+      count: 2,
     });
     expect(doc.equipment.other[0]).toMatchObject({ name: 'Cloak', attuned: true });
     expect(doc.featsAndTraits.categories[0]?.items[0]).toMatchObject({ name: 'Sneak Attack' });
@@ -356,6 +360,7 @@ describe('toSheetActions', () => {
       attuned: false,
       equipped: false,
       attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8' },
+      count: null,
     });
     const id = toSheetData(sheet).equipment.weapons[0]?.id ?? '';
 
@@ -364,6 +369,24 @@ describe('toSheetActions', () => {
 
     actions.equipment.setWeaponAttackAbility(id, null);
     expect(sheet.toDocument().equipment.weapons[0]?.attack).toBeNull();
+  });
+
+  // The by-id test below ticks Stackable and sets a count; this is the untick it does not do.
+  it('makes a weapon not stackable again through its action', () => {
+    const sheet = newSheet();
+    const actions = toSheetActions(sheet);
+    actions.equipment.addWeapon({
+      name: 'Javelin',
+      description: '',
+      attuned: false,
+      equipped: false,
+      attack: null,
+      count: 4,
+    });
+    const id = toSheetData(sheet).equipment.weapons[0]?.id ?? '';
+
+    actions.equipment.setWeaponStackable(id, false);
+    expect(sheet.toDocument().equipment.weapons[0]?.count).toBeNull();
   });
 
   /**
@@ -385,6 +408,7 @@ describe('toSheetActions', () => {
       attuned: false,
       equipped: false,
       attack: null,
+      count: null,
     });
     actions.featsAndTraits.createCategory('Rogue');
     actions.featsAndTraits.addFeat(null, { name: 'Darkvision', description: '' });
@@ -418,6 +442,8 @@ describe('toSheetActions', () => {
     actions.equipment.setWeaponAttackBonus(gearId, 7);
     const damageFailure = actions.equipment.setWeaponAttackDamage(gearId, '2d6+4 slashing');
     actions.equipment.setWeaponAttackAbility(gearId, 'dexterity');
+    actions.equipment.setWeaponStackable(gearId, true);
+    actions.equipment.setWeaponCount(gearId, 9);
     actions.featsAndTraits.renameCategory(featCategoryId, 'Rogue levels');
     actions.featsAndTraits.renameFeat(featId, 'Superior Darkvision');
     actions.featsAndTraits.setFeatDescription(featId, '120 ft');
@@ -451,6 +477,7 @@ describe('toSheetActions', () => {
       attuned: true,
       equipped: true,
       attack: { ability: 'dexterity', attackBonus: 7, damage: '2d6+4 slashing' },
+      count: 9,
     });
     expect(damageFailure).toBeNull();
     expect(doc.featsAndTraits.categories[0]?.name).toBe('Rogue levels');
