@@ -169,3 +169,102 @@ describe('the weapon dialogs', () => {
     });
   });
 });
+
+const stackable = () => screen.getByRole('checkbox', { name: 'Stackable' }) as HTMLInputElement;
+
+describe('weapon count', () => {
+  it('shows on a stackable weapon only, before the attack badge, and edits from the row', () => {
+    const actions = spyActions(noEquipmentActions);
+    renderWith(actions);
+    const dagger = rowOf('Dagger');
+    const count = within(dagger).getByLabelText('Dagger count') as HTMLInputElement;
+    expect(count.value).toBe('2');
+    // The name's button, then the count, then the attack badge: the badge stays at the far right.
+    expect([...dagger.children].map((element) => element.className)).toEqual([
+      'recopen',
+      'num qty',
+      'atk',
+    ]);
+    expect(within(rowOf('Rapier')).queryByLabelText('Rapier count')).toBeNull();
+
+    fireEvent.change(count, { target: { value: '1' } });
+    expect(actions.setWeaponCount).toHaveBeenCalledWith('e3', 1);
+  });
+
+  it('opens the edit dialog with Stackable ticked and the count beside it', () => {
+    renderWith(noEquipmentActions);
+    open('Dagger');
+    expect(stackable().checked).toBe(true);
+    expect((screen.getByLabelText('Count') as HTMLInputElement).value).toBe('2');
+  });
+
+  it('sits directly under the name in both weapon dialogs', () => {
+    renderWith(noEquipmentActions);
+    open('Rapier');
+    const edit = stackable().closest('.stackrow')!;
+    expect(edit.previousElementSibling?.querySelector('input')?.getAttribute('aria-label')).toBe(
+      'Name',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add entry to Weapons' }));
+    const created = stackable().closest('.stackrow')!;
+    expect(created.previousElementSibling?.id).toBe('new-equipment-name');
+  });
+
+  it('ticks Stackable through its action, which brings the count', () => {
+    const actions = spyActions(noEquipmentActions);
+    renderWith(actions);
+    open('Rapier');
+    expect(stackable().checked).toBe(false);
+    expect(screen.queryByLabelText('Count')).toBeNull();
+    fireEvent.click(stackable());
+    expect(actions.setWeaponStackable).toHaveBeenCalledWith('e1', true);
+  });
+
+  it('edits the count from the dialog, and unticks Stackable with no confirmation', () => {
+    const actions = spyActions(noEquipmentActions);
+    renderWith(actions);
+    open('Dagger');
+    fireEvent.change(screen.getByLabelText('Count'), { target: { value: '7' } });
+    expect(actions.setWeaponCount).toHaveBeenCalledWith('e3', 7);
+    fireEvent.click(stackable());
+    expect(actions.setWeaponStackable).toHaveBeenCalledWith('e3', false);
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+  });
+
+  it('creates a stackable weapon with the count it was given, starting from 0', () => {
+    const actions = spyActions(noEquipmentActions);
+    renderWith(actions);
+    fireEvent.click(screen.getByRole('button', { name: 'Add entry to Weapons' }));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Javelin' } });
+    expect(screen.queryByLabelText('Count')).toBeNull();
+    fireEvent.click(stackable());
+    expect((screen.getByLabelText('Count') as HTMLInputElement).value).toBe('0');
+    fireEvent.change(screen.getByLabelText('Count'), { target: { value: '5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect(actions.addWeapon).toHaveBeenCalledWith(expect.objectContaining({ count: 5 }));
+  });
+
+  it('forgets the count when Stackable is unticked before Create', () => {
+    const actions = spyActions(noEquipmentActions);
+    renderWith(actions);
+    fireEvent.click(screen.getByRole('button', { name: 'Add entry to Weapons' }));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Javelin' } });
+    fireEvent.click(stackable());
+    fireEvent.change(screen.getByLabelText('Count'), { target: { value: '5' } });
+    fireEvent.click(stackable());
+    expect(screen.queryByLabelText('Count')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    expect(actions.addWeapon).toHaveBeenCalledWith(expect.objectContaining({ count: null }));
+  });
+
+  it('is only for weapons', () => {
+    renderWith(noEquipmentActions);
+    open('Studded Leather');
+    expect(screen.queryByRole('checkbox', { name: 'Stackable' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add entry to Other Equipment' }));
+    expect(screen.queryByRole('checkbox', { name: 'Stackable' })).toBeNull();
+  });
+});

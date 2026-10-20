@@ -2589,6 +2589,29 @@ button:not(:disabled):active {
   display: flex;
   gap: 28px;
 }
+/* Stackable, and its count beside it while ticked, under a weapon's name (stackable weapons spec
+   §5). The row keeps the field's height either way, so ticking does not push the dialog down. */
+.stackrow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 40px;
+  margin-top: 12px;
+}
+.stackrow .chkrow {
+  margin-top: 0;
+}
+.stackcount {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stackcount .dlabel {
+  margin: 0;
+}
+.stackcount .inp {
+  width: 72px;
+}
 /* A weapon's key facts now sit in its attack, so its description starts shorter. It still grows
    with its text (field-sizing: content), up to the same 60dvh as every other description. */
 .dialog .area.brief {
