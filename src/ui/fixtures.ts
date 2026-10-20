@@ -175,7 +175,10 @@ export const inventory: InventoryView = {
   ],
 };
 
-/** Shortbow has no attack roll entered yet, so the stories show both kinds of weapon row. */
+/**
+ * Shortbow has no attack roll entered yet, so the stories show both kinds of weapon row; Dagger is
+ * stackable, so they show a count on the row too.
+ */
 const weapons: WeaponView[] = [
   {
     id: 'e1',
@@ -184,6 +187,7 @@ const weapons: WeaponView[] = [
     attuned: false,
     equipped: true,
     attack: { ability: 'dexterity', attackBonus: 6, damage: '1d8+3 piercing' },
+    count: null,
   },
   {
     id: 'e2',
@@ -192,14 +196,16 @@ const weapons: WeaponView[] = [
     attuned: false,
     equipped: false,
     attack: null,
+    count: null,
   },
   {
     id: 'e3',
-    name: 'Dagger (x2)',
+    name: 'Dagger',
     description: '1d4 piercing, finesse, thrown 20/60.',
     attuned: false,
     equipped: true,
     attack: { ability: 'dexterity', attackBonus: 6, damage: '1d4+3 piercing' },
+    count: 2,
   },
 ];
 
@@ -484,6 +490,8 @@ export const noEquipmentActions: EquipmentActions = {
   setWeaponAttackAbility: () => {},
   setWeaponAttackBonus: () => {},
   setWeaponAttackDamage: () => null,
+  setWeaponStackable: () => {},
+  setWeaponCount: () => {},
   renameEquipment: () => null,
   setEquipmentDescription: () => {},
   setAttuned: () => {},

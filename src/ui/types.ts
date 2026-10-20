@@ -269,12 +269,14 @@ export interface WeaponAttackView {
 }
 
 /**
- * A weapon is an equipment item plus its attack roll. Only the Weapons list holds these; a row
- * tells the two apart by whether the `attack` key is present at all.
+ * A weapon is an equipment item plus its attack roll and its count. Only the Weapons list holds
+ * these; a row tells the two apart by whether the `attack` key is present at all.
  */
 export interface WeaponView extends EquipmentItemView {
   /** `null` when no attack roll has been entered. */
   attack: WeaponAttackView | null;
+  /** `null` when the weapon is not stackable; 0 is a stack with none left. */
+  count: number | null;
 }
 
 /** Which stored list an item lives in. There are two, and nothing moves between them. */
@@ -304,7 +306,9 @@ export interface EquipmentActions {
    * Two adds rather than one with a slot: only a weapon has an attack, and one action taking an
    * optional attack for either list would have to drop it silently for other equipment.
    */
-  addWeapon(item: NewEquipmentItem & { attack: WeaponAttackView | null }): void;
+  addWeapon(
+    item: NewEquipmentItem & { attack: WeaponAttackView | null; count: number | null },
+  ): void;
   addOther(item: NewEquipmentItem): void;
   renameEquipment(id: string, name: string): NameResult;
   setEquipmentDescription(id: string, description: string): void;
@@ -316,6 +320,9 @@ export interface EquipmentActions {
   setWeaponAttackBonus(id: string, value: number): void;
   /** Rejectable: damage over 80 characters is `TOO_LONG`. */
   setWeaponAttackDamage(id: string, damage: string): NameResult;
+  /** On creates the count at 0, or keeps the one there is; off clears it. */
+  setWeaponStackable(id: string, stackable: boolean): void;
+  setWeaponCount(id: string, count: number): void;
 }
 
 export interface JournalAndNotesView {

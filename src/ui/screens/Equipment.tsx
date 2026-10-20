@@ -213,6 +213,7 @@ function NewEquipmentDialog({
       actions.addWeapon({
         ...item,
         attack: attack === null ? null : { ...attack, damage: attack.damage.trim() },
+        count: null,
       });
     } else {
       actions.addOther(item);

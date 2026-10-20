@@ -147,6 +147,7 @@ describe('the weapon dialogs', () => {
       attuned: false,
       equipped: false,
       attack: { ability: 'dexterity', attackBonus: 5, damage: '1d8 piercing' },
+      count: null,
     });
   });
 
