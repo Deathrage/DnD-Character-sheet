@@ -116,11 +116,13 @@ const seedSable = seeder('Sable Nightwind', (sheet) => {
   });
   // No attack roll yet, so the list shows both kinds of weapon row.
   sheet.equipment.addWeapon({ name: 'Shortbow', description: '1d6 piercing, range 80/320.' });
+  // Stackable, so the list shows a count on a weapon row too.
   sheet.equipment.addWeapon({
-    name: 'Dagger (x2)',
+    name: 'Dagger',
     description: '1d4 piercing, finesse, thrown 20/60.',
     equipped: true,
     attack: { ability: 'dexterity', attackBonus: 6, damage: '1d4+3 piercing' },
+    count: 2,
   });
   sheet.equipment.addOther({
     name: 'Cloak of Elvenkind',
