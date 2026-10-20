@@ -45,7 +45,11 @@ export class EquipmentBO {
   addWeapon({ attack = null, ...init }: NewWeapon): WeaponBO {
     // Checked before anything is pushed, so a bad attack leaves no half-made weapon behind.
     const checked = attack === null ? null : weaponAttack(attack);
-    const node = pushAndRead(this.#weapons, { ...equipmentNode(init), attack: checked });
+    const node = pushAndRead(this.#weapons, {
+      ...equipmentNode(init),
+      attack: checked,
+      count: null,
+    });
     return new WeaponBO(node, this.#weapons);
   }
 

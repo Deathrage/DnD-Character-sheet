@@ -26,6 +26,8 @@ export const V1_WEAPON_ID = '66666666-6666-4666-8666-666666666666';
 export const V1_OTHER_ID = '77777777-7777-4777-8777-777777777777';
 const V4_WARLOCK_ID = '88888888-8888-4888-8888-888888888888';
 const V4_PACT_COUNTER_ID = '99999999-9999-4999-8999-999999999999';
+const V5_JAVELINS_ID = 'abababab-abab-4bab-8bab-abababababab';
+const V5_JAVELIN_ITEM_ID = 'cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd';
 
 /**
  * A complete v1 document, written out by hand. `createCharacter` makes the current version, and
@@ -186,6 +188,46 @@ export function v4DocFor(id: string, name: string): Record<string, unknown> {
         },
       ],
     },
+  };
+}
+
+/**
+ * A complete v5 document: `v4DocFor` with the pact slots v5 added, filled in (3rd level, 1 of 2)
+ * rather than left empty, plus a weapon "Javelins" described as "5 javelins" and an inventory
+ * item "Javelins" counting 5. Those two are bait: a v5 → v6 migration that filled in a weapon's
+ * count from either would show up here. `fixtures.test.ts` checks it against `SCHEMAS[5]`.
+ */
+export function v5DocFor(id: string, name: string): Record<string, unknown> {
+  const v4 = v4DocFor(id, name) as {
+    inventory: { items: object[] };
+    equipment: { weapons: object[] };
+    counters: object;
+  };
+  return {
+    ...v4,
+    schemaVersion: 5,
+    inventory: {
+      ...v4.inventory,
+      items: [
+        ...v4.inventory.items,
+        { id: V5_JAVELIN_ITEM_ID, name: 'Javelins', description: '', count: 5 },
+      ],
+    },
+    equipment: {
+      ...v4.equipment,
+      weapons: [
+        ...v4.equipment.weapons,
+        {
+          id: V5_JAVELINS_ID,
+          name: 'Javelins',
+          description: '5 javelins',
+          attuned: false,
+          equipped: true,
+          attack: { ability: 'strength', attackBonus: 5, damage: '1d6+3 piercing' },
+        },
+      ],
+    },
+    counters: { ...v4.counters, pactSlots: { level: 3, current: 1, total: 2 } },
   };
 }
 

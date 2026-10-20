@@ -6,6 +6,7 @@ import { migrateV1ToV2 } from '../migration/v1ToV2.js';
 import { migrateV2ToV3 } from '../migration/v2ToV3.js';
 import { migrateV3ToV4 } from '../migration/v3ToV4.js';
 import { migrateV4ToV5 } from '../migration/v4ToV5.js';
+import { migrateV5ToV6 } from '../migration/v5ToV6.js';
 import { ID_A, ID_B, createOpener, docFor, putRaw, v1DocFor, wipe } from '../../test/fixtures.js';
 import {
   CHARACTER_STORE,
@@ -366,7 +367,9 @@ describe('createIndexedDbRepository', () => {
 
     expect(entry?.ok).toBe(true);
     expect(await repository.getRaw(ID_A)).toEqual(
-      migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(v1DocFor(ID_A, 'Sable'))))),
+      migrateV5ToV6(
+        migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(v1DocFor(ID_A, 'Sable'))))),
+      ),
     );
   });
 
