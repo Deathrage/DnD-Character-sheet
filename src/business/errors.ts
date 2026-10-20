@@ -8,6 +8,7 @@ export type RuleCode =
   | 'EMPTY_NAME'
   | 'DUPLICATE_DIE'
   | 'NOT_AN_INTEGER'
+  | 'UNSAFE_INTEGER'
   | 'NEGATIVE'
   | 'BELOW_ONE'
   | 'ABOVE_THREE'

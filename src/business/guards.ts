@@ -68,10 +68,21 @@ export function portrait(value: string): string {
 /**
  * A safety net against a business-layer bug, not input validation. The UI contract is that a
  * numeric input holds its half-typed text locally and calls a setter only once it parses.
+ *
+ * Safe integers only, because that is what the schema's `.int()` accepts in Zod 4 — checked
+ * against the installed version at both edges. `Number.isInteger` alone let 1e19 through, and a
+ * document holding it is one autosave refuses for good. `UNSAFE_INTEGER`, not `NOT_AN_INTEGER`:
+ * 1e19 is an integer, and a rule code must be true of every value it rejects.
  */
 export function integer(value: number): number {
   if (!Number.isInteger(value)) {
     throw new RuleViolation('NOT_AN_INTEGER', `expected an integer, got ${value}`);
+  }
+  if (!Number.isSafeInteger(value)) {
+    throw new RuleViolation(
+      'UNSAFE_INTEGER',
+      `expected an integer within ±${Number.MAX_SAFE_INTEGER}, got ${value}`,
+    );
   }
   return value;
 }

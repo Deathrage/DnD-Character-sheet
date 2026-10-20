@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 2045 tests across 87 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 2061 tests across 87 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -273,7 +273,8 @@ back on the next load (criterion 14).
   tree and asserts the result still satisfies `CURRENT_SCHEMA`: the property that will let autosave
   validate a document and refuse to save it loudly on failure, rather than ever writing one the
   schema would reject.
-- Three rules the whole-branch review added, worth knowing before you write a setter here:
+- Four rules worth knowing before you write a setter here, the first three from the whole-branch
+  review:
   - **A business object may not act on a cached sibling array.** `CategoryBO.remove()` rehomes its
     items into `uncategorized`, so an item business object a caller still holds points at an array
     that is no longer part of the document. `CategorizedItemBO` therefore resolves the node's live
@@ -287,6 +288,13 @@ back on the next load (criterion 14).
     for freeform text.
   - **A rule code must be true of every value it rejects.** `add(0)` threw `NOT_AN_INTEGER` about an
     integer; the die-size guard is now one key-shaped check with its own `INVALID_DIE_SIZE`.
+  - **Every integer a setter stores is a safe one** (2026-10-20). Zod 4's `.int()` accepts only integers
+    within `±Number.MAX_SAFE_INTEGER`, but `integer()` in `guards.ts` checked `Number.isInteger`, and
+    `NumberField` parsed any run of digits. Twenty digits typed into a coin reached the store,
+    and autosave refused the character from then on: in Chromium, the next edit was lost behind
+    the refusal banner. `integer()` now throws `UNSAFE_INTEGER` past the safe range (not
+    `NOT_AN_INTEGER`: 1e19 is an integer), and `NumberField` never passes such a value on: it
+    stays a draft until blur, and the stepper stops at the edge.
 - **Spec §5-6 is now built too**: `CharacterLibraryBO`, `CharacterEntryBO`, `CharacterFile`,
   `Autosave`, and the storage gate. Four decisions there differ from what the spec wrote, each for
   a reason recorded in the file that makes it:

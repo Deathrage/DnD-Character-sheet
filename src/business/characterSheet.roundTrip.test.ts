@@ -162,6 +162,32 @@ describe('no write can exceed a length the schema caps', () => {
   });
 });
 
+const UNSAFE = Number.MAX_SAFE_INTEGER + 1;
+
+/** One write per kind of integer guard: non-negative, signed, at least 1, and a new item's. */
+const unsafeWrites: [string, (sheet: CharacterSheetBO) => void][] = [
+  ['the gold coins', (sheet) => sheet.inventory.coins.setGp(UNSAFE)],
+  ['a weapon count', (sheet) => sheet.equipment.weapons[1]?.setCount(UNSAFE)],
+  ['the initiative', (sheet) => sheet.setInitiative(-UNSAFE)],
+  ['a class level', (sheet) => sheet.classes.items[0]?.setLevel(UNSAFE)],
+  ['a new inventory item count', (sheet) => sheet.inventory.add({ name: 'Arrows', count: UNSAFE })],
+];
+
+// The same property for numbers: Zod 4's `.int()` accepts safe integers only, and `NumberField`
+// parses any run of digits, so a 20-digit gold count reached the setter, was stored, and made the
+// character one autosave refused until it was put right. The setter refuses it now.
+describe('no write can store an integer the schema cannot', () => {
+  it.each(unsafeWrites)('refuses an unsafe integer for %s', (_label, write) => {
+    const sheet = sheetFor();
+    fill(sheet);
+
+    expect(() => write(sheet)).toThrow(
+      expect.objectContaining({ code: 'UNSAFE_INTEGER' }) as Error,
+    );
+    expect(CURRENT_SCHEMA.safeParse(sheet.toDocument()).success).toBe(true);
+  });
+});
+
 /**
  * Every property reachable from a `CharacterSheetBO`: its own fields (`#doc` is a true private
  * field, so it is invisible here — that is exactly the invariant this walk is proving), every

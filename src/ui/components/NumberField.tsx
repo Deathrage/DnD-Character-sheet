@@ -27,10 +27,10 @@ interface Props {
  * A numeric input that keeps half-typed text to itself.
  *
  * This is the UI half of a contract the business layer states in `guards.ts`: its setters throw
- * `NOT_AN_INTEGER` / `NEGATIVE` on bad input because they are a net for a UI bug, not input
- * validation. So `onChange` fires only for text that is a whole number — an empty box, a lone
- * `-`, or `1e3` are all normal keystrokes on the way somewhere, and none of them may reach a
- * setter.
+ * `NOT_AN_INTEGER` / `UNSAFE_INTEGER` / `NEGATIVE` on bad input because they are a net for a UI
+ * bug, not input validation. So `onChange` fires only for text that is a whole number the
+ * document can store — an empty box, a lone `-`, `1e3`, or twenty digits are all text that may
+ * not reach a setter, and stay a draft until blur shows the stored value again.
  *
  * The draft is discarded on blur rather than kept, so the field re-renders from the value that
  * was actually stored. Clearing the box and tabbing away therefore restores the old number
@@ -94,7 +94,7 @@ export function NumberField({
         aria-label={`Decrease ${label}`}
         // At zero there is nowhere down to go for an unsigned field, and calling the setter
         // anyway would throw `NEGATIVE`. Disabling says so before the tap rather than after.
-        disabled={!signed && value <= min}
+        disabled={signed ? value <= -Number.MAX_SAFE_INTEGER : value <= min}
         onClick={() => step(-1)}
       >
         {'−'}
@@ -104,6 +104,8 @@ export function NumberField({
         type="button"
         className="step"
         aria-label={`Increase ${label}`}
+        // Past this the setter would throw `UNSAFE_INTEGER`, for the reason the − button gives.
+        disabled={value >= Number.MAX_SAFE_INTEGER}
         onClick={() => step(1)}
       >
         +
@@ -116,9 +118,14 @@ function format(value: number, signed: boolean): string {
   return signed && value >= 0 ? `+${value}` : String(value);
 }
 
-/** `null` for anything that is not a whole number the caller accepts. */
+/**
+ * `null` for anything that is not a whole number the caller accepts. Twenty digits match the
+ * pattern, but `Number` rounds them to an integer the schema cannot store, so a value past
+ * `Number.MAX_SAFE_INTEGER` is `null` too.
+ */
 function parse(text: string, signed: boolean): number | null {
   const pattern = signed ? /^[+-]?\d+$/ : /^\d+$/;
   if (!pattern.test(text.trim())) return null;
-  return Number(text.trim());
+  const value = Number(text.trim());
+  return Number.isSafeInteger(value) ? value : null;
 }
