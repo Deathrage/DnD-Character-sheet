@@ -4,6 +4,8 @@ import { ResponsiveDialog } from './ResponsiveDialog.js';
 interface Props {
   /** What goes, in the confirm dialog's words: "Longsword", "Day 3", "the Rogue class". */
   what: string;
+  /** A sentence on what else happens, said before "This cannot be undone." */
+  detail?: string;
   onConfirm(): void;
   className?: string;
   'aria-label'?: string;
@@ -14,7 +16,14 @@ interface Props {
  * A delete button that asks first. Nothing in a character has undo (spec §6), so every delete
  * goes through this rather than acting on the first tap.
  */
-export function ConfirmDelete({ what, onConfirm, className = 'del', children, ...rest }: Props) {
+export function ConfirmDelete({
+  what,
+  detail,
+  onConfirm,
+  className = 'del',
+  children,
+  ...rest
+}: Props) {
   const [asking, setAsking] = useState(false);
   return (
     <>
@@ -50,7 +59,7 @@ export function ConfirmDelete({ what, onConfirm, className = 'del', children, ..
           }
         >
           <p className="hint" style={{ marginTop: 0 }}>
-            {what} will be deleted. This cannot be undone.
+            {what} will be deleted. {detail && `${detail} `}This cannot be undone.
           </p>
         </ResponsiveDialog>
       )}

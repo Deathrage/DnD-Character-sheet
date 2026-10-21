@@ -25,6 +25,26 @@ describe('ConfirmDelete', () => {
     expect(onConfirm).toHaveBeenCalledOnce();
   });
 
+  it('says a detail between what goes and that it cannot be undone', () => {
+    render(
+      <ConfirmDelete
+        what="The category Rogue"
+        detail="Its 2 entries will move to Uncategorized."
+        onConfirm={() => {}}
+      >
+        Remove
+      </ConfirmDelete>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+
+    expect(
+      screen.getByText(
+        'The category Rogue will be deleted. Its 2 entries will move to Uncategorized. ' +
+          'This cannot be undone.',
+      ),
+    ).toBeTruthy();
+  });
+
   it('Escape on the confirm leaves the dialog beneath it open', () => {
     const onOuterClose = vi.fn();
     render(
