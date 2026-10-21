@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen } from '@testing-library/react';
+import { stubDialogElement } from '../../test/stubDialog.js';
 import { CategorizedSection } from './CategorizedSection.js';
 
 const noop = () => null;
@@ -50,6 +51,48 @@ describe('CategorizedSection', () => {
     fireEvent.click(rogue);
     expect(rogue.textContent).toContain('n=1');
     expect(screen.getAllByText('n=1')).toHaveLength(2); // Rogue and Uncategorized
+  });
+});
+
+describe('CategorizedSection deleting a category', () => {
+  beforeAll(stubDialogElement);
+
+  const confirmFor = (categories: typeof data.categories) => {
+    render(
+      <CategorizedSection
+        characterId="c"
+        title="Feats"
+        data={{ ...data, categories }}
+        actions={actions}
+        onClose={() => {}}
+        onAdd={() => {}}
+        renderRow={(item) => <div>{item.name}</div>}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Edit category Rogue' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete category', hidden: true }));
+    return screen.getByRole('dialog', { name: 'Delete?', hidden: true }).textContent;
+  };
+
+  it('says where the entries go when there are some', () => {
+    const items = [
+      { id: 'a', name: 'Sneak Attack' },
+      { id: 'c', name: 'Cunning Action' },
+    ];
+    expect(confirmFor([{ id: 'c1', name: 'Rogue', items }])).toContain(
+      'The category Rogue will be deleted. Its 2 entries will move to Uncategorized. ' +
+        'This cannot be undone.',
+    );
+  });
+
+  it('says "1 entry" for one', () => {
+    expect(confirmFor(data.categories)).toContain('Its 1 entry will move to Uncategorized.');
+  });
+
+  it('says nothing about entries when there are none', () => {
+    expect(confirmFor([{ id: 'c1', name: 'Rogue', items: [] }])).toContain(
+      'The category Rogue will be deleted. This cannot be undone.',
+    );
   });
 });
 

@@ -213,6 +213,7 @@ function CategoryDialog<T>({
   onClose(): void;
 }) {
   const count = category.items.length;
+  const entries = count === 1 ? '1 entry' : `${count} entries`;
 
   return (
     <ResponsiveDialog
@@ -222,6 +223,9 @@ function CategoryDialog<T>({
       footer={
         <ConfirmDelete
           what={`The category ${category.name}`}
+          // Said again here, beside "This cannot be undone", so it does not read as though the
+          // entries go too. What cannot be undone is the grouping.
+          {...(count > 0 ? { detail: `Its ${entries} will move to Uncategorized.` } : {})}
           onConfirm={() => {
             actions.removeCategory(category.id);
             onClose();
@@ -237,11 +241,7 @@ function CategoryDialog<T>({
         value={category.name}
         onCommit={(name) => actions.renameCategory(category.id, name)}
       />
-      {count > 0 && (
-        <div className="hint">
-          Deleting moves its {count === 1 ? '1 entry' : `${count} entries`} to Uncategorized.
-        </div>
-      )}
+      {count > 0 && <div className="hint">Deleting moves its {entries} to Uncategorized.</div>}
     </ResponsiveDialog>
   );
 }
