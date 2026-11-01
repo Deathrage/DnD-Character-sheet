@@ -232,3 +232,16 @@ Every new test is broken on purpose once to prove it bites (AGENTS.md, "Traps").
 
 A step on spell slots or hit dice; a counter that resets or refills on a rest; a display format
 other than the plain number (no `½`, no units).
+
+## 9. Deviations
+
+The build matches this design, with one addition to §6 found in the browser.
+
+- **The row's box grows with its value where the browser supports `field-sizing`.** `.curinp`
+  is 40px wide, which holds four characters at its 19px: `9.75` fits, `10.25` needs 43px and
+  `12.125` 52px, measured in Chromium. Before v7 a counter showed whole numbers, and four digits
+  was plenty. An `@supports (field-sizing: content)` block now sets `width: auto` with a 40px
+  minimum, so the box takes the width its value needs in Chromium and Firefox; a fixed `width`
+  defeats the property, which is why the base rule keeps 40px for every other browser, where a
+  long value scrolls inside the box as it always did. The header's hit-point and hit-die boxes
+  stay 40px: they are whole numbers.

@@ -1389,7 +1389,11 @@ button:not(:disabled):active {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12.5px;
 }
-/* An inline count, written on a line rather than boxed: a counter's "3", a hit die's "5". */
+/* An inline count, written on a line rather than boxed: a counter's "3", a hit die's "5".
+   40px fits four characters at this size — "9.75", "12.5" — and a counter that counts in parts
+   can read "10.25" (43px) or "12.125" (52px). `field-sizing: content` lets the box grow to its
+   value where the browser knows the property (Chromium, Firefox); elsewhere it stays 40px, as
+   every box did before fractions, and a long value scrolls inside it. */
 .curinp {
   width: 40px;
   text-align: center;
@@ -1409,6 +1413,14 @@ button:not(:disabled):active {
   outline: none;
   border-bottom-color: var(--accent-text);
   box-shadow: none;
+}
+/* A fixed width defeats field-sizing, so the growth is opted into only where it is known. */
+@supports (field-sizing: content) {
+  .curinp {
+    width: auto;
+    min-width: 40px;
+    field-sizing: content;
+  }
 }
 .clsrow,
 .hdrow {
