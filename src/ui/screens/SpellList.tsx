@@ -52,13 +52,6 @@ export const SpellList = memo(function SpellList({ characterId, data, actions, o
       ? data.spellcasting.find((entry) => entry.ability === dialog.ability)
       : undefined;
   const openSpell = useCallback((id: string) => setDialog({ kind: 'edit', id }), []);
-  const { setSpellPrepared } = actions;
-  const renderRow = useCallback(
-    (spell: SpellView) => (
-      <SpellRow spell={spell} onOpen={openSpell} onSetPrepared={setSpellPrepared} />
-    ),
-    [openSpell, setSpellPrepared],
-  );
 
   return (
     <>
@@ -72,7 +65,9 @@ export const SpellList = memo(function SpellList({ characterId, data, actions, o
         count={(spells) =>
           `${spells.filter((spell) => spell.prepared).length}/${spells.length} prepared`
         }
-        renderRow={renderRow}
+        renderRow={(spell) => (
+          <SpellRow spell={spell} onOpen={openSpell} onSetPrepared={actions.setSpellPrepared} />
+        )}
       >
         <Spellcasting
           entries={data.spellcasting}

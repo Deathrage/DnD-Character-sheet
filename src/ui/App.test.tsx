@@ -10,6 +10,7 @@ import {
 import { ID_A, docFor, putRaw, wipe } from '../test/fixtures.js';
 import { stubDialogElement } from '../test/stubDialog.js';
 import { App } from './App.js';
+import { navigate } from './route.js';
 
 /**
  * The shell over a real `CharacterLibraryBO` on `fake-indexeddb`, driven through the rendered UI.
@@ -117,8 +118,7 @@ describe('App', () => {
     const id = library.entries[0]?.id ?? '';
     expect(library.isOpen(id)).toBe(true);
 
-    globalThis.location.hash = '#/';
-    globalThis.dispatchEvent(new Event('hashchange'));
+    navigate({ name: 'list' });
     await screen.findByLabelText('New character');
 
     // `create` hands back a sheet with autosave attached, which the shell never edits: the sheet

@@ -320,32 +320,24 @@ function abilitiesView(sheet: CharacterSheetBO): AbilitiesAndSkillsView {
   };
 }
 
-export function toSheetData(sheet: CharacterSheetBO): SheetData {
-  const featsAndTraits: FeatsAndTraitsView = categorizedView(sheet.featsAndTraits, namedItemView);
-  return {
-    character: toCharacterView(sheet),
-    journalAndNotes: journalView(sheet),
-    inventory: inventoryView(sheet),
-    featsAndTraits,
-    equipment: equipmentView(sheet),
-    spellList: spellListView(sheet),
-    counters: countersView(sheet),
-    abilitiesAndSkills: abilitiesView(sheet),
-  };
-}
-
 // ---------------------------------------------------------------------------
 // Keeping identities
 // ---------------------------------------------------------------------------
 
 /**
- * Hands back the previous copy of a view while the fresh one says the same thing, so a
- * memoised component sees the same props and skips its render.
+ * Hands back the previous copy of a row's view while the fresh one says the same thing, so a
+ * memoised row sees the same `item` and skips its render.
  *
  * The views above are rebuilt from scratch, which is what keeps them simple — but rebuilt from
  * scratch, every row's view is a new object on every change, and `memo` on a row then skips
- * nothing. Keyed by what a view is a view of: an item's id, an ability's key, a list's name.
- * Entries for items since removed stay behind until the sheet closes; a few objects each.
+ * nothing. Only rows are kept, because only rows are memoised: a list or a category is a fresh
+ * array either way, and nothing compares it. Keyed by what a view is a view of: a list's name
+ * and an item's id, or an ability's key. Entries for items since removed stay behind until the
+ * sheet closes; a few objects each.
+ *
+ * The business layer hands out a fresh `*BO` wrapper on every read, which is why this is keyed
+ * by id rather than by object. Were the wrappers ever cached per node, a row's view could be a
+ * `computed` on its wrapper instead, and this class would go.
  */
 class Keep {
   readonly #last = new Map<string, unknown>();
@@ -358,15 +350,8 @@ class Keep {
     return kept;
   }
 
-  /**
-   * Each item by its id, then the list itself: unchanged items make an unchanged list. Items
-   * are keyed under `itemKey`, so lists that show the same items — Equipment's four — share.
-   */
-  list<T extends { id: string }>(key: string, fresh: T[], itemKey = key): T[] {
-    return this.one(
-      key,
-      fresh.map((item) => this.one(`${itemKey}#${item.id}`, item)),
-    );
+  list<T extends { id: string }>(key: string, fresh: T[]): T[] {
+    return fresh.map((item) => this.one(`${key}#${item.id}`, item));
   }
 
   categorized<T extends { id: string }>(
@@ -374,16 +359,11 @@ class Keep {
     fresh: CategorizedView<T>,
   ): CategorizedView<T> {
     return {
-      categories: this.one(
-        `${key}/categories`,
-        fresh.categories.map((category) =>
-          this.one(`${key}/category#${category.id}`, {
-            ...category,
-            items: this.list(`${key}/category#${category.id}/items`, category.items, key),
-          }),
-        ),
-      ),
-      uncategorized: this.list(`${key}/uncategorized`, fresh.uncategorized, key),
+      categories: fresh.categories.map((category) => ({
+        ...category,
+        items: this.list(`${key}/${category.id}`, category.items),
+      })),
+      uncategorized: this.list(`${key}/uncategorized`, fresh.uncategorized),
     };
   }
 }
@@ -416,25 +396,22 @@ export function createSheetViews(sheet: CharacterSheetBO): () => SheetData {
   const equipment = computed((): EquipmentView => {
     const view = equipmentView(sheet);
     return {
-      weapons: keep.list('equipment/weapons', view.weapons, 'equipment'),
-      other: keep.list('equipment/other', view.other, 'equipment'),
-      attuned: keep.list('equipment/attuned', view.attuned, 'equipment'),
-      equipped: keep.list('equipment/equipped', view.equipped, 'equipment'),
+      weapons: keep.list('weapons', view.weapons),
+      other: keep.list('other', view.other),
+      attuned: keep.list('attuned', view.attuned),
+      equipped: keep.list('equipped', view.equipped),
     };
   });
   const spellList = computed((): SpellListView => {
     const view = spellListView(sheet);
-    return {
-      ...keep.categorized('spells', view),
-      spellcasting: keep.one('spellcasting', view.spellcasting),
-    };
+    return { ...keep.categorized('spells', view), spellcasting: view.spellcasting };
   });
   const counters = computed((): CountersView => {
     const view = countersView(sheet);
     return {
       ...keep.categorized('counters', view),
-      spellSlots: keep.one('spellSlots', view.spellSlots),
-      pactSlots: keep.one('pactSlots', view.pactSlots),
+      spellSlots: view.spellSlots,
+      pactSlots: view.pactSlots,
     };
   });
   const abilitiesAndSkills = computed((): AbilitiesAndSkillsView => {
@@ -461,6 +438,11 @@ export function createSheetViews(sheet: CharacterSheetBO): () => SheetData {
     counters: counters.get(),
     abilitiesAndSkills: abilitiesAndSkills.get(),
   });
+}
+
+/** The views once, as the tests read them: the same assembly, read outside any reaction. */
+export function toSheetData(sheet: CharacterSheetBO): SheetData {
+  return createSheetViews(sheet)();
 }
 
 // ---------------------------------------------------------------------------
@@ -776,7 +758,7 @@ export function toStorageGateView(gate: StorageGate): StorageGateView {
  * `fireImmediately` costs one extra render on mount and buys the window between the first
  * render's snapshot and the effect subscribing, in which a change would otherwise be missed.
  *
- * `compute` must be stable, so every caller below wraps it in `useCallback`. `mobx` is imported
+ * `compute` must be stable, so every caller below memoises it. `mobx` is imported
  * here and nowhere else in `src/ui/`: this file is the layer seam, and that the state underneath
  * is observable is its business and no component's.
  */

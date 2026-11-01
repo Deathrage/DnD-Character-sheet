@@ -35,13 +35,6 @@ export const Counters = memo(function Counters({ characterId, data, actions, onC
   const close = () => setDialog(null);
   const editing = dialog?.kind === 'edit' ? locate(data, dialog.id) : undefined;
   const openCounter = useCallback((id: string) => setDialog({ kind: 'edit', id }), []);
-  const { setCounterCurrent } = actions;
-  const renderRow = useCallback(
-    (counter: CounterView) => (
-      <CounterRow counter={counter} onOpen={openCounter} onSetCurrent={setCounterCurrent} />
-    ),
-    [openCounter, setCounterCurrent],
-  );
 
   // A level with no slots at all is hidden rather than shown as 0/0 — a wizard has three rows,
   // not nine — and so is the pact row, for everyone but a warlock. With no slots of either kind
@@ -74,7 +67,13 @@ export const Counters = memo(function Counters({ characterId, data, actions, onC
         actions={actions}
         onClose={onClose}
         onAdd={(categoryId) => setDialog({ kind: 'new', categoryId })}
-        renderRow={renderRow}
+        renderRow={(counter) => (
+          <CounterRow
+            counter={counter}
+            onOpen={openCounter}
+            onSetCurrent={actions.setCounterCurrent}
+          />
+        )}
       >
         <div className="sechead-row">
           {hasSlots && <span className="sechead static">Spell Slots</span>}

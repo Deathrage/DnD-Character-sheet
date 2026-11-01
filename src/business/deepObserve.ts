@@ -1,5 +1,6 @@
 import {
   type IArrayDidChange,
+  type IObjectDidChange,
   isObservableArray,
   isObservableObject,
   type Lambda,
@@ -41,7 +42,7 @@ export function deepObserve(root: object, listener: () => void): Lambda {
 
   const attach = (value: unknown): void => {
     if (!isNode(value) || disposers.has(value)) return;
-    const onChange = (change: IArrayDidChange | ObjectChange): void => {
+    const onChange = (change: IArrayDidChange | IObjectDidChange): void => {
       if (change.type === 'splice') {
         for (const removed of change.removed) release(removed);
         for (const added of change.added) attach(added);
@@ -51,10 +52,8 @@ export function deepObserve(root: object, listener: () => void): Lambda {
       }
       listener();
     };
-    disposers.set(
-      value,
-      isObservableArray(value) ? observe(value, onChange) : observe(value, onChange),
-    );
+    // One call for both kinds: MobX dispatches on the value, not the overload.
+    disposers.set(value, observe(value, onChange));
     for (const child of values(value)) attach(child);
   };
 
@@ -64,9 +63,3 @@ export function deepObserve(root: object, listener: () => void): Lambda {
     disposers.clear();
   };
 }
-
-/** MobX's `IObjectDidChange`, by the members this file reads. */
-type ObjectChange =
-  | { type: 'add'; newValue: unknown }
-  | { type: 'update'; oldValue: unknown; newValue: unknown }
-  | { type: 'remove'; oldValue: unknown };

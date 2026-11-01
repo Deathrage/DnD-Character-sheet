@@ -8,14 +8,10 @@ import type { CharacterSheetBO } from './characterSheet.js';
 /**
  * Spec §6's pipeline: observe the document, debounce, stamp `updatedAt` on a copy, save.
  *
- * The observation half is `CharacterSheetBO.observe`, a deep observer over the document (see
- * `deepObserve.ts`): one listener call per change, whatever the size of the sheet. It began as
- * a `reaction` over `sheet.toDocument()`, the spec's `deepObserve` replaced by something with
- * the same reach and no dependency — and the same reach was the problem. `toDocument()` is
- * `toJS`, a deep copy, so every keystroke copied the whole document to learn that one field of
- * it had changed. At 0.59ms for a 124 KB sheet on a desktop that looked free; at a 6× CPU
- * throttle on a 468 KB sheet it was about 25ms of every keystroke, and the part of the
- * keystroke that grew as the character did.
+ * The observation half is `CharacterSheetBO.observe`, a deep observer over the document: one
+ * listener call per change, whatever the size of the sheet. It began as a `reaction` over
+ * `sheet.toDocument()`, which copied the whole document on every keystroke; `deepObserve.ts`
+ * has the measurements and the reasoning.
  *
  * The debounce is this class's own `setTimeout` and not `reaction`'s `delay` option, which was
  * the first attempt. `delay` schedules the effect internally and hands the caller no way to ask

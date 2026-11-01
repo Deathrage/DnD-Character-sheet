@@ -58,12 +58,8 @@ export const Equipment = memo(function Equipment({ characterId, data, actions, o
       : undefined;
 
   const openItem = useCallback((id: string) => setDialog({ kind: 'edit', id }), []);
-  const { setWeaponCount } = actions;
-  const row = useCallback(
-    (item: EquipmentItemView) => (
-      <EquipmentRow item={item} onOpen={openItem} onSetCount={setWeaponCount} />
-    ),
-    [openItem, setWeaponCount],
+  const row = (item: EquipmentItemView) => (
+    <EquipmentRow item={item} onOpen={openItem} onSetCount={actions.setWeaponCount} />
   );
 
   return (

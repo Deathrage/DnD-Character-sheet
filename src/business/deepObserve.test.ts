@@ -4,7 +4,8 @@ import { deepObserve } from './deepObserve.js';
 
 type Item = { id: string; name: string; attack: { bonus: number } | null };
 
-const docFor = () =>
+/** A toy tree with every shape `observable(doc)` makes: objects, arrays, a record, primitives. */
+const treeFor = () =>
   observable({
     name: 'Sable',
     hitPoints: { current: 10, total: 10 },
@@ -15,7 +16,7 @@ const docFor = () =>
 
 describe('deepObserve', () => {
   it('fires once per change, at any depth', () => {
-    const doc = docFor();
+    const doc = treeFor();
     const listener = vi.fn();
     deepObserve(doc, listener);
 
@@ -28,7 +29,7 @@ describe('deepObserve', () => {
   });
 
   it('observes an item that is pushed, and inside it afterwards', () => {
-    const doc = docFor();
+    const doc = treeFor();
     const listener = vi.fn();
     deepObserve(doc, listener);
 
@@ -41,7 +42,7 @@ describe('deepObserve', () => {
   });
 
   it('observes a subtree that replaces another, and releases the one replaced', () => {
-    const doc = docFor();
+    const doc = treeFor();
     const listener = vi.fn();
     deepObserve(doc, listener);
 
@@ -59,7 +60,7 @@ describe('deepObserve', () => {
   });
 
   it('releases an item that is spliced out', () => {
-    const doc = docFor();
+    const doc = treeFor();
     const listener = vi.fn();
     deepObserve(doc, listener);
 
@@ -71,7 +72,7 @@ describe('deepObserve', () => {
   });
 
   it('fires for a key added to a record and for one deleted from it', () => {
-    const doc = docFor();
+    const doc = treeFor();
     const listener = vi.fn();
     deepObserve(doc, listener);
 
@@ -84,7 +85,7 @@ describe('deepObserve', () => {
   });
 
   it('stops entirely once disposed', () => {
-    const doc = docFor();
+    const doc = treeFor();
     const listener = vi.fn();
     const dispose = deepObserve(doc, listener);
 

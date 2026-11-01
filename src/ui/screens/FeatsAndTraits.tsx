@@ -32,10 +32,6 @@ export const FeatsAndTraits = memo(function FeatsAndTraits({
   const close = () => setDialog(null);
   const editing = dialog?.kind === 'edit' ? locate(data, dialog.id) : undefined;
   const openFeat = useCallback((id: string) => setDialog({ kind: 'edit', id }), []);
-  const renderRow = useCallback(
-    (feat: FeatView) => <FeatRow feat={feat} onOpen={openFeat} />,
-    [openFeat],
-  );
 
   return (
     <>
@@ -46,7 +42,7 @@ export const FeatsAndTraits = memo(function FeatsAndTraits({
         actions={actions}
         onClose={onClose}
         onAdd={(categoryId) => setDialog({ kind: 'new', categoryId })}
-        renderRow={renderRow}
+        renderRow={(feat) => <FeatRow feat={feat} onOpen={openFeat} />}
       />
 
       {dialog?.kind === 'new' && (
@@ -69,10 +65,6 @@ export const FeatsAndTraits = memo(function FeatsAndTraits({
   );
 });
 
-/**
- * Creation collects the whole entry before anything exists, because `add` needs a name the
- * business layer will accept — there is no blank entry to fill in afterwards.
- */
 /** Memoised: a change elsewhere leaves `feat` the same object (`bind.ts` keeps it). */
 const FeatRow = memo(function FeatRow({
   feat,
@@ -84,6 +76,10 @@ const FeatRow = memo(function FeatRow({
   return <ItemRow name={feat.name} description={feat.description} onOpen={() => onOpen(feat.id)} />;
 });
 
+/**
+ * Creation collects the whole entry before anything exists, because `add` needs a name the
+ * business layer will accept — there is no blank entry to fill in afterwards.
+ */
 function NewFeatDialog({
   categoryId,
   categories,

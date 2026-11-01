@@ -70,13 +70,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-/**
- * On a mobile browser, Auth initialises a resolver it is handed at construction straight away:
- * Google's gapi scripts and the hidden auth iframe, about 400 KB of script on the main thread
- * the moment the first sheet of a launch loads Firebase. Constructed without one, Auth loads
- * nothing of that; the resolver is passed to the calls that need it, and `getRedirectResult`
- * then opens the iframe only when a redirect is actually pending.
- */
+/** Pins the wiring explained beside the `initializeAuth` call in `firestoreRepository.ts`. */
 describe('createFirestoreRepository', () => {
   it('initialises Auth without the redirect resolver, keeping getAuth’s own persistence', () => {
     createFirestoreRepository();
