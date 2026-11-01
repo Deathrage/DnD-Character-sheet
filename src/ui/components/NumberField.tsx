@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { addDecimals, MAX_DECIMALS } from '../../shared/decimal.js';
 import { useSelectOnFocus } from './selectOnFocus.js';
 
 interface Props {
@@ -15,6 +16,15 @@ interface Props {
   stepper?: boolean;
   /** The lowest value an unsigned field accepts; typed text below it never reaches `onChange`. */
   min?: number;
+  /**
+   * Accepts a fraction of up to three places, typed with a point or a comma — a phone keyboard
+   * in `decimal` mode offers whichever its locale uses, and a Czech or German phone offers the
+   * comma. Opt-in: a counter counts in parts since schema v7, nothing else on the sheet does.
+   * Not combined with `signed` anywhere.
+   */
+  decimal?: boolean;
+  /** What − and + add or subtract. A counter's step; one for everything else. */
+  step?: number;
   className?: string;
   /**
    * Selects the whole value when a click or tap focuses the field, so typing replaces it. On by
@@ -44,6 +54,8 @@ export function NumberField({
   stepper = false,
   className = 'num',
   min = 0,
+  decimal = false,
+  step: stepBy = 1,
   selectOnFocus = true,
 }: Props) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -57,7 +69,10 @@ export function NumberField({
    */
   const step = (delta: number) => {
     setDraft(null);
-    onChange(signed ? value + delta : Math.max(min, value + delta));
+    // Rounded to the operands' places: 0.2 + 0.1 must be 0.3, not 0.30000000000000004, which the
+    // setter would store and the schema then refuse. A whole number plus 1 is unchanged by it.
+    const next = addDecimals(value, delta * stepBy);
+    onChange(signed ? next : Math.max(min, next));
   };
 
   const input = (
@@ -67,7 +82,7 @@ export function NumberField({
       // scroll wheel that changes values by accident, and a `value` that reads back as '' for
       // anything it considers invalid — which is exactly the draft text this component exists
       // to keep hold of.
-      inputMode={signed ? 'text' : 'numeric'}
+      inputMode={signed ? 'text' : decimal ? 'decimal' : 'numeric'}
       // Chrome on Android otherwise puts its autofill bar — saved passwords, cards, addresses —
       // above the keyboard on every field, and nothing on a character sheet is one of those.
       autoComplete="off"
@@ -76,7 +91,7 @@ export function NumberField({
       onChange={(event) => {
         const text = event.target.value;
         setDraft(text);
-        const parsed = parse(text, signed);
+        const parsed = parse(text, signed, decimal);
         if (parsed !== null && (signed || parsed >= min)) onChange(parsed);
       }}
       {...selectOnPress}
@@ -118,14 +133,23 @@ function format(value: number, signed: boolean): string {
   return signed && value >= 0 ? `+${value}` : String(value);
 }
 
+const DECIMAL = new RegExp(`^\\d+([.,]\\d{1,${MAX_DECIMALS}})?$`);
+
 /**
- * `null` for anything that is not a whole number the caller accepts. Twenty digits match the
- * pattern, but `Number` rounds them to an integer the schema cannot store, so a value past
- * `Number.MAX_SAFE_INTEGER` is `null` too.
+ * `null` for anything that is not a number the caller accepts. Twenty digits match the pattern,
+ * but `Number` rounds them to an integer the schema cannot store, so a value past
+ * `Number.MAX_SAFE_INTEGER` is `null` too. A decimal field takes a point or a comma, and `4.`
+ * or `.5` is a draft, not a number.
  */
-function parse(text: string, signed: boolean): number | null {
+function parse(text: string, signed: boolean, decimal: boolean): number | null {
+  const trimmed = text.trim();
+  if (decimal) {
+    if (!DECIMAL.test(trimmed)) return null;
+    const value = Number(trimmed.replace(',', '.'));
+    return value <= Number.MAX_SAFE_INTEGER ? value : null;
+  }
   const pattern = signed ? /^[+-]?\d+$/ : /^\d+$/;
-  if (!pattern.test(text.trim())) return null;
-  const value = Number(text.trim());
+  if (!pattern.test(trimmed)) return null;
+  const value = Number(trimmed);
   return Number.isSafeInteger(value) ? value : null;
 }

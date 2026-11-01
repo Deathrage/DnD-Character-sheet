@@ -276,6 +276,7 @@ function countersView(sheet: CharacterSheetBO): CountersView {
       ...namedItemView(counter),
       current: counter.current,
       total: counter.total,
+      step: counter.step,
     })),
     spellSlots: sheet.counters.spellSlots.map(slotView),
     pactSlots: slotView(sheet.counters.pactSlots),
@@ -640,6 +641,7 @@ function countersActions(sheet: CharacterSheetBO): CountersActions {
     addCounter: (categoryId, init) => {
       // A new counter starts full: nobody creates "Rage 3" meaning none left.
       const added = (categoryId === null ? bo : category(categoryId)).add(init);
+      added.setStep(init.step);
       added.setTotal(init.total);
       added.setCurrent(init.total);
     },
@@ -647,6 +649,7 @@ function countersActions(sheet: CharacterSheetBO): CountersActions {
     setCounterDescription: (id, description) => counter(id).setDescription(description),
     setCounterCurrent: (id, value) => counter(id).setCurrent(value),
     setCounterTotal: (id, value) => counter(id).setTotal(value),
+    setCounterStep: (id, step) => counter(id).setStep(step),
     moveCounter: (id, categoryId) =>
       counter(id).moveTo(categoryId === null ? null : category(categoryId)),
     removeCounter: (id) => counter(id).remove(),

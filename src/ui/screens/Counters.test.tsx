@@ -14,6 +14,15 @@ beforeEach(() => localStorage.clear());
 const NO_SLOTS = counters.spellSlots.map((slot) => ({ ...slot, current: 0, total: 0 }));
 const NO_PACT = { level: 1, current: 0, total: 0 };
 const PACT = { level: 3, current: 1, total: 2 };
+/** A counter that counts in parts, in Uncategorized so its row is on screen without a click. */
+const OIL = {
+  id: 'oil',
+  name: 'Lantern oil',
+  description: 'One flask burns six hours.',
+  current: 4.5,
+  total: 6,
+  step: 0.5,
+};
 
 /** `counters` has 1st 4/4 and 2nd 1/2 and no pact slots; each test overrides what it needs. */
 const renderWith = (data: Partial<CountersView>, actions: CountersActions = noCountersActions) =>
@@ -144,6 +153,88 @@ describe('The spell slots dialog', () => {
 
     expect(actions.setPactSlotLevel).toHaveBeenCalledWith(5);
     expect(actions.setPactSlotTotal).toHaveBeenCalledWith(3);
+  });
+});
+
+describe('A counter that counts in parts', () => {
+  it('shows its fraction and steps by its own step, with no float residue', () => {
+    const actions = spyActions(noCountersActions);
+    renderWith({ uncategorized: [OIL] }, actions);
+    const remaining = screen.getByRole('textbox', { name: 'Lantern oil remaining' });
+    expect((remaining as HTMLInputElement).value).toBe('4.5');
+    expect(screen.getByText('/ 6')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease Lantern oil remaining' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Lantern oil remaining' }));
+    expect(actions.setCounterCurrent.mock.calls).toEqual([
+      ['oil', 4],
+      ['oil', 5],
+    ]);
+  });
+
+  it('takes a fraction typed into the row, with a comma too', () => {
+    const actions = spyActions(noCountersActions);
+    renderWith({ uncategorized: [OIL] }, actions);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Lantern oil remaining' }), {
+      target: { value: '4,25' },
+    });
+    expect(actions.setCounterCurrent).toHaveBeenCalledWith('oil', 4.25);
+  });
+
+  // A counter at step 1 is every counter from before v7, and must still move by one.
+  it('steps a whole-number counter by one', () => {
+    const actions = spyActions(noCountersActions);
+    renderWith(
+      { uncategorized: [{ ...OIL, id: 'rage', name: 'Rage', current: 2, step: 1 }] },
+      actions,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease Rage remaining' }));
+    expect(actions.setCounterCurrent).toHaveBeenCalledWith('rage', 1);
+  });
+
+  it('is created with a step, 1 unless the player sets one', () => {
+    const actions = spyActions(noCountersActions);
+    renderWith({}, actions);
+    fireEvent.click(screen.getByRole('button', { name: 'Add entry to Uncategorized' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name' }), {
+      target: { value: 'Rations (days)' },
+    });
+    expect((screen.getByRole('textbox', { name: 'Step' }) as HTMLInputElement).value).toBe('1');
+    expect(screen.getByText(/move it by the step/)).toBeTruthy();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Total' }), { target: { value: '10' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Step' }), { target: { value: '0.5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+
+    expect(actions.addCounter).toHaveBeenCalledWith(null, {
+      name: 'Rations (days)',
+      description: '',
+      total: 10,
+      step: 0.5,
+    });
+  });
+
+  it('never passes a step of 0 on, from the new or the edit dialog', () => {
+    const actions = spyActions(noCountersActions);
+    renderWith({ uncategorized: [OIL] }, actions);
+    fireEvent.click(screen.getByRole('button', { name: /^Lantern oil/ }));
+    const step = screen.getByRole('textbox', { name: 'Step' }) as HTMLInputElement;
+    expect(step.value).toBe('0.5');
+
+    fireEvent.change(step, { target: { value: '0' } });
+    fireEvent.change(step, { target: { value: '0.25' } });
+    expect(actions.setCounterStep.mock.calls).toEqual([['oil', 0.25]]);
+  });
+
+  it('edits the fraction and total from the edit dialog', () => {
+    const actions = spyActions(noCountersActions);
+    renderWith({ uncategorized: [OIL] }, actions);
+    fireEvent.click(screen.getByRole('button', { name: /^Lantern oil/ }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Remaining' }), {
+      target: { value: '3.5' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Total' }), { target: { value: '6.5' } });
+    expect(actions.setCounterCurrent).toHaveBeenCalledWith('oil', 3.5);
+    expect(actions.setCounterTotal).toHaveBeenCalledWith('oil', 6.5);
   });
 });
 

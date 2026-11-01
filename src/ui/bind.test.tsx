@@ -65,7 +65,9 @@ describe('toSheetData', () => {
     spell.setPrepared(true);
     sheet.spellList.spellcasting.add('charisma', { attackBonus: 4, saveDc: 12 });
     sheet.spellList.spellcasting.add('intelligence', { attackBonus: 6, saveDc: 14 });
-    sheet.counters.add({ name: 'Inspiration' }).setTotal(1);
+    const inspiration = sheet.counters.add({ name: 'Inspiration' });
+    inspiration.setTotal(1);
+    inspiration.setStep(0.5);
     sheet.counters.spellSlots[1]?.setTotal(2);
     sheet.counters.spellSlots[1]?.setCurrent(1);
     sheet.counters.pactSlots.setLevel(3);
@@ -193,6 +195,7 @@ describe('toSheetData', () => {
         description: '',
         current: 0,
         total: 1,
+        step: 0.5,
       },
     ]);
     expect(data.counters.spellSlots).toHaveLength(9);
@@ -296,7 +299,12 @@ describe('toSheetActions', () => {
       prepared: true,
     });
     actions.spellList.addSpellcasting('wisdom', { attackBonus: 5, saveDc: 13 });
-    actions.counters.addCounter(null, { name: 'Inspiration', description: '', total: 1 });
+    actions.counters.addCounter(null, {
+      name: 'Inspiration',
+      description: '',
+      total: 1,
+      step: 0.5,
+    });
     actions.counters.setSpellSlotTotal(2, 2);
     actions.counters.setSpellSlotCurrent(2, 1);
     actions.counters.setPactSlotLevel(4);
@@ -341,6 +349,7 @@ describe('toSheetActions', () => {
       name: 'Inspiration',
       current: 1,
       total: 1,
+      step: 0.5,
     });
     expect(doc.counters.spellSlots['2']).toEqual({ current: 1, total: 2 });
     expect(doc.counters.pactSlots).toEqual({ level: 4, current: 1, total: 2 });
@@ -419,7 +428,7 @@ describe('toSheetActions', () => {
       level: 'c',
       prepared: false,
     });
-    actions.counters.addCounter(null, { name: 'Inspiration', description: '', total: 0 });
+    actions.counters.addCounter(null, { name: 'Inspiration', description: '', total: 0, step: 1 });
     actions.spellList.addSpellcasting('intelligence', { attackBonus: 1, saveDc: 2 });
 
     const before = toSheetData(sheet);
@@ -458,6 +467,7 @@ describe('toSheetActions', () => {
     actions.counters.setCounterDescription(counterId, 'd8, regained on a rest');
     actions.counters.setCounterTotal(counterId, 4);
     actions.counters.setCounterCurrent(counterId, 3);
+    actions.counters.setCounterStep(counterId, 0.25);
     actions.abilitiesAndSkills.setProficiencyBonus(3);
     actions.abilitiesAndSkills.setPassivePerception(14);
     actions.abilitiesAndSkills.setAbilityModifier('wisdom', 1);
@@ -498,6 +508,7 @@ describe('toSheetActions', () => {
       description: 'd8, regained on a rest',
       current: 3,
       total: 4,
+      step: 0.25,
     });
     expect(doc.abilitiesAndSkills).toMatchObject({
       proficiencyBonus: 3,
@@ -577,7 +588,7 @@ describe('toSheetActions', () => {
       prepared: true,
     });
     actions.counters.createCategory('Class features');
-    actions.counters.addCounter(null, { name: 'Rage', description: '', total: 3 });
+    actions.counters.addCounter(null, { name: 'Rage', description: '', total: 3, step: 1 });
 
     const before = toSheetData(sheet);
     actions.spellList.moveSpell(

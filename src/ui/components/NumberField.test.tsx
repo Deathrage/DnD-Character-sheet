@@ -75,6 +75,107 @@ describe('NumberField', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  // v7's counters count in parts. The whole-number contract above still holds for every other
+  // field: `decimal` is opt-in, so nothing else on the sheet starts accepting a fraction.
+  describe('decimal', () => {
+    it('accepts up to three decimal places, with a point or a comma', () => {
+      const onChange = vi.fn();
+      render(<NumberField label="Remaining" value={6} onChange={onChange} decimal />);
+      const input = screen.getByLabelText('Remaining');
+
+      fireEvent.change(input, { target: { value: '4' } });
+      fireEvent.change(input, { target: { value: '4.' } });
+      fireEvent.change(input, { target: { value: '4.5' } });
+      fireEvent.change(input, { target: { value: '4,' } });
+      fireEvent.change(input, { target: { value: '4,25' } });
+      fireEvent.change(input, { target: { value: '.5' } });
+      fireEvent.change(input, { target: { value: '0.125' } });
+      fireEvent.change(input, { target: { value: '0.1255' } });
+
+      expect(onChange.mock.calls).toEqual([[4], [4.5], [4.25], [0.125]]);
+    });
+
+    it('holds a half-typed fraction as a draft, and shows the stored value again after blur', () => {
+      render(<NumberField label="Remaining" value={6} onChange={() => {}} decimal />);
+      const input = screen.getByLabelText<HTMLInputElement>('Remaining');
+
+      fireEvent.change(input, { target: { value: '4,' } });
+      expect(input.value).toBe('4,');
+
+      fireEvent.blur(input);
+      expect(input.value).toBe('6');
+    });
+
+    it('shows a fraction with a point, and asks the keyboard for a decimal layout', () => {
+      render(<NumberField label="Remaining" value={4.5} onChange={() => {}} decimal />);
+      const input = screen.getByLabelText<HTMLInputElement>('Remaining');
+      expect(input.value).toBe('4.5');
+      expect(input.getAttribute('inputmode')).toBe('decimal');
+    });
+
+    it('does not accept a fraction when not decimal, which is every other field', () => {
+      const onChange = vi.fn();
+      render(<NumberField label="Gold" value={6} onChange={onChange} />);
+      fireEvent.change(screen.getByLabelText('Gold'), { target: { value: '4,5' } });
+      fireEvent.change(screen.getByLabelText('Gold'), { target: { value: '4.5' } });
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('never calls onChange below min, from typing or the stepper', () => {
+      const onChange = vi.fn();
+      render(
+        <NumberField label="Step" value={0.001} min={0.001} onChange={onChange} decimal stepper />,
+      );
+
+      fireEvent.change(screen.getByLabelText('Step'), { target: { value: '0' } });
+      fireEvent.change(screen.getByLabelText('Step'), { target: { value: '0.0005' } });
+      expect(screen.getByLabelText<HTMLButtonElement>('Decrease Step').disabled).toBe(true);
+      fireEvent.change(screen.getByLabelText('Step'), { target: { value: '0.5' } });
+
+      expect(onChange.mock.calls).toEqual([[0.5]]);
+    });
+  });
+
+  describe('step', () => {
+    it('moves by the step, with no float residue', () => {
+      const onChange = vi.fn();
+      render(
+        <NumberField label="Oil" value={0.2} onChange={onChange} decimal stepper step={0.1} />,
+      );
+
+      fireEvent.click(screen.getByLabelText('Increase Oil'));
+      fireEvent.click(screen.getByLabelText('Decrease Oil'));
+
+      // 0.2 + 0.1 is 0.30000000000000004 in floating point; the schema would refuse that.
+      expect(onChange.mock.calls).toEqual([[0.3], [0.1]]);
+    });
+
+    it('steps a fraction back to a whole number', () => {
+      const onChange = vi.fn();
+      render(
+        <NumberField label="Oil" value={4.5} onChange={onChange} decimal stepper step={0.5} />,
+      );
+      fireEvent.click(screen.getByLabelText('Decrease Oil'));
+      expect(onChange).toHaveBeenCalledWith(4);
+    });
+
+    it('stops at min rather than stepping below it', () => {
+      const onChange = vi.fn();
+      render(
+        <NumberField label="Oil" value={0.3} onChange={onChange} decimal stepper step={0.5} />,
+      );
+      fireEvent.click(screen.getByLabelText('Decrease Oil'));
+      expect(onChange).toHaveBeenCalledWith(0);
+    });
+
+    it('is one when not given, so every other stepper is unchanged', () => {
+      const onChange = vi.fn();
+      render(<NumberField label="Current" value={38} onChange={onChange} stepper />);
+      fireEvent.click(screen.getByLabelText('Increase Current'));
+      expect(onChange).toHaveBeenCalledWith(39);
+    });
+  });
+
   it('shows the draft while typing, and the stored value again after blur', () => {
     // The parent ignores onChange, so `value` stays 38 — which is what a rejected or
     // uncommitted edit looks like from the field's point of view.

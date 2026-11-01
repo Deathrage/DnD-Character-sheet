@@ -1,4 +1,5 @@
 import { memo, useCallback, useState } from 'react';
+import { MIN_STEP } from '../../shared/decimal.js';
 import { pasteLists } from '../components/pasteLists.js';
 import { CategorizedSection } from '../components/CategorizedSection.js';
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
@@ -142,6 +143,8 @@ const CounterRow = memo(function CounterRow({
             value={counter.current}
             onChange={(value) => onSetCurrent(counter.id, value)}
             stepper
+            decimal
+            step={counter.step}
           />
           <span className="maxlbl">/ {counter.total}</span>
         </span>
@@ -279,6 +282,7 @@ function NewCounterDialog({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [total, setTotal] = useState(1);
+  const [step, setStep] = useState(1);
   const [target, setTarget] = useState(categoryId);
 
   return (
@@ -292,7 +296,7 @@ function NewCounterDialog({
           className="primary"
           disabled={name.trim() === ''}
           onClick={() => {
-            onCreate(target, { name: name.trim(), description, total });
+            onCreate(target, { name: name.trim(), description, total, step });
             onClose();
           }}
         >
@@ -312,12 +316,15 @@ function NewCounterDialog({
       <div className="row2">
         <div className="col">
           <span className="dlabel">Total</span>
-          <NumberField label="Total" className="inp" value={total} onChange={setTotal} />
+          <NumberField label="Total" className="inp" value={total} onChange={setTotal} decimal />
         </div>
         <div className="col">
-          <CategorySelect value={target} categories={categories} onChange={setTarget} />
+          <span className="dlabel">Step</span>
+          <StepField value={step} onChange={setStep} />
         </div>
       </div>
+      <StepHint />
+      <CategorySelect value={target} categories={categories} onChange={setTarget} />
       <label className="dlabel mt12" htmlFor="new-counter-description">
         Note
       </label>
@@ -377,6 +384,7 @@ function EditCounterDialog({
             className="inp"
             value={counter.current}
             onChange={(value) => actions.setCounterCurrent(counter.id, value)}
+            decimal
           />
         </div>
         <div className="col">
@@ -386,14 +394,27 @@ function EditCounterDialog({
             className="inp"
             value={counter.total}
             onChange={(value) => actions.setCounterTotal(counter.id, value)}
+            decimal
           />
         </div>
       </div>
-      <CategorySelect
-        value={categoryId}
-        categories={categories}
-        onChange={(id) => actions.moveCounter(counter.id, id)}
-      />
+      <div className="row2">
+        <div className="col">
+          <span className="dlabel">Step</span>
+          <StepField
+            value={counter.step}
+            onChange={(value) => actions.setCounterStep(counter.id, value)}
+          />
+        </div>
+        <div className="col">
+          <CategorySelect
+            value={categoryId}
+            categories={categories}
+            onChange={(id) => actions.moveCounter(counter.id, id)}
+          />
+        </div>
+      </div>
+      <StepHint />
       <label className="dlabel mt12" htmlFor="counter-description">
         Note
       </label>
@@ -406,5 +427,31 @@ function EditCounterDialog({
         onChange={(event) => actions.setCounterDescription(counter.id, event.target.value)}
       />
     </ResponsiveDialog>
+  );
+}
+
+/**
+ * What − and + move the counter by. `min` is the smallest step three decimal places can
+ * express, so a typed 0 — a button that does nothing — never reaches the setter, which would
+ * throw `NOT_POSITIVE`.
+ */
+function StepField({ value, onChange }: { value: number; onChange(value: number): void }) {
+  return (
+    <NumberField
+      label="Step"
+      className="inp"
+      value={value}
+      onChange={onChange}
+      decimal
+      min={MIN_STEP}
+    />
+  );
+}
+
+function StepHint() {
+  return (
+    <div className="hint tight">
+      − and + move it by the step. 0.5 or 0.1 lets it count in parts.
+    </div>
   );
 }
