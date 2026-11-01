@@ -76,6 +76,10 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
 
   const createCharacter = useCallback(() => {
     void library.create('Unnamed character').then((sheet) => {
+      // `create` attaches autosave to the sheet it returns, for a caller that edits it — the dev
+      // seed does. This one never will: `Character` opens its own below. Disposed here, or it
+      // stays attached, and counted as open, for the rest of the session.
+      sheet.dispose();
       navigate({ name: 'character', id: sheet.id, section: null });
     });
   }, [library]);
