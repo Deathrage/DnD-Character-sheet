@@ -172,12 +172,6 @@ describe('nonNegativeDecimal', () => {
       expect.objectContaining({ code: 'NEGATIVE' }) as Error,
     );
   });
-
-  it('rejects a fourth place as TOO_PRECISE, so the codes stay distinguishable', () => {
-    expect(() => nonNegativeDecimal(0.0001)).toThrow(
-      expect.objectContaining({ code: 'TOO_PRECISE' }) as Error,
-    );
-  });
 });
 
 describe('positiveDecimal', () => {

@@ -13,9 +13,13 @@ describe('decimalPlaces', () => {
   });
 
   // `String(1e-7)` is '1e-7', which has no point to count after; the value is still a fraction.
-  it('treats a fraction too small to print in full as having every place', () => {
-    expect(decimalPlaces(1e-7)).toBe(Number.POSITIVE_INFINITY);
-  });
+  // `String(NaN)` has no point either, and a non-number is not a whole number.
+  it.each([1e-7, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    'treats %j, which cannot be stored, as having every place',
+    (value) => {
+      expect(decimalPlaces(value)).toBe(Number.POSITIVE_INFINITY);
+    },
+  );
 });
 
 describe('addDecimals', () => {

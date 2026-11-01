@@ -14,15 +14,11 @@ beforeEach(() => localStorage.clear());
 const NO_SLOTS = counters.spellSlots.map((slot) => ({ ...slot, current: 0, total: 0 }));
 const NO_PACT = { level: 1, current: 0, total: 0 };
 const PACT = { level: 3, current: 1, total: 2 };
-/** A counter that counts in parts, in Uncategorized so its row is on screen without a click. */
-const OIL = {
-  id: 'oil',
-  name: 'Lantern oil',
-  description: 'One flask burns six hours.',
-  current: 4.5,
-  total: 6,
-  step: 0.5,
-};
+/**
+ * The fixture's counter that counts in parts (4.5 of 6 by 0.5), moved to Uncategorized so its
+ * row is on screen without a click: categories start collapsed.
+ */
+const OIL = { ...counters.categories[1]!.items[1]!, id: 'oil' };
 
 /** `counters` has 1st 4/4 and 2nd 1/2 and no pact slots; each test overrides what it needs. */
 const renderWith = (data: Partial<CountersView>, actions: CountersActions = noCountersActions) =>
@@ -160,12 +156,12 @@ describe('A counter that counts in parts', () => {
   it('shows its fraction and steps by its own step, with no float residue', () => {
     const actions = spyActions(noCountersActions);
     renderWith({ uncategorized: [OIL] }, actions);
-    const remaining = screen.getByRole('textbox', { name: 'Lantern oil remaining' });
+    const remaining = screen.getByRole('textbox', { name: 'Lantern oil (hours) remaining' });
     expect((remaining as HTMLInputElement).value).toBe('4.5');
     expect(screen.getByText('/ 6')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Decrease Lantern oil remaining' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Increase Lantern oil remaining' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease Lantern oil (hours) remaining' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Lantern oil (hours) remaining' }));
     expect(actions.setCounterCurrent.mock.calls).toEqual([
       ['oil', 4],
       ['oil', 5],
@@ -175,7 +171,7 @@ describe('A counter that counts in parts', () => {
   it('takes a fraction typed into the row, with a comma too', () => {
     const actions = spyActions(noCountersActions);
     renderWith({ uncategorized: [OIL] }, actions);
-    fireEvent.change(screen.getByRole('textbox', { name: 'Lantern oil remaining' }), {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Lantern oil (hours) remaining' }), {
       target: { value: '4,25' },
     });
     expect(actions.setCounterCurrent).toHaveBeenCalledWith('oil', 4.25);

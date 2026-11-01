@@ -20,7 +20,6 @@ interface Props {
    * Accepts a fraction of up to three places, typed with a point or a comma — a phone keyboard
    * in `decimal` mode offers whichever its locale uses, and a Czech or German phone offers the
    * comma. Opt-in: a counter counts in parts since schema v7, nothing else on the sheet does.
-   * Not combined with `signed` anywhere.
    */
   decimal?: boolean;
   /** What − and + add or subtract. A counter's step; one for everything else. */
@@ -55,7 +54,7 @@ export function NumberField({
   className = 'num',
   min = 0,
   decimal = false,
-  step: stepBy = 1,
+  step = 1,
   selectOnFocus = true,
 }: Props) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -67,11 +66,11 @@ export function NumberField({
    * way to `45`, `value` is already 4 — and if it holds something unparseable, `value` is still
    * the last good one. Dropping the draft afterwards is what makes the new number appear.
    */
-  const step = (delta: number) => {
+  const nudge = (delta: number) => {
     setDraft(null);
     // Rounded to the operands' places: 0.2 + 0.1 must be 0.3, not 0.30000000000000004, which the
     // setter would store and the schema then refuse. A whole number plus 1 is unchanged by it.
-    const next = addDecimals(value, delta * stepBy);
+    const next = addDecimals(value, delta * step);
     onChange(signed ? next : Math.max(min, next));
   };
 
@@ -110,7 +109,7 @@ export function NumberField({
         // At zero there is nowhere down to go for an unsigned field, and calling the setter
         // anyway would throw `NEGATIVE`. Disabling says so before the tap rather than after.
         disabled={signed ? value <= -Number.MAX_SAFE_INTEGER : value <= min}
-        onClick={() => step(-1)}
+        onClick={() => nudge(-1)}
       >
         {'−'}
       </button>
@@ -121,7 +120,7 @@ export function NumberField({
         aria-label={`Increase ${label}`}
         // Past this the setter would throw `UNSAFE_INTEGER`, for the reason the − button gives.
         disabled={value >= Number.MAX_SAFE_INTEGER}
-        onClick={() => step(1)}
+        onClick={() => nudge(1)}
       >
         +
       </button>
@@ -133,23 +132,21 @@ function format(value: number, signed: boolean): string {
   return signed && value >= 0 ? `+${value}` : String(value);
 }
 
-const DECIMAL = new RegExp(`^\\d+([.,]\\d{1,${MAX_DECIMALS}})?$`);
+const SIGN = '[+-]?';
+const FRACTION = `(?:[.,]\\d{1,${MAX_DECIMALS}})?`;
 
 /**
- * `null` for anything that is not a number the caller accepts. Twenty digits match the pattern,
- * but `Number` rounds them to an integer the schema cannot store, so a value past
- * `Number.MAX_SAFE_INTEGER` is `null` too. A decimal field takes a point or a comma, and `4.`
- * or `.5` is a draft, not a number.
+ * `null` for anything that is not a number the caller accepts: an optional sign when `signed`,
+ * digits, and when `decimal` an optional point or comma with up to three places. One shape for
+ * every field, so a whole number is a decimal with no places and the two cannot drift apart.
+ * `4.` or `.5` is a draft, not a number. Twenty digits match the pattern, but `Number` rounds
+ * them to an integer the schema cannot store, so a value past `Number.MAX_SAFE_INTEGER` is
+ * `null` too.
  */
 function parse(text: string, signed: boolean, decimal: boolean): number | null {
   const trimmed = text.trim();
-  if (decimal) {
-    if (!DECIMAL.test(trimmed)) return null;
-    const value = Number(trimmed.replace(',', '.'));
-    return value <= Number.MAX_SAFE_INTEGER ? value : null;
-  }
-  const pattern = signed ? /^[+-]?\d+$/ : /^\d+$/;
+  const pattern = new RegExp(`^${signed ? SIGN : ''}\\d+${decimal ? FRACTION : ''}$`);
   if (!pattern.test(trimmed)) return null;
-  const value = Number(trimmed);
-  return Number.isSafeInteger(value) ? value : null;
+  const value = Number(trimmed.replace(',', '.'));
+  return Math.abs(value) <= Number.MAX_SAFE_INTEGER ? value : null;
 }

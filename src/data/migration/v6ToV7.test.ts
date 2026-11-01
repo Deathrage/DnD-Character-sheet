@@ -23,8 +23,14 @@ const every = (doc: Counters): Counter[] => [
 describe('migrateV6ToV7', () => {
   it('gives every counter a step of 1 and changes nothing else', () => {
     const v6 = v6DocFor(ID_A, 'Sable') as Counters;
-    // Everything the migration does not touch comes through as it was, the weapon counts v6
-    // added included.
+    // The bait is really there, so the assertion below means something: a counter in a category
+    // and one in uncategorized, one of them described in a way a step could be read from.
+    expect(v6.counters.uncategorized.length).toBeGreaterThan(0);
+    expect(v6.counters.categories.map((category) => category.items.length)).toContain(1);
+    expect(every(v6).map((counter) => counter.description)).toContain('Counted in half hours.');
+
+    // Everything the migration does not touch comes through as it was: the slots, and the weapon
+    // counts v6 added. A step of 1 everywhere is what "half hours" was not read as.
     expect(migrateV6ToV7(v6)).toEqual({
       ...v6,
       schemaVersion: 7,
@@ -39,35 +45,13 @@ describe('migrateV6ToV7', () => {
     });
   });
 
-  it('reaches counters in every category and in uncategorized alike', () => {
-    const v6 = v6DocFor(ID_A, 'Sable') as Counters;
-    // Both buckets are really populated, so the assertion below means something.
-    expect(v6.counters.uncategorized.length).toBeGreaterThan(0);
-    expect(v6.counters.categories.map((category) => category.items.length)).toContain(1);
-
-    const v7 = migrateV6ToV7(v6) as Counters;
-    expect(every(v7).map((counter) => counter.step)).toEqual(every(v6).map(() => 1));
-  });
-
-  it('reads no description: "half hours" is a note, not a step', () => {
-    const v6 = v6DocFor(ID_A, 'Sable') as Counters;
-    expect(every(v6).map((counter) => counter.description)).toContain('Counted in half hours.');
-
-    const v7 = migrateV6ToV7(v6) as Counters;
-    const oil = every(v7).find((counter) => counter.name === 'Lantern oil');
-    expect(oil?.step).toBe(1);
-  });
-
-  it('puts the step last in each counter, and leaves the slots alone', () => {
-    // Key order is what the raw-JSON editor shows; a new counter has its step last too.
-    const v6 = v6DocFor(ID_A, 'Sable') as Counters;
-    const v7 = migrateV6ToV7(v6) as Counters;
+  it('puts the step last in each counter', () => {
+    // Key order is what the raw-JSON editor shows, and `toEqual` above ignores it; a new counter
+    // has its step last too.
+    const v7 = migrateV6ToV7(v6DocFor(ID_A, 'Sable')) as Counters;
     for (const counter of every(v7)) {
       expect(Object.keys(counter).at(-1)).toBe('step');
     }
-    expect(v7.counters.spellSlots).toEqual(v6.counters.spellSlots);
-    expect(v7.counters.pactSlots).toEqual(v6.counters.pactSlots);
-    expect(Object.keys(v7.counters)).toEqual(Object.keys(v6.counters));
   });
 
   it('produces a valid v7 document', () => {

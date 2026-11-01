@@ -16,9 +16,12 @@ export const MIN_STEP = 10 ** -MAX_DECIMALS;
 /**
  * How many decimal places a value has, read from its shortest round-trip text — the same text
  * the schema checks and the raw-JSON editor shows. 0 for a whole number. A fraction too small
- * to print without an exponent has, for every purpose here, more places than can be stored.
+ * to print without an exponent, and a value that is not a finite number at all, have, for every
+ * purpose here, more places than can be stored: `String(NaN)` has no point and must not count
+ * as a whole number.
  */
 export function decimalPlaces(value: number): number {
+  if (!Number.isFinite(value)) return Number.POSITIVE_INFINITY;
   const text = String(value);
   if (/e/i.test(text)) {
     return Number.isInteger(value) ? 0 : Number.POSITIVE_INFINITY;

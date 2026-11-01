@@ -318,10 +318,7 @@ function NewCounterDialog({
           <span className="dlabel">Total</span>
           <NumberField label="Total" className="inp" value={total} onChange={setTotal} decimal />
         </div>
-        <div className="col">
-          <span className="dlabel">Step</span>
-          <StepField value={step} onChange={setStep} />
-        </div>
+        <StepField value={step} onChange={setStep} />
       </div>
       <StepHint />
       <CategorySelect value={target} categories={categories} onChange={setTarget} />
@@ -399,13 +396,10 @@ function EditCounterDialog({
         </div>
       </div>
       <div className="row2">
-        <div className="col">
-          <span className="dlabel">Step</span>
-          <StepField
-            value={counter.step}
-            onChange={(value) => actions.setCounterStep(counter.id, value)}
-          />
-        </div>
+        <StepField
+          value={counter.step}
+          onChange={(value) => actions.setCounterStep(counter.id, value)}
+        />
         <div className="col">
           <CategorySelect
             value={categoryId}
@@ -431,20 +425,23 @@ function EditCounterDialog({
 }
 
 /**
- * What − and + move the counter by. `min` is the smallest step three decimal places can
- * express, so a typed 0 — a button that does nothing — never reaches the setter, which would
- * throw `NOT_POSITIVE`.
+ * The Step column of a `.row2`: what − and + move the counter by. `min` is the smallest step
+ * three decimal places can express, so a typed 0 — a button that does nothing — never reaches
+ * the setter, which would throw `NOT_POSITIVE`.
  */
 function StepField({ value, onChange }: { value: number; onChange(value: number): void }) {
   return (
-    <NumberField
-      label="Step"
-      className="inp"
-      value={value}
-      onChange={onChange}
-      decimal
-      min={MIN_STEP}
-    />
+    <div className="col">
+      <span className="dlabel">Step</span>
+      <NumberField
+        label="Step"
+        className="inp"
+        value={value}
+        onChange={onChange}
+        decimal
+        min={MIN_STEP}
+      />
+    </div>
   );
 }
 
