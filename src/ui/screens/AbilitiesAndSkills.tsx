@@ -1,6 +1,12 @@
+import { memo } from 'react';
 import { NumberField } from '../components/NumberField.js';
 import { ABILITIES, SKILLS } from '../reference.js';
-import type { AbilitiesAndSkillsActions, AbilitiesAndSkillsView } from '../types.js';
+import type {
+  AbilitiesAndSkillsActions,
+  AbilitiesAndSkillsView,
+  AbilityView,
+  SkillView,
+} from '../types.js';
 
 interface Props {
   data: AbilitiesAndSkillsView;
@@ -18,7 +24,11 @@ interface Props {
  * The proficiency and expertise marks are therefore *labels*, not inputs. Ticking P changes
  * nothing else on the row.
  */
-export function AbilitiesAndSkills({ data, actions, onClose }: Props) {
+export const AbilitiesAndSkills = memo(function AbilitiesAndSkills({
+  data,
+  actions,
+  onClose,
+}: Props) {
   return (
     <div className="bottom">
       <div className="sv">
@@ -68,78 +78,114 @@ export function AbilitiesAndSkills({ data, actions, onClose }: Props) {
           <span>Mod</span>
           <span>Save</span>
         </div>
-        {ABILITIES.map((ability) => {
-          const value = data.abilities[ability.key];
-          return (
-            <div className="abrow" key={ability.key}>
-              <span className="an">{ability.short}</span>
-              <NumberField
-                label={`${ability.short} score`}
-                value={value.score}
-                onChange={(next) => actions.setAbilityScore(ability.key, next)}
-              />
-              <NumberField
-                label={`${ability.short} modifier`}
-                value={value.modifier}
-                onChange={(next) => actions.setAbilityModifier(ability.key, next)}
-                signed
-              />
-              <div className="savecell">
-                <Mark
-                  label={`${ability.short} saving throw proficiency`}
-                  letter="P"
-                  on={value.savingThrowProficient}
-                  onChange={(next) => actions.setSavingThrowProficient(ability.key, next)}
-                />
-                <NumberField
-                  label={`${ability.short} saving throw`}
-                  value={value.savingThrowModifier}
-                  onChange={(next) => actions.setSavingThrowModifier(ability.key, next)}
-                  signed
-                />
-              </div>
-            </div>
-          );
-        })}
+        {ABILITIES.map((ability) => (
+          <AbilityRow
+            key={ability.key}
+            ability={ability}
+            value={data.abilities[ability.key]}
+            actions={actions}
+          />
+        ))}
 
         <div className="sechead-row">
           <span className="sechead static">Skills</span>
         </div>
-        {SKILLS.map((skill) => {
-          const value = data.skills[skill.key];
-          return (
-            <div className="skrow" key={skill.key}>
-              <span className="nm">
-                <span className="lbl">{skill.label}</span>
-                {/* Reference data, not stored — spec §3.2. A label, not an input. */}
-                <span className="ab">{skill.ability}</span>
-              </span>
-              <Mark
-                label={`${skill.label} proficiency`}
-                letter="P"
-                on={value.proficient}
-                onChange={(next) => actions.setSkillProficient(skill.key, next)}
-              />
-              <Mark
-                label={`${skill.label} expertise`}
-                letter="E"
-                on={value.expertise}
-                onChange={(next) => actions.setSkillExpertise(skill.key, next)}
-              />
-              <NumberField
-                label={`${skill.label} modifier`}
-                className="num sk"
-                value={value.modifier}
-                onChange={(next) => actions.setSkillModifier(skill.key, next)}
-                signed
-              />
-            </div>
-          );
-        })}
+        {SKILLS.map((skill) => (
+          <SkillRow
+            key={skill.key}
+            skill={skill}
+            value={data.skills[skill.key]}
+            actions={actions}
+          />
+        ))}
       </div>
     </div>
   );
-}
+});
+
+/**
+ * One row each, memoised: a keystroke in one score leaves every other row's `value` the same
+ * object (`bind.ts` keeps it), so the other twenty-three rows skip their render.
+ */
+const AbilityRow = memo(function AbilityRow({
+  ability,
+  value,
+  actions,
+}: {
+  ability: (typeof ABILITIES)[number];
+  value: AbilityView;
+  actions: AbilitiesAndSkillsActions;
+}) {
+  return (
+    <div className="abrow">
+      <span className="an">{ability.short}</span>
+      <NumberField
+        label={`${ability.short} score`}
+        value={value.score}
+        onChange={(next) => actions.setAbilityScore(ability.key, next)}
+      />
+      <NumberField
+        label={`${ability.short} modifier`}
+        value={value.modifier}
+        onChange={(next) => actions.setAbilityModifier(ability.key, next)}
+        signed
+      />
+      <div className="savecell">
+        <Mark
+          label={`${ability.short} saving throw proficiency`}
+          letter="P"
+          on={value.savingThrowProficient}
+          onChange={(next) => actions.setSavingThrowProficient(ability.key, next)}
+        />
+        <NumberField
+          label={`${ability.short} saving throw`}
+          value={value.savingThrowModifier}
+          onChange={(next) => actions.setSavingThrowModifier(ability.key, next)}
+          signed
+        />
+      </div>
+    </div>
+  );
+});
+
+const SkillRow = memo(function SkillRow({
+  skill,
+  value,
+  actions,
+}: {
+  skill: (typeof SKILLS)[number];
+  value: SkillView;
+  actions: AbilitiesAndSkillsActions;
+}) {
+  return (
+    <div className="skrow">
+      <span className="nm">
+        <span className="lbl">{skill.label}</span>
+        {/* Reference data, not stored — spec §3.2. A label, not an input. */}
+        <span className="ab">{skill.ability}</span>
+      </span>
+      <Mark
+        label={`${skill.label} proficiency`}
+        letter="P"
+        on={value.proficient}
+        onChange={(next) => actions.setSkillProficient(skill.key, next)}
+      />
+      <Mark
+        label={`${skill.label} expertise`}
+        letter="E"
+        on={value.expertise}
+        onChange={(next) => actions.setSkillExpertise(skill.key, next)}
+      />
+      <NumberField
+        label={`${skill.label} modifier`}
+        className="num sk"
+        value={value.modifier}
+        onChange={(next) => actions.setSkillModifier(skill.key, next)}
+        signed
+      />
+    </div>
+  );
+});
 
 /** The wireframe's `.mk` square, as a toggle button so it reads as one to a screen reader. */
 function Mark({

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { memo, useRef, useState } from 'react';
 import { AddByName } from '../components/AddByName.js';
 import { NameField } from '../components/NameField.js';
 import { NumberField } from '../components/NumberField.js';
@@ -21,7 +21,7 @@ interface Props {
  * AC / initiative tiles. Classes and hit dice open dialogs, exactly as in the wireframe — both are
  * lists that would crowd a header that has to stay visible above every section.
  */
-export function VitalsHeader({ character, actions, onBack }: Props) {
+export const VitalsHeader = memo(function VitalsHeader({ character, actions, onBack }: Props) {
   const [dialog, setDialog] = useState<'classes' | 'hitDice' | 'portrait' | null>(null);
   // Collapsed, the header gives its height back to the section below and keeps the numbers
   // readable in one line. One setting for the whole app, not per character: it is about screen
@@ -172,7 +172,7 @@ export function VitalsHeader({ character, actions, onBack }: Props) {
       />
     </div>
   );
-}
+});
 
 function PortraitDialog({ open, onClose, character, actions }: DialogProps) {
   const [error, setError] = useState<string | null>(null);

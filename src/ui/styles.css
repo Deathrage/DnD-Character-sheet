@@ -1072,6 +1072,18 @@ button:not(:disabled):active {
   font: inherit;
   color: inherit;
   text-align: left;
+  /* A row off screen is neither laid out nor painted until it scrolls near. Opening a section
+     lays out every row it lists, and on a phone that was the cost that grew with the
+     character: measured at a 6× CPU throttle, an inventory of 270 items opened in 367ms
+     without this and 259ms with it, and nothing changed for sections with few rows. The
+     placeholder height is a row's own, 60 to 68px, so the scrollbar is about right before a
+     row has ever been laid out; once it has, the browser keeps its real size.
+     It also turns on layout and paint containment: nothing in a row may draw past its padding
+     box, and an absolutely positioned descendant is positioned against the row. The 4px side
+     padding is therefore a floor — the focus ring on an edge control (2px, offset 2px) reaches
+     exactly that far. Widen the padding before widening a ring. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 64px;
 }
 .rec:first-of-type {
   border-top: none;

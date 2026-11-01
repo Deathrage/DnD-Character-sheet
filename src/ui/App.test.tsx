@@ -10,6 +10,7 @@ import {
 import { ID_A, docFor, putRaw, wipe } from '../test/fixtures.js';
 import { stubDialogElement } from '../test/stubDialog.js';
 import { App } from './App.js';
+import { navigate } from './route.js';
 
 /**
  * The shell over a real `CharacterLibraryBO` on `fake-indexeddb`, driven through the rendered UI.
@@ -106,6 +107,24 @@ describe('App', () => {
       if (opened?.ok === true) opened.sheet.dispose();
     });
     expect(id).not.toBe('');
+  });
+
+  it('leaves nothing open for a created character once its sheet is closed', async () => {
+    const { library } = renderApp();
+    await screen.findByText('No characters yet. Tap + to make one.');
+
+    fireEvent.click(screen.getByLabelText('New character'));
+    await waitFor(() => expect(screen.getByLabelText('Armor class')).toBeDefined());
+    const id = library.entries[0]?.id ?? '';
+    expect(library.isOpen(id)).toBe(true);
+
+    navigate({ name: 'list' });
+    await screen.findByLabelText('New character');
+
+    // `create` hands back a sheet with autosave attached, which the shell never edits: the sheet
+    // on screen was opened separately. Left undisposed, every character ever created stayed
+    // "open" for the rest of the session — and a cloud restore of it was refused as such.
+    expect(library.isOpen(id)).toBe(false);
   });
 
   it.each([

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { AbilityPicker } from '../components/AbilityPicker.js';
 import { pasteLists } from '../components/pasteLists.js';
 import { CategorizedSection } from '../components/CategorizedSection.js';
@@ -41,7 +41,7 @@ type Dialog =
   | { kind: 'editCasting'; ability: AbilityKey }
   | null;
 
-export function SpellList({ characterId, data, actions, onClose }: Props) {
+export const SpellList = memo(function SpellList({ characterId, data, actions, onClose }: Props) {
   const [dialog, setDialog] = useState<Dialog>(null);
   const close = () => setDialog(null);
   const editing = dialog?.kind === 'edit' ? locate(data, dialog.id) : undefined;
@@ -51,6 +51,7 @@ export function SpellList({ characterId, data, actions, onClose }: Props) {
     dialog?.kind === 'editCasting'
       ? data.spellcasting.find((entry) => entry.ability === dialog.ability)
       : undefined;
+  const openSpell = useCallback((id: string) => setDialog({ kind: 'edit', id }), []);
 
   return (
     <>
@@ -65,24 +66,7 @@ export function SpellList({ characterId, data, actions, onClose }: Props) {
           `${spells.filter((spell) => spell.prepared).length}/${spells.length} prepared`
         }
         renderRow={(spell) => (
-          <ItemRow
-            name={spell.name}
-            description={spell.description}
-            dim={!spell.prepared}
-            onOpen={() => setDialog({ kind: 'edit', id: spell.id })}
-            before={
-              // Prepared toggles from the row, not only from the dialog: it is the one field
-              // that changes on every long rest, for every spell at once.
-              <button
-                type="button"
-                className={spell.prepared ? 'prep on' : 'prep'}
-                aria-pressed={spell.prepared}
-                aria-label={`${spell.name} prepared`}
-                onClick={() => actions.setSpellPrepared(spell.id, !spell.prepared)}
-              />
-            }
-            after={<span className="lvlbadge">{spellLevelBadge(spell.level)}</span>}
-          />
+          <SpellRow spell={spell} onOpen={openSpell} onSetPrepared={actions.setSpellPrepared} />
         )}
       >
         <Spellcasting
@@ -120,7 +104,39 @@ export function SpellList({ characterId, data, actions, onClose }: Props) {
       )}
     </>
   );
-}
+});
+
+/** Memoised: a change elsewhere leaves `spell` the same object (`bind.ts` keeps it). */
+const SpellRow = memo(function SpellRow({
+  spell,
+  onOpen,
+  onSetPrepared,
+}: {
+  spell: SpellView;
+  onOpen(id: string): void;
+  onSetPrepared: SpellListActions['setSpellPrepared'];
+}) {
+  return (
+    <ItemRow
+      name={spell.name}
+      description={spell.description}
+      dim={!spell.prepared}
+      onOpen={() => onOpen(spell.id)}
+      before={
+        // Prepared toggles from the row, not only from the dialog: it is the one field that
+        // changes on every long rest, for every spell at once.
+        <button
+          type="button"
+          className={spell.prepared ? 'prep on' : 'prep'}
+          aria-pressed={spell.prepared}
+          aria-label={`${spell.name} prepared`}
+          onClick={() => onSetPrepared(spell.id, !spell.prepared)}
+        />
+      }
+      after={<span className="lvlbadge">{spellLevelBadge(spell.level)}</span>}
+    />
+  );
+});
 
 function LevelSelect({
   value,

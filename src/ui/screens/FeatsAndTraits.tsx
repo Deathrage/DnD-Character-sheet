@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { pasteLists } from '../components/pasteLists.js';
 import { CategorizedSection } from '../components/CategorizedSection.js';
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
@@ -22,10 +22,16 @@ interface Props {
 
 type Dialog = { kind: 'new'; categoryId: string | null } | { kind: 'edit'; id: string } | null;
 
-export function FeatsAndTraits({ characterId, data, actions, onClose }: Props) {
+export const FeatsAndTraits = memo(function FeatsAndTraits({
+  characterId,
+  data,
+  actions,
+  onClose,
+}: Props) {
   const [dialog, setDialog] = useState<Dialog>(null);
   const close = () => setDialog(null);
   const editing = dialog?.kind === 'edit' ? locate(data, dialog.id) : undefined;
+  const openFeat = useCallback((id: string) => setDialog({ kind: 'edit', id }), []);
 
   return (
     <>
@@ -36,13 +42,7 @@ export function FeatsAndTraits({ characterId, data, actions, onClose }: Props) {
         actions={actions}
         onClose={onClose}
         onAdd={(categoryId) => setDialog({ kind: 'new', categoryId })}
-        renderRow={(feat) => (
-          <ItemRow
-            name={feat.name}
-            description={feat.description}
-            onOpen={() => setDialog({ kind: 'edit', id: feat.id })}
-          />
-        )}
+        renderRow={(feat) => <FeatRow feat={feat} onOpen={openFeat} />}
       />
 
       {dialog?.kind === 'new' && (
@@ -63,7 +63,18 @@ export function FeatsAndTraits({ characterId, data, actions, onClose }: Props) {
       )}
     </>
   );
-}
+});
+
+/** Memoised: a change elsewhere leaves `feat` the same object (`bind.ts` keeps it). */
+const FeatRow = memo(function FeatRow({
+  feat,
+  onOpen,
+}: {
+  feat: FeatView;
+  onOpen(id: string): void;
+}) {
+  return <ItemRow name={feat.name} description={feat.description} onOpen={() => onOpen(feat.id)} />;
+});
 
 /**
  * Creation collects the whole entry before anything exists, because `add` needs a name the

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, fireEvent, render, screen } from '@testing-library/react';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { memo } from 'react';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CharacterLibraryBO,
   CloudBackup,
@@ -677,6 +678,45 @@ describe('useSheet', () => {
 
     expect(sheet.toDocument().hitPoints.current).toBe(37);
     expect(currentHitPoints()).toBe('37');
+  });
+
+  it('keeps every part a change did not touch, so memoised components skip their render', () => {
+    const rendered = vi.fn<(name: string) => void>();
+    // `value` is compared by `memo` and never read: the render count is the whole assertion.
+    const Probe = memo(function Probe({ name }: { name: string; value: unknown }) {
+      rendered(name);
+      return null;
+    });
+    const Probes = ({ sheet }: { sheet: CharacterSheetBO }) => {
+      const { data } = useSheet(sheet);
+      return (
+        <>
+          <Probe name="header" value={data.character} />
+          <Probe name="abilities" value={data.abilitiesAndSkills} />
+          <Probe name="inventory" value={data.inventory} />
+          <Probe name="rope" value={data.inventory.items[0]} />
+          <Probe name="torch" value={data.inventory.items[1]} />
+        </>
+      );
+    };
+    const sheet = newSheet();
+    sheet.inventory.add({ name: 'Rope' });
+    sheet.inventory.add({ name: 'Torch' });
+    render(<Probes sheet={sheet} />);
+    rendered.mockClear();
+    const names = () => rendered.mock.calls.map(([name]) => name);
+
+    // A coin changes Inventory's view and nothing else's: the rows keep their objects too.
+    act(() => {
+      sheet.inventory.coins.setGp(5);
+    });
+    expect(names()).toEqual(['inventory']);
+
+    rendered.mockClear();
+    act(() => {
+      sheet.inventory.items[1]?.setCount(3);
+    });
+    expect(names()).toEqual(['inventory', 'torch']);
   });
 
   it('re-renders when the document changes without the UI touching it', () => {

@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { AbilitiesAndSkills } from './AbilitiesAndSkills.js';
 import { Counters } from './Counters.js';
 import { Equipment } from './Equipment.js';
@@ -98,7 +99,8 @@ export function CharacterHub({
   uploadDisabled,
   uploadHint,
 }: Props) {
-  const close = () => onSectionChange(null);
+  // Stable, so a memoised section sees the same `onClose` on every render.
+  const close = useCallback(() => onSectionChange(null), [onSectionChange]);
 
   return (
     <div className="app">

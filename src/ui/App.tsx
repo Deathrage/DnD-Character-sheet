@@ -76,6 +76,10 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
 
   const createCharacter = useCallback(() => {
     void library.create('Unnamed character').then((sheet) => {
+      // `create` attaches autosave to the sheet it returns, for a caller that edits it — the dev
+      // seed does. This one never will: `Character` opens its own below. Disposed here, or it
+      // stays attached, and counted as open, for the rest of the session.
+      sheet.dispose();
       navigate({ name: 'character', id: sheet.id, section: null });
     });
   }, [library]);
@@ -353,13 +357,22 @@ function Sheet({
     void cloud.checkSignIn();
   }, [cloud]);
 
+  // Stable across renders: `onBack` reaches the memoised header and `onSectionChange` the
+  // memoised sections, which skip their render on a keystroke only if these are unchanged.
+  // The hub grid's own callbacks need no such care; it is not memoised.
+  const onSectionChange = useCallback(
+    (next: SectionKey | null) => navigate({ name: 'character', id, section: next }),
+    [id],
+  );
+  const onBack = useCallback(() => navigate({ name: 'list' }), []);
+
   return (
     <CharacterHub
       data={data}
       actions={actions}
       section={section}
-      onSectionChange={(next) => navigate({ name: 'character', id, section: next })}
-      onBack={() => navigate({ name: 'list' })}
+      onSectionChange={onSectionChange}
+      onBack={onBack}
       onExport={() => download(CharacterFile.of(sheet, new Date()))}
       onOpenRawJson={() => navigate({ name: 'raw', id })}
       onUpload={() => void cloud.upload(id)}

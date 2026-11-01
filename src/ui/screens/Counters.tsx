@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { pasteLists } from '../components/pasteLists.js';
 import { CategorizedSection } from '../components/CategorizedSection.js';
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
@@ -30,10 +30,11 @@ type Dialog =
   | { kind: 'slots' }
   | null;
 
-export function Counters({ characterId, data, actions, onClose }: Props) {
+export const Counters = memo(function Counters({ characterId, data, actions, onClose }: Props) {
   const [dialog, setDialog] = useState<Dialog>(null);
   const close = () => setDialog(null);
   const editing = dialog?.kind === 'edit' ? locate(data, dialog.id) : undefined;
+  const openCounter = useCallback((id: string) => setDialog({ kind: 'edit', id }), []);
 
   // A level with no slots at all is hidden rather than shown as 0/0 — a wizard has three rows,
   // not nine — and so is the pact row, for everyone but a warlock. With no slots of either kind
@@ -67,23 +68,10 @@ export function Counters({ characterId, data, actions, onClose }: Props) {
         onClose={onClose}
         onAdd={(categoryId) => setDialog({ kind: 'new', categoryId })}
         renderRow={(counter) => (
-          <ItemRow
-            name={counter.name}
-            description={counter.description}
-            dim={counter.current <= 0}
-            onOpen={() => setDialog({ kind: 'edit', id: counter.id })}
-            after={
-              <span className="valcluster">
-                <NumberField
-                  label={`${counter.name} remaining`}
-                  className="curinp"
-                  value={counter.current}
-                  onChange={(value) => actions.setCounterCurrent(counter.id, value)}
-                  stepper
-                />
-                <span className="maxlbl">/ {counter.total}</span>
-              </span>
-            }
+          <CounterRow
+            counter={counter}
+            onOpen={openCounter}
+            onSetCurrent={actions.setCounterCurrent}
           />
         )}
       >
@@ -128,7 +116,39 @@ export function Counters({ characterId, data, actions, onClose }: Props) {
       )}
     </>
   );
-}
+});
+
+/** Memoised: a change elsewhere leaves `counter` the same object (`bind.ts` keeps it). */
+const CounterRow = memo(function CounterRow({
+  counter,
+  onOpen,
+  onSetCurrent,
+}: {
+  counter: CounterView;
+  onOpen(id: string): void;
+  onSetCurrent: CountersActions['setCounterCurrent'];
+}) {
+  return (
+    <ItemRow
+      name={counter.name}
+      description={counter.description}
+      dim={counter.current <= 0}
+      onOpen={() => onOpen(counter.id)}
+      after={
+        <span className="valcluster">
+          <NumberField
+            label={`${counter.name} remaining`}
+            className="curinp"
+            value={counter.current}
+            onChange={(value) => onSetCurrent(counter.id, value)}
+            stepper
+          />
+          <span className="maxlbl">/ {counter.total}</span>
+        </span>
+      }
+    />
+  );
+});
 
 function SlotRow({
   name,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { pasteLists } from '../components/pasteLists.js';
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
 import { ItemRow } from '../components/ItemRow.js';
@@ -14,9 +14,10 @@ interface Props {
   onClose(): void;
 }
 
-export function Inventory({ data, actions, onClose }: Props) {
+export const Inventory = memo(function Inventory({ data, actions, onClose }: Props) {
   const [dialog, setDialog] = useState<'new' | string | null>(null);
   const editing = data.items.find((item) => item.id === dialog);
+  const openItem = useCallback((id: string) => setDialog(id), []);
 
   return (
     <div className="bottom">
@@ -59,21 +60,11 @@ export function Inventory({ data, actions, onClose }: Props) {
           <div className="empty">No items yet</div>
         ) : (
           data.items.map((item) => (
-            <ItemRow
+            <InventoryRow
               key={item.id}
-              name={item.name}
-              description={item.description}
-              onOpen={() => setDialog(item.id)}
-              after={
-                // The count is editable from the row: it is the field that changes when you
-                // drink a potion, and opening a dialog to decrement it is friction per use.
-                <NumberField
-                  label={`${item.name} count`}
-                  className="num qty"
-                  value={item.count}
-                  onChange={(value) => actions.setItemCount(item.id, value)}
-                />
-              }
+              item={item}
+              onOpen={openItem}
+              onSetCount={actions.setItemCount}
             />
           ))
         )}
@@ -87,7 +78,39 @@ export function Inventory({ data, actions, onClose }: Props) {
       )}
     </div>
   );
-}
+});
+
+/**
+ * Memoised: a keystroke in another row's count, or anywhere else on the sheet, leaves this
+ * row's `item` the same object (`bind.ts` keeps it), so the row skips its render.
+ */
+const InventoryRow = memo(function InventoryRow({
+  item,
+  onOpen,
+  onSetCount,
+}: {
+  item: InventoryItemView;
+  onOpen(id: string): void;
+  onSetCount: InventoryActions['setItemCount'];
+}) {
+  return (
+    <ItemRow
+      name={item.name}
+      description={item.description}
+      onOpen={() => onOpen(item.id)}
+      after={
+        // The count is editable from the row: it is the field that changes when you drink a
+        // potion, and opening a dialog to decrement it is friction per use.
+        <NumberField
+          label={`${item.name} count`}
+          className="num qty"
+          value={item.count}
+          onChange={(value) => onSetCount(item.id, value)}
+        />
+      }
+    />
+  );
+});
 
 function NewItemDialog({
   onCreate,
