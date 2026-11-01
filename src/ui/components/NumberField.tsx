@@ -108,7 +108,7 @@ export function NumberField({
         aria-label={`Decrease ${label}`}
         // At zero there is nowhere down to go for an unsigned field, and calling the setter
         // anyway would throw `NEGATIVE`. Disabling says so before the tap rather than after.
-        disabled={signed ? value <= -Number.MAX_SAFE_INTEGER : value <= min}
+        disabled={signed ? addDecimals(value, -step) < -Number.MAX_SAFE_INTEGER : value <= min}
         onClick={() => nudge(-1)}
       >
         {'−'}
@@ -118,8 +118,9 @@ export function NumberField({
         type="button"
         className="step"
         aria-label={`Increase ${label}`}
-        // Past this the setter would throw `UNSAFE_INTEGER`, for the reason the − button gives.
-        disabled={value >= Number.MAX_SAFE_INTEGER}
+        // Past this the setter would throw `UNSAFE_INTEGER`, for the reason the − button gives;
+        // by the step, not by one, or a step of 5 would carry a value 2 short of the edge over it.
+        disabled={addDecimals(value, step) > Number.MAX_SAFE_INTEGER}
         onClick={() => nudge(1)}
       >
         +
@@ -132,21 +133,46 @@ function format(value: number, signed: boolean): string {
   return signed && value >= 0 ? `+${value}` : String(value);
 }
 
-const SIGN = '[+-]?';
 const FRACTION = `(?:[.,]\\d{1,${MAX_DECIMALS}})?`;
+// Built once: `parse` runs on every keystroke of every numeric field on the sheet.
+const PATTERNS = {
+  whole: /^\d+$/,
+  signed: /^[+-]?\d+$/,
+  decimal: new RegExp(`^\\d+${FRACTION}$`),
+  signedDecimal: new RegExp(`^[+-]?\\d+${FRACTION}$`),
+};
 
 /**
  * `null` for anything that is not a number the caller accepts: an optional sign when `signed`,
  * digits, and when `decimal` an optional point or comma with up to three places. One shape for
  * every field, so a whole number is a decimal with no places and the two cannot drift apart.
- * `4.` or `.5` is a draft, not a number. Twenty digits match the pattern, but `Number` rounds
- * them to an integer the schema cannot store, so a value past `Number.MAX_SAFE_INTEGER` is
- * `null` too.
+ * `4.` or `.5` is a draft, not a number.
+ *
+ * The number must also be the one typed. Twenty digits match the pattern, but `Number` rounds
+ * them to an integer the schema cannot store; and near that edge a fraction is dropped without
+ * a word (`9007199254740990.5` reads back as `…990`). So a value past `Number.MAX_SAFE_INTEGER`
+ * is `null`, and so is one whose shortest text is not the text typed, once a comma, a plus, a
+ * leading zero and a fraction's trailing zeros — all of which `Number` legitimately forgets —
+ * are set aside. That last rule also refuses `-0`, which prints as `0` and is nothing the
+ * document wants.
  */
 function parse(text: string, signed: boolean, decimal: boolean): number | null {
   const trimmed = text.trim();
-  const pattern = new RegExp(`^${signed ? SIGN : ''}\\d+${decimal ? FRACTION : ''}$`);
+  const pattern = signed
+    ? decimal
+      ? PATTERNS.signedDecimal
+      : PATTERNS.signed
+    : decimal
+      ? PATTERNS.decimal
+      : PATTERNS.whole;
   if (!pattern.test(trimmed)) return null;
-  const value = Number(trimmed.replace(',', '.'));
-  return Math.abs(value) <= Number.MAX_SAFE_INTEGER ? value : null;
+  const canonical = trimmed
+    .replace(',', '.')
+    .replace(/^\+/, '')
+    .replace(/^(-?)0+(?=\d)/, '$1')
+    .replace(/(\.\d*?)0+$/, '$1')
+    .replace(/\.$/, '');
+  const value = Number(canonical);
+  if (Math.abs(value) > Number.MAX_SAFE_INTEGER || String(value) !== canonical) return null;
+  return value;
 }

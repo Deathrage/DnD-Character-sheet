@@ -113,6 +113,28 @@ describe('NumberField', () => {
       expect(input.getAttribute('inputmode')).toBe('decimal');
     });
 
+    // Past 2^52 a double has no room for a fraction, so `Number('9007199254740990.5')` is
+    // `9007199254740990` — a valid number that is not the one typed. It stays a draft.
+    it('does not call onChange for a fraction the number cannot hold', () => {
+      const onChange = vi.fn();
+      render(<NumberField label="Remaining" value={6} onChange={onChange} decimal />);
+      const input = screen.getByLabelText('Remaining');
+
+      fireEvent.change(input, { target: { value: '9007199254740990.5' } });
+      fireEvent.change(input, { target: { value: '4503599627370497.25' } });
+      // Forms `Number` legitimately forgets are still the typed number.
+      fireEvent.change(input, { target: { value: '04,50' } });
+      expect(onChange.mock.calls).toEqual([[4.5]]);
+    });
+
+    it('accepts a signed fraction when both are asked for', () => {
+      const onChange = vi.fn();
+      render(<NumberField label="Offset" value={0} onChange={onChange} decimal signed />);
+      fireEvent.change(screen.getByLabelText('Offset'), { target: { value: '-2.5' } });
+      fireEvent.change(screen.getByLabelText('Offset'), { target: { value: '-0' } });
+      expect(onChange.mock.calls).toEqual([[-2.5]]);
+    });
+
     it('does not accept a fraction when not decimal, which is every other field', () => {
       const onChange = vi.fn();
       render(<NumberField label="Gold" value={6} onChange={onChange} />);
@@ -166,6 +188,24 @@ describe('NumberField', () => {
       );
       fireEvent.click(screen.getByLabelText('Decrease Oil'));
       expect(onChange).toHaveBeenCalledWith(0);
+    });
+
+    // The guard must look a whole step ahead: at 2 below the edge a step of 5 would land past
+    // it, and the setter would throw `UNSAFE_INTEGER` out of a click.
+    it('cannot step past the largest number it can store, by the step', () => {
+      const onChange = vi.fn();
+      render(
+        <NumberField
+          label="Oil"
+          value={Number.MAX_SAFE_INTEGER - 2}
+          onChange={onChange}
+          stepper
+          step={5}
+        />,
+      );
+      expect(screen.getByLabelText<HTMLButtonElement>('Increase Oil').disabled).toBe(true);
+      fireEvent.click(screen.getByLabelText('Increase Oil'));
+      expect(onChange).not.toHaveBeenCalled();
     });
 
     it('is one when not given, so every other stepper is unchanged', () => {

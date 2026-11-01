@@ -277,9 +277,17 @@ back on the next load (criterion 14).
     four characters at 19px: `9.75` and `12.5` fit, `10.25` is 43px and `12.125` 52px. An
     `@supports (field-sizing: content)` block lets it grow to its value in Chromium and Firefox;
     a fixed `width` defeats `field-sizing`, which is why the base rule keeps 40px and the block
-    sets `width: auto` with a 40px minimum. Elsewhere the box stays 40px, as before, and a long
-    value scrolls inside it. The header's hit-point and hit-die boxes are more specific and stay
-    40px.
+    sets `width: auto` with a 40px minimum and an 80px cap: the box grows to the draft, not only
+    to the stored value, and twenty digits that will never commit must not push the stepper off
+    a 320px row. Elsewhere the box stays 40px, as before, and a long value scrolls inside it.
+    The header's hit-point and hit-die boxes are more specific and stay 40px.
+  - **`NumberField` has one parser.** One pattern per field — a sign when `signed`, a fraction
+    when `decimal` — and one rule after it: the number must be the one typed. Past 2^52 a double
+    has no room for a fraction, so `Number('9007199254740990.5')` is `…990`, a valid number that
+    is not what the player wrote; the parse refuses any text whose shortest form is not
+    `String(value)`, once a comma, a plus, a leading zero and a fraction's trailing zeros are set
+    aside. The stepper's edge guards look a whole step ahead, not one: a step of 5 from 2 below
+    the edge would otherwise throw `UNSAFE_INTEGER` out of a click.
   - **Verified in Chromium** on a fresh dev seed, at 360px and 320px, light and dark:
     - the seeded Lantern oil reads `4.5 / 6`; − three times reads 3, and that survives a reload,
       stored as `current: 3, total: 6, step: 0.5` with `step` last

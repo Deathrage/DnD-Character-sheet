@@ -29,6 +29,18 @@ describe('the character lifecycle, end to end across the data layer', () => {
     };
     // A non-blank pact entry, so a hop that drops or defaults it fails the toEqual assertions.
     created.counters.pactSlots = { level: 3, current: 1, total: 2 };
+    // A counter that counts in parts (v7): a hop through a whole-number path would round 4.5 or
+    // drop the step, and only a fractional value shows it.
+    created.counters.uncategorized = [
+      {
+        id: '7b7b7b7b-7b7b-4b7b-8b7b-7b7b7b7b7b7b',
+        name: 'Lantern oil',
+        description: '',
+        current: 4.5,
+        total: 6,
+        step: 0.5,
+      },
+    ];
     // A stackable weapon with none left: 0, not null, so a hop that reads 0 as "no count" fails.
     created.equipment.weapons = [
       {

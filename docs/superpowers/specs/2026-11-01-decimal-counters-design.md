@@ -244,4 +244,11 @@ The build matches this design, with one addition to §6 found in the browser.
   minimum, so the box takes the width its value needs in Chromium and Firefox; a fixed `width`
   defeats the property, which is why the base rule keeps 40px for every other browser, where a
   long value scrolls inside the box as it always did. The header's hit-point and hit-die boxes
-  stay 40px: they are whole numbers.
+  stay 40px: they are whole numbers. An 80px cap keeps a draft — the box grows to what is typed,
+  not only to what is stored — from pushing the stepper off a 320px row.
+- **`NumberField` parses every field with one pattern** (§6 described `decimal` as a separate
+  path). A sign when `signed`, a fraction when `decimal`, and one rule after it: the number must
+  be the one typed, which refuses a fraction a double near 2^53 cannot hold. `signed` and
+  `decimal` may now be combined, though nothing on the sheet does.
+- **The lifecycle test carries a fractional counter** through export, import, save, list and
+  get, as earlier bumps carried their fields, which §7 did not list.

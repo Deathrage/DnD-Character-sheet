@@ -1414,11 +1414,14 @@ button:not(:disabled):active {
   border-bottom-color: var(--accent-text);
   box-shadow: none;
 }
-/* A fixed width defeats field-sizing, so the growth is opted into only where it is known. */
+/* A fixed width defeats field-sizing, so the growth is opted into only where it is known. The
+   cap is for a draft: the box grows to what is typed, not only to what is stored, and twenty
+   digits that will never commit must not push the stepper off a 320px row. */
 @supports (field-sizing: content) {
   .curinp {
     width: auto;
     min-width: 40px;
+    max-width: 80px;
     field-sizing: content;
   }
 }
