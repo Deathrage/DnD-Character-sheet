@@ -21,6 +21,9 @@ export type RuleCode =
   | 'DUPLICATE_SPELLCASTING'
   | 'NO_ATTACK'
   | 'NOT_STACKABLE'
+  | 'NOT_FINITE'
+  | 'TOO_PRECISE'
+  | 'NOT_POSITIVE'
   | 'GONE';
 
 export class RuleViolation extends Error {

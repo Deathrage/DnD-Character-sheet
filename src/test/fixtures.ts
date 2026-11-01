@@ -28,6 +28,8 @@ const V4_WARLOCK_ID = '88888888-8888-4888-8888-888888888888';
 const V4_PACT_COUNTER_ID = '99999999-9999-4999-8999-999999999999';
 const V5_JAVELINS_ID = 'abababab-abab-4bab-8bab-abababababab';
 const V5_JAVELIN_ITEM_ID = 'cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd';
+const V6_SUPPLIES_CATEGORY_ID = 'efefefef-efef-4fef-8fef-efefefefefef';
+const V6_LANTERN_OIL_ID = 'a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1';
 
 /**
  * A complete v1 document, written out by hand. `createCharacter` makes the current version, and
@@ -228,6 +230,50 @@ export function v5DocFor(id: string, name: string): Record<string, unknown> {
       ],
     },
     counters: { ...v4.counters, pactSlots: { level: 3, current: 1, total: 2 } },
+  };
+}
+
+/**
+ * A complete v6 document: `v5DocFor` with the weapon counts v6 added, filled in (the Javelins at
+ * 5, the v1 weapon not stackable), plus a counter "Lantern oil" in a category of its own,
+ * described as "Counted in half hours". That is bait: a v6 → v7 migration that read a step from
+ * a description would show up here, and one that gave a step only to uncategorized counters
+ * would leave this one without. `fixtures.test.ts` checks it against `SCHEMAS[6]`.
+ */
+export function v6DocFor(id: string, name: string): Record<string, unknown> {
+  const v5 = v5DocFor(id, name) as {
+    equipment: { weapons: { name: string }[] };
+    counters: { categories: object[] };
+  };
+  return {
+    ...v5,
+    schemaVersion: 6,
+    equipment: {
+      ...v5.equipment,
+      weapons: v5.equipment.weapons.map((weapon) => ({
+        ...weapon,
+        count: weapon.name === 'Javelins' ? 5 : null,
+      })),
+    },
+    counters: {
+      ...v5.counters,
+      categories: [
+        ...v5.counters.categories,
+        {
+          id: V6_SUPPLIES_CATEGORY_ID,
+          name: 'Supplies',
+          items: [
+            {
+              id: V6_LANTERN_OIL_ID,
+              name: 'Lantern oil',
+              description: 'Counted in half hours.',
+              current: 4,
+              total: 6,
+            },
+          ],
+        },
+      ],
+    },
   };
 }
 

@@ -24,6 +24,54 @@ describe('CountersBO', () => {
     );
   });
 
+  it('starts a new counter at a step of 1, last in the stored counter', () => {
+    const sheet = sheetFor();
+    sheet.counters.add({ name: 'Rage' });
+    const [stored] = sheet.toDocument().counters.uncategorized;
+    expect(stored?.step).toBe(1);
+    expect(Object.keys(stored ?? {}).at(-1)).toBe('step');
+  });
+
+  it('counts in parts: a fractional step, remaining and total reach the document', () => {
+    const sheet = sheetFor();
+    const oil = sheet.counters.add({ name: 'Lantern oil' });
+    oil.setStep(0.5);
+    oil.setTotal(6);
+    oil.setCurrent(4.5);
+    expect([oil.step, oil.total, oil.current]).toEqual([0.5, 6, 4.5]);
+    expect(sheet.toDocument().counters.uncategorized[0]).toMatchObject({
+      current: 4.5,
+      total: 6,
+      step: 0.5,
+    });
+  });
+
+  it.each([0, -0.5])('rejects a step of %j as NOT_POSITIVE', (value) => {
+    const counter = sheetFor().counters.add({ name: 'Rage' });
+    expect(() => counter.setStep(value)).toThrow(
+      expect.objectContaining({ code: 'NOT_POSITIVE' }) as Error,
+    );
+  });
+
+  it('rejects a fourth decimal place anywhere as TOO_PRECISE', () => {
+    const counter = sheetFor().counters.add({ name: 'Rage' });
+    for (const write of [
+      () => counter.setStep(0.0001),
+      () => counter.setCurrent(1.0005),
+      () => counter.setTotal(2.0005),
+    ]) {
+      expect(write).toThrow(expect.objectContaining({ code: 'TOO_PRECISE' }) as Error);
+    }
+  });
+
+  // Not a rule: the player types what the table says.
+  it('does not tie remaining or total to the step', () => {
+    const counter = sheetFor().counters.add({ name: 'Rage' });
+    counter.setStep(0.5);
+    counter.setCurrent(0.3);
+    expect(counter.current).toBe(0.3);
+  });
+
   it('supports categories, because it uses the same generic', () => {
     const sheet = sheetFor();
     const features = sheet.counters.createCategory('Class features');
