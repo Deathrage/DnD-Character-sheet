@@ -1,5 +1,7 @@
 import { observable } from 'mobx';
 import { describe, expect, it, vi } from 'vitest';
+import { CharacterSheetBO } from './characterSheet.js';
+import { createCharacter } from '../data/schema/index.js';
 import { deepObserve } from './deepObserve.js';
 
 type Item = { id: string; name: string; attack: { bonus: number } | null };
@@ -84,6 +86,28 @@ describe('deepObserve', () => {
     expect(listener).toHaveBeenCalledTimes(3);
   });
 
+  it('keeps observing a node while any parent still holds it', () => {
+    const doc = observable({
+      a: [{ id: 'x', name: 'Shared' }],
+      b: [] as { id: string; name: string }[],
+    });
+    const listener = vi.fn();
+    deepObserve(doc, listener);
+
+    // Reachable from two parents, then from one, then from none — the order `CategoryBO.remove`
+    // uses: push into the new home first, splice out of the old one second.
+    doc.b.push(doc.a[0]!);
+    doc.a.splice(0, 1);
+    listener.mockClear();
+    doc.b[0]!.name = 'Still shared';
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    const [gone] = doc.b.splice(0, 1);
+    listener.mockClear();
+    gone!.name = 'Nowhere';
+    expect(listener).not.toHaveBeenCalled();
+  });
+
   it('stops entirely once disposed', () => {
     const doc = treeFor();
     const listener = vi.fn();
@@ -95,5 +119,30 @@ describe('deepObserve', () => {
     doc.weapons.push({ id: 'w3', name: 'Club', attack: null });
 
     expect(listener).not.toHaveBeenCalled();
+  });
+});
+
+describe('CharacterSheetBO.observe', () => {
+  it('still reports an edit to a feat after its category was removed', () => {
+    const sheet = new CharacterSheetBO(
+      createCharacter({
+        name: 'Sable',
+        id: '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e',
+        now: new Date('2026-07-25T09:41:00.000Z'),
+      }),
+    );
+    const category = sheet.featsAndTraits.createCategory('Rogue');
+    category.add({ name: 'Sneak Attack' });
+    const listener = vi.fn();
+    sheet.observe(listener);
+
+    // Removing a category rehomes its feats into Uncategorized. With the observer gone from
+    // them, this rename would show on screen and never reach autosave.
+    category.remove();
+    listener.mockClear();
+    sheet.featsAndTraits.uncategorized[0]?.setName('Sneak Attack (2d6)');
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(sheet.toDocument().featsAndTraits.uncategorized[0]?.name).toBe('Sneak Attack (2d6)');
   });
 });

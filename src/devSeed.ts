@@ -28,9 +28,11 @@ export async function seedIfEmpty(library: CharacterLibraryBO): Promise<void> {
   if (library.entries.length > 0) return;
 
   const sheets = [seedSable, seedThorne, seedWren];
+  const seeded = [];
   for (const fill of sheets) {
     const sheet = await library.create(fill.characterName);
     fill(sheet);
+    seeded.push(sheet);
   }
 
   // Everything after `create` was an ordinary edit, so it is sitting in autosave's debounce
@@ -38,6 +40,9 @@ export async function seedIfEmpty(library: CharacterLibraryBO): Promise<void> {
   // seed rather than three blank characters — and a half-seeded store would never re-seed,
   // because it is no longer empty.
   await library.flush();
+  // Written, so done with: the app opens its own sheet for whichever the player taps. Left
+  // attached, each would keep its autosave and count as open for the whole session.
+  for (const sheet of seeded) sheet.dispose();
 
   console.info(
     `[dev] Seeded ${String(sheets.length)} sample characters. Delete them all (or clear site data) to seed again.`,

@@ -11,8 +11,13 @@ import './mobxConfig.js';
 
 /**
  * Calls `listener` after any change anywhere under `root`: a property set, an item pushed,
- * spliced or replaced, a key deleted, however deep. Each observable node is observed once; a
- * node that arrives is observed as it arrives, and a node that leaves is released.
+ * spliced or replaced, a key deleted, however deep. Each observable node is observed once,
+ * however many parents hold it: a node that arrives is observed as it arrives, and one that
+ * leaves is released only when its last parent lets go. That last part matters because the
+ * business layer rehomes before it removes — `CategoryBO.remove()` pushes a category's items
+ * into Uncategorized and then splices the category out — so for a moment an item has two
+ * parents, and releasing it with the first would leave it unobserved while it is still in the
+ * document. An edit to it would then show on screen and never reach autosave.
  *
  * This is what lets autosave notice a change in constant time. Its first implementation was a
  * `reaction` over `toDocument()`, which deep-copies the whole document to learn that something
@@ -26,22 +31,30 @@ import './mobxConfig.js';
  * primitives have nothing to observe.
  */
 export function deepObserve(root: object, listener: () => void): Lambda {
-  const disposers = new Map<object, Lambda>();
+  /** Per observed node: how to stop, and how many parents currently hold it. */
+  const observed = new Map<object, { dispose: Lambda; holders: number }>();
 
   const isNode = (value: unknown): value is object =>
     isObservableObject(value) || isObservableArray(value);
 
   const release = (value: unknown): void => {
     if (!isNode(value)) return;
-    const dispose = disposers.get(value);
-    if (dispose === undefined) return;
-    dispose();
-    disposers.delete(value);
+    const entry = observed.get(value);
+    if (entry === undefined) return;
+    entry.holders -= 1;
+    if (entry.holders > 0) return;
+    entry.dispose();
+    observed.delete(value);
     for (const child of values(value)) release(child);
   };
 
   const attach = (value: unknown): void => {
-    if (!isNode(value) || disposers.has(value)) return;
+    if (!isNode(value)) return;
+    const entry = observed.get(value);
+    if (entry !== undefined) {
+      entry.holders += 1;
+      return;
+    }
     const onChange = (change: IArrayDidChange | IObjectDidChange): void => {
       if (change.type === 'splice') {
         for (const removed of change.removed) release(removed);
@@ -53,13 +66,13 @@ export function deepObserve(root: object, listener: () => void): Lambda {
       listener();
     };
     // One call for both kinds: MobX dispatches on the value, not the overload.
-    disposers.set(value, observe(value, onChange));
+    observed.set(value, { dispose: observe(value, onChange), holders: 1 });
     for (const child of values(value)) attach(child);
   };
 
   attach(root);
   return () => {
-    for (const dispose of disposers.values()) dispose();
-    disposers.clear();
+    for (const { dispose } of observed.values()) dispose();
+    observed.clear();
   };
 }

@@ -395,11 +395,14 @@ export function createSheetViews(sheet: CharacterSheetBO): () => SheetData {
   );
   const equipment = computed((): EquipmentView => {
     const view = equipmentView(sheet);
+    // One key for all four lists: an item in Attuned or Equipped is the same view as in Weapons
+    // or Other (`anyEquipmentView` builds it the same way), so its three rows share one object
+    // and it is compared once rather than three times.
     return {
-      weapons: keep.list('weapons', view.weapons),
-      other: keep.list('other', view.other),
-      attuned: keep.list('attuned', view.attuned),
-      equipped: keep.list('equipped', view.equipped),
+      weapons: keep.list('equipment', view.weapons),
+      other: keep.list('equipment', view.other),
+      attuned: keep.list('equipment', view.attuned),
+      equipped: keep.list('equipment', view.equipped),
     };
   });
   const spellList = computed((): SpellListView => {
