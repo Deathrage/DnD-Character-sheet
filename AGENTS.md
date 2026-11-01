@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 2069 tests across 88 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 2076 tests across 89 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -298,12 +298,17 @@ back on the next load (criterion 14).
 - **Spec §5-6 is now built too**: `CharacterLibraryBO`, `CharacterEntryBO`, `CharacterFile`,
   `Autosave`, and the storage gate. Four decisions there differ from what the spec wrote, each for
   a reason recorded in the file that makes it:
-  - **`mobx-utils` was not installed**, and `Autosave` observes with `reaction` over
-    `sheet.toDocument()` rather than `deepObserve`. Reading `toJS` of the document inside a
-    reaction tracks the whole tree, which is all autosave needs — it discards per-node change
-    events anyway. Measured against the installed mobx@7.0.3 before relying on it: 0.59 ms per
-    `toDocument()` on a deliberately oversized 124 KB character, and twenty edits in one debounce
-    window ran the expression twice, not twenty times.
+  - **`mobx-utils` is not installed; `Autosave` observes through `CharacterSheetBO.observe`**, a
+    deep observer of the document written in `src/business/deepObserve.ts` (2026-11-01). It is a
+    reduction of `mobx-utils`' `deepObserve`, which declares MobX 6 while this app is on 7: each
+    observable node is observed once with MobX's `observe`, nodes that arrive are attached and
+    nodes that leave are released, so a change anywhere costs one listener call. Before that
+    `Autosave` used a `reaction` over `sheet.toDocument()`, measured at 0.59 ms per `toDocument()`
+    on a 124 KB character and judged free. It was not free on a phone: `toJS` deep-copies the
+    whole document on every keystroke, and at a 6× CPU throttle on a 468 KB sheet that copy was
+    about 25 ms of every keystroke — the part of a keystroke that grew as the character did. The
+    observer hands out nothing: `observe(listener)` tells the listener that something changed and
+    no more, so the round-trip test's "nothing exposes the document" property still holds.
   - **The debounce is `Autosave`'s own `setTimeout`, not `reaction`'s `delay`.** `delay` schedules
     the effect internally and gives the caller no way to ask for it early, so `flush()` on
     `pagehide` had nothing to flush — and the last edit before the tab goes away is exactly the one
@@ -602,7 +607,9 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
                        repair, clone, remove; attaches Autosave to every sheet it hands out
   characterFile.ts     CharacterFile — a character as text; the document is held in a module
                        WeakMap, never on the class, so `ui` cannot reach it
-  autosave.ts          Autosave — reaction, debounce, stamp updatedAt on the copy, save
+  autosave.ts          Autosave — observe, debounce, stamp updatedAt on the copy, save
+  deepObserve.ts       one listener call per change anywhere under an observable tree; what
+                       `CharacterSheetBO.observe` and so Autosave run on
   storageGate.ts       StorageGate — the persistence gate and the last storage failure
   cloudBackup.ts       CloudBackup — a sibling of StorageGate; Google sign-in and dated versions
   types.ts, nodeBO.ts, namedItem.ts, observableList.ts, mobxConfig.ts, guards.ts, createId.ts

@@ -8,17 +8,14 @@ import type { CharacterSheetBO } from './characterSheet.js';
 /**
  * Spec §6's pipeline: observe the document, debounce, stamp `updatedAt` on a copy, save.
  *
- * The spec names `mobx-utils`' `deepObserve` as the observation half. This uses `reaction` over
- * `sheet.toDocument()` instead, and does not install `mobx-utils`. `toDocument()` is `toJS` of
- * the observable document, so reading it inside a reaction's expression tracks every field,
- * every array and every record key in the tree — the same reach `deepObserve` has, for the
- * purpose autosave actually needs, which is "something, somewhere, changed" rather than a
- * per-node change event this class would only discard.
- *
- * Measured against the installed mobx@7.0.3 rather than recalled, because the cost of a full
- * `toJS` per keystroke would have been the reason to prefer `deepObserve`: on a deliberately
- * oversized character (124 KB of JSON — far past anything a real sheet reaches) `toDocument()`
- * takes 0.59 ms, and twenty edits in one window ran the expression twice, not twenty times.
+ * The observation half is `CharacterSheetBO.observe`, a deep observer over the document (see
+ * `deepObserve.ts`): one listener call per change, whatever the size of the sheet. It began as
+ * a `reaction` over `sheet.toDocument()`, the spec's `deepObserve` replaced by something with
+ * the same reach and no dependency — and the same reach was the problem. `toDocument()` is
+ * `toJS`, a deep copy, so every keystroke copied the whole document to learn that one field of
+ * it had changed. At 0.59ms for a 124 KB sheet on a desktop that looked free; at a 6× CPU
+ * throttle on a 468 KB sheet it was about 25ms of every keystroke, and the part of the
+ * keystroke that grew as the character did.
  *
  * The debounce is this class's own `setTimeout` and not `reaction`'s `delay` option, which was
  * the first attempt. `delay` schedules the effect internally and hands the caller no way to ask
@@ -100,10 +97,7 @@ export class Autosave {
 
   start(): void {
     if (this.#stopReaction !== null) return;
-    this.#stopReaction = reaction(
-      () => this.#sheet.toDocument(),
-      () => this.#schedule(),
-    );
+    this.#stopReaction = this.#sheet.observe(() => this.#schedule());
     this.#stopPortraitReaction = reaction(
       () => this.#sheet.portrait,
       (portrait) => this.#savePortrait(portrait),

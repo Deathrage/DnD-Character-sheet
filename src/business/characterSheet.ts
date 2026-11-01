@@ -1,4 +1,5 @@
 import { observable, toJS } from 'mobx';
+import { deepObserve } from './deepObserve.js';
 import { createCharacter, type CharacterDocument } from '../data/schema/index.js';
 import { AbilitiesAndSkillsBO } from './abilitiesAndSkills.js';
 import { ClassesBO } from './classes.js';
@@ -108,6 +109,15 @@ export class CharacterSheetBO {
   /** Compressing the picked file is the UI's job; this only refuses what the schema would. */
   setPortrait(value: string | null): void {
     this.#portrait.value = value === null ? null : portrait(value);
+  }
+
+  /**
+   * Calls `listener` after any change to the document, however deep, until the returned
+   * function is called. The listener learns that something changed and nothing more: this
+   * is what autosave needs, and it hands out no part of the document.
+   */
+  observe(listener: () => void): () => void {
+    return deepObserve(this.#doc, listener);
   }
 
   /** `toJS` of the observable document. This is literally the file that gets saved. */
