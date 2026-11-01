@@ -1,9 +1,13 @@
 import { initializeApp } from 'firebase/app';
 import {
+  browserLocalPersistence,
+  browserPopupRedirectResolver,
+  browserSessionPersistence,
   connectAuthEmulator,
-  getAuth,
   getRedirectResult,
   GoogleAuthProvider,
+  indexedDBLocalPersistence,
+  initializeAuth,
   signInWithPopup,
   signInWithRedirect,
   signOut,
@@ -21,7 +25,18 @@ import type { CloudRepository, CloudUser } from './types.js';
  */
 export function createFirestoreRepository(): CloudRepository {
   const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+  // `initializeAuth`, not `getAuth`: `getAuth` also hands Auth the popup/redirect resolver, and on
+  // a mobile browser (Android, iOS, Safari) Auth initialises that resolver at once — it loads
+  // Google's gapi scripts and opens the hidden auth iframe, about 400 KB of script run on the
+  // page's main thread the moment the first sheet of a launch loads Firebase. Measured at a 6×
+  // CPU throttle as an extra second of main-thread work spread over the following seconds: the
+  // lag a player feels navigating a freshly opened sheet. Left out of the options, nothing of
+  // that loads; the resolver goes instead to the three calls below that need it, and
+  // `getRedirectResult` then opens the iframe only when a redirect is actually pending. The
+  // persistence list is `getAuth`'s own, in its order, so no stored sign-in is lost.
+  const auth = initializeAuth(app, {
+    persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
+  });
   const db = getFirestore(app);
   // Dev talks to the local emulators (`npm run dev:cloud`), never the live project, so a test
   // upload cannot land beside real backups or spend the shared quota. Before any other call on
@@ -34,7 +49,7 @@ export function createFirestoreRepository(): CloudRepository {
   // reported once, by `currentUser` below, rather than dropped: a player who never sees it comes
   // back signed out with no error anywhere, for reasons as ordinary as `auth/unauthorized-domain`.
   let redirectFailure: CloudError | null = null;
-  const ready = getRedirectResult(auth)
+  const ready = getRedirectResult(auth, browserPopupRedirectResolver)
     .catch((caught: unknown) => {
       redirectFailure = toCloudError(caught);
     })
@@ -79,8 +94,9 @@ export function createFirestoreRepository(): CloudRepository {
         const provider = new GoogleAuthProvider();
         // Popup in dev: localhost is not `authDomain`'s origin, and a cross-origin redirect loses
         // its result to storage partitioning. In production the redirect is same-origin.
-        if (import.meta.env.DEV) return toUser((await signInWithPopup(auth, provider)).user);
-        return signInWithRedirect(auth, provider);
+        if (import.meta.env.DEV)
+          return toUser((await signInWithPopup(auth, provider, browserPopupRedirectResolver)).user);
+        return signInWithRedirect(auth, provider, browserPopupRedirectResolver);
       }),
 
     signOut: () => guard(() => signOut(auth)),

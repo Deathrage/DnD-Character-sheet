@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 2065 tests across 87 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 2069 tests across 88 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -350,6 +350,21 @@ back on the next load (criterion 14).
   - **The service worker's precache denylists `/^\/__\//`.** `/__/auth/handler` is Firebase
     Hosting's reserved path for the redirect sign-in, and it must reach the network, never the
     cached app shell.
+  - **Auth is built with `initializeAuth`, never `getAuth`** (2026-11-01). `getAuth` hands Auth the
+    popup/redirect resolver, and on a mobile browser (Android, iOS, Safari) Auth initialises it at
+    once: Google's gapi scripts plus the hidden `__/auth/iframe`, about 400 KB of script on the
+    page's main thread the moment the first sheet of a launch calls `checkSignIn()`. Measured in
+    headless Chromium at a 6× CPU throttle with a phone user agent: an extra second of main-thread
+    work in long tasks up to 293 ms over the seconds after that open — the "occasional lag when
+    navigating" a player reported, since it happens once per launch and only on phones. Built
+    without the resolver, nothing of that loads; `browserPopupRedirectResolver` is passed to
+    `getRedirectResult`, `signInWithPopup` and `signInWithRedirect` instead, and
+    `getRedirectResult` opens the iframe only when a redirect is actually pending (checked in the
+    installed SDK's `RedirectAction.execute`). The persistence list is `getAuth`'s own, so nobody
+    is signed out. `firestoreRepository.test.ts` pins all of it over a mocked SDK. Still there:
+    Auth's IndexedDB persistence polls `firebaseLocalStorageDb` every 800 ms once loaded
+    (localStorage persistence would poll at 1000 ms on mobile, so switching gains nothing), and
+    the first sheet open still loads the Firestore chunk for the Upload button's state.
   - **Sign-in is a popup in dev, a redirect in production** (`import.meta.env.DEV`). A popup is
     fine on localhost; the spec picked redirect for the deployed app because popups are unreliable
     in an installed PWA and on iOS.
