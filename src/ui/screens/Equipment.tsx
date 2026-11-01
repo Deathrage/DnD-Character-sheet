@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { memo, type ReactNode, useCallback, useState } from 'react';
 import { AbilityPicker } from '../components/AbilityPicker.js';
 import { Block } from '../components/CategorizedSection.js';
 import { pasteLists } from '../components/pasteLists.js';
@@ -39,7 +39,7 @@ const isWeapon = (item: EquipmentItemView): item is WeaponView => 'attack' in it
 /** The damage placeholder, in the new and edit dialogs alike. */
 const DAMAGE_EXAMPLE = 'e.g. 1d8+3 piercing';
 
-export function Equipment({ characterId, data, actions, onClose }: Props) {
+export const Equipment = memo(function Equipment({ characterId, data, actions, onClose }: Props) {
   const [dialog, setDialog] = useState<Dialog>(null);
   // Per character, like the categories: whether Weapons deserves the space depends on who is
   // carrying them. Every block starts open, and only a collapse is recorded.
@@ -57,43 +57,14 @@ export function Equipment({ characterId, data, actions, onClose }: Props) {
       ? [...data.weapons, ...data.other].find((item) => item.id === dialog.id)
       : undefined;
 
-  const row = (item: EquipmentItemView) => {
-    const weapon = isWeapon(item) ? item : null;
-    const attack = weapon?.attack ?? null;
-    const count = weapon?.count ?? null;
-    return (
-      <ItemRow
-        key={item.id}
-        name={item.name}
-        description={item.description}
-        lead={attack?.damage ?? ''}
-        onOpen={() => setDialog({ kind: 'edit', id: item.id })}
-        after={
-          <>
-            {count !== null && (
-              // Editable on the row, as an inventory item's count is: it is what changes when a
-              // javelin is thrown, and opening a dialog per throw is friction per use. Before the
-              // attack, so the attack keeps the far right whether or not there is a count.
-              <NumberField
-                label={`${item.name} count`}
-                className="num qty"
-                value={count}
-                onChange={(value) => actions.setWeaponCount(item.id, value)}
-              />
-            )}
-            {attack !== null && (
-              // Short and fixed-width, so it never squeezes the name; the damage goes in the
-              // preview line, which cuts off long text (spec §5.2).
-              <span className="atk">
-                <span className="ab">{abilityOf(attack.ability).short}</span>
-                <span className="b">{formatSigned(attack.attackBonus)}</span>
-              </span>
-            )}
-          </>
-        }
-      />
-    );
-  };
+  const openItem = useCallback((id: string) => setDialog({ kind: 'edit', id }), []);
+  const { setWeaponCount } = actions;
+  const row = useCallback(
+    (item: EquipmentItemView) => (
+      <EquipmentRow item={item} onOpen={openItem} onSetCount={setWeaponCount} />
+    ),
+    [openItem, setWeaponCount],
+  );
 
   return (
     <div className="bottom">
@@ -147,7 +118,7 @@ export function Equipment({ characterId, data, actions, onClose }: Props) {
       {editing && <EditEquipmentDialog item={editing} actions={actions} onClose={close} />}
     </div>
   );
-}
+});
 
 /**
  * The attack fields, shared by both weapon dialogs (spec §5.2): the ability first, then — only
@@ -225,6 +196,55 @@ function StackFields({
     </div>
   );
 }
+
+/**
+ * Memoised: a keystroke in another row's count, or anywhere else on the sheet, leaves this
+ * row's `item` the same object (`bind.ts` keeps it), so the row skips its render.
+ */
+const EquipmentRow = memo(function EquipmentRow({
+  item,
+  onOpen,
+  onSetCount,
+}: {
+  item: EquipmentItemView;
+  onOpen(id: string): void;
+  onSetCount: EquipmentActions['setWeaponCount'];
+}) {
+  const weapon = isWeapon(item) ? item : null;
+  const attack = weapon?.attack ?? null;
+  const count = weapon?.count ?? null;
+  return (
+    <ItemRow
+      name={item.name}
+      description={item.description}
+      lead={attack?.damage ?? ''}
+      onOpen={() => onOpen(item.id)}
+      after={
+        <>
+          {count !== null && (
+            // Editable on the row, as an inventory item's count is: it is what changes when a
+            // javelin is thrown, and opening a dialog per throw is friction per use. Before the
+            // attack, so the attack keeps the far right whether or not there is a count.
+            <NumberField
+              label={`${item.name} count`}
+              className="num qty"
+              value={count}
+              onChange={(value) => onSetCount(item.id, value)}
+            />
+          )}
+          {attack !== null && (
+            // Short and fixed-width, so it never squeezes the name; the damage goes in the
+            // preview line, which cuts off long text (spec §5.2).
+            <span className="atk">
+              <span className="ab">{abilityOf(attack.ability).short}</span>
+              <span className="b">{formatSigned(attack.attackBonus)}</span>
+            </span>
+          )}
+        </>
+      }
+    />
+  );
+});
 
 function NewEquipmentDialog({
   slot,

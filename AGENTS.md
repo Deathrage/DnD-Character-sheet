@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 2076 tests across 89 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 2077 tests across 89 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -295,6 +295,19 @@ back on the next load (criterion 14).
     the refusal banner. `integer()` now throws `UNSAFE_INTEGER` past the safe range (not
     `NOT_AN_INTEGER`: 1e19 is an integer), and `NumberField` never passes such a value on: it
     stays a draft until blur, and the stepper stops at the edge.
+- **The sheet's views are eight MobX computeds, and the components below them are memoised**
+  (2026-11-01). `useSheet` used to read `toSheetData(sheet)` in one reaction: every keystroke
+  rebuilt the whole snapshot and re-rendered the header, the open section and every row in it,
+  so a keystroke's cost grew with the character — measured at a 6× CPU throttle on a 468 KB
+  sheet with 270 items as 116 ms per keystroke in a coin field. `createSheetViews` in `bind.ts`
+  builds the same views as one `computed` per section, so a change re-runs only the section it
+  touched, and `Keep` hands back the previous copy of a row's view while a fresh one says the
+  same thing (`compareStructural`), keyed by id, ability key or list name. `VitalsHeader`, the
+  seven sections and their rows are `memo`, with the callbacks they take made stable in `Sheet`
+  (`useCallback`) and `CharacterHub`. `bind.test.tsx` renders memoised probes over `useSheet`
+  and asserts a coin edit re-renders Inventory alone, and one item's count that item alone; it
+  fails against the plain snapshot. `toSheetData` stays as the one-shot version for tests and
+  stories. The components keep their contract: data in, callbacks out, no MobX.
 - **Spec §5-6 is now built too**: `CharacterLibraryBO`, `CharacterEntryBO`, `CharacterFile`,
   `Autosave`, and the storage gate. Four decisions there differ from what the spec wrote, each for
   a reason recorded in the file that makes it:

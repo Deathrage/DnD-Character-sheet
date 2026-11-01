@@ -13,7 +13,7 @@
  * `UNKNOWN_CATEGORY` — is a bug in the caller and is rethrown loudly.
  */
 
-import { reaction } from 'mobx';
+import { compareStructural, computed, reaction } from 'mobx';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   type CharacterLibraryBO,
@@ -335,6 +335,135 @@ export function toSheetData(sheet: CharacterSheetBO): SheetData {
 }
 
 // ---------------------------------------------------------------------------
+// Keeping identities
+// ---------------------------------------------------------------------------
+
+/**
+ * Hands back the previous copy of a view while the fresh one says the same thing, so a
+ * memoised component sees the same props and skips its render.
+ *
+ * The views above are rebuilt from scratch, which is what keeps them simple — but rebuilt from
+ * scratch, every row's view is a new object on every change, and `memo` on a row then skips
+ * nothing. Keyed by what a view is a view of: an item's id, an ability's key, a list's name.
+ * Entries for items since removed stay behind until the sheet closes; a few objects each.
+ */
+class Keep {
+  readonly #last = new Map<string, unknown>();
+
+  one<T>(key: string, fresh: T): T {
+    const previous = this.#last.get(key);
+    const kept =
+      previous !== undefined && compareStructural(previous, fresh) ? (previous as T) : fresh;
+    this.#last.set(key, kept);
+    return kept;
+  }
+
+  /**
+   * Each item by its id, then the list itself: unchanged items make an unchanged list. Items
+   * are keyed under `itemKey`, so lists that show the same items — Equipment's four — share.
+   */
+  list<T extends { id: string }>(key: string, fresh: T[], itemKey = key): T[] {
+    return this.one(
+      key,
+      fresh.map((item) => this.one(`${itemKey}#${item.id}`, item)),
+    );
+  }
+
+  categorized<T extends { id: string }>(
+    key: string,
+    fresh: CategorizedView<T>,
+  ): CategorizedView<T> {
+    return {
+      categories: this.one(
+        `${key}/categories`,
+        fresh.categories.map((category) =>
+          this.one(`${key}/category#${category.id}`, {
+            ...category,
+            items: this.list(`${key}/category#${category.id}/items`, category.items, key),
+          }),
+        ),
+      ),
+      uncategorized: this.list(`${key}/uncategorized`, fresh.uncategorized, key),
+    };
+  }
+}
+
+/**
+ * `toSheetData` as eight MobX computeds, one per section, read together.
+ *
+ * `toSheetData` reads the whole tree on every change, and that was the price a keystroke paid
+ * for being anywhere on the sheet: the snapshot was rebuilt in full and every component below
+ * it re-rendered. A computed per section re-runs only when something it read changed, so a
+ * coin typed in Inventory leaves the other seven views the same objects they were, and the
+ * memoised components they feed skip their render. Within a changed section, `Keep` does the
+ * same for the rows.
+ *
+ * A function rather than the data, so `useObserved` can track it. Read outside a reaction the
+ * computeds do not cache, which is MobX's rule for every computed, so a caller that wants
+ * identities kept across reads must read inside one — `useObserved` does.
+ */
+export function createSheetViews(sheet: CharacterSheetBO): () => SheetData {
+  const keep = new Keep();
+  const character = computed(() => toCharacterView(sheet));
+  const journalAndNotes = computed(() => journalView(sheet));
+  const inventory = computed((): InventoryView => {
+    const view = inventoryView(sheet);
+    return { coins: view.coins, items: keep.list('inventory', view.items) };
+  });
+  const featsAndTraits = computed((): FeatsAndTraitsView =>
+    keep.categorized('feats', categorizedView(sheet.featsAndTraits, namedItemView)),
+  );
+  const equipment = computed((): EquipmentView => {
+    const view = equipmentView(sheet);
+    return {
+      weapons: keep.list('equipment/weapons', view.weapons, 'equipment'),
+      other: keep.list('equipment/other', view.other, 'equipment'),
+      attuned: keep.list('equipment/attuned', view.attuned, 'equipment'),
+      equipped: keep.list('equipment/equipped', view.equipped, 'equipment'),
+    };
+  });
+  const spellList = computed((): SpellListView => {
+    const view = spellListView(sheet);
+    return {
+      ...keep.categorized('spells', view),
+      spellcasting: keep.one('spellcasting', view.spellcasting),
+    };
+  });
+  const counters = computed((): CountersView => {
+    const view = countersView(sheet);
+    return {
+      ...keep.categorized('counters', view),
+      spellSlots: keep.one('spellSlots', view.spellSlots),
+      pactSlots: keep.one('pactSlots', view.pactSlots),
+    };
+  });
+  const abilitiesAndSkills = computed((): AbilitiesAndSkillsView => {
+    const view = abilitiesView(sheet);
+    return {
+      proficiencyBonus: view.proficiencyBonus,
+      passivePerception: view.passivePerception,
+      speed: view.speed,
+      abilities: Object.fromEntries(
+        ABILITIES.map(({ key }) => [key, keep.one(`ability#${key}`, view.abilities[key])]),
+      ) as Record<AbilityKey, AbilityView>,
+      skills: Object.fromEntries(
+        SKILLS.map(({ key }) => [key, keep.one(`skill#${key}`, view.skills[key])]),
+      ) as Record<SkillKey, SkillView>,
+    };
+  });
+  return () => ({
+    character: character.get(),
+    journalAndNotes: journalAndNotes.get(),
+    inventory: inventory.get(),
+    featsAndTraits: featsAndTraits.get(),
+    equipment: equipment.get(),
+    spellList: spellList.get(),
+    counters: counters.get(),
+    abilitiesAndSkills: abilitiesAndSkills.get(),
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
 
@@ -637,10 +766,12 @@ export function toStorageGateView(gate: StorageGate): StorageGateView {
 /**
  * Re-renders whenever anything `compute` read changes.
  *
- * One `reaction` over a whole snapshot rather than an `observer` per component. That is coarse on
- * purpose: a character sheet is a few hundred values, and the alternative would put MobX into
- * every component in `screens/` and cost them their data-in/callbacks-out contract — the property
- * that lets a story be a literal.
+ * One `reaction` over a snapshot rather than an `observer` per component. That is coarse on
+ * purpose: the alternative would put MobX into every component in `screens/` and cost them their
+ * data-in/callbacks-out contract — the property that lets a story be a literal. What keeps it
+ * cheap is the snapshot's shape, not the reaction: `createSheetViews` builds it from one computed
+ * per section, so a change rebuilds one section's view and the memoised components under the
+ * other seven see the same objects and skip.
  *
  * `fireImmediately` costs one extra render on mount and buys the window between the first
  * render's snapshot and the effect subscribing, in which a change would otherwise be missed.
@@ -656,7 +787,7 @@ export function useObserved<T>(compute: () => T): T {
 }
 
 export function useSheet(sheet: CharacterSheetBO): { data: SheetData; actions: SheetActions } {
-  const data = useObserved(useCallback(() => toSheetData(sheet), [sheet]));
+  const data = useObserved(useMemo(() => createSheetViews(sheet), [sheet]));
   const actions = useMemo(() => toSheetActions(sheet), [sheet]);
   return { data, actions };
 }

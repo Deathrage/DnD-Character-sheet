@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { pasteLists } from '../components/pasteLists.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
@@ -16,7 +16,7 @@ interface Props {
  * because removing any other index would renumber every day after it. So there is one add
  * button, and the Delete button appears in one dialog only — the last day's.
  */
-export function JournalAndNotes({ data, actions, onClose }: Props) {
+export const JournalAndNotes = memo(function JournalAndNotes({ data, actions, onClose }: Props) {
   const [openDay, setOpenDay] = useState<number | null>(null);
   const newest = data.days.length - 1;
   const current = openDay !== null ? data.days[openDay] : undefined;
@@ -116,4 +116,4 @@ export function JournalAndNotes({ data, actions, onClose }: Props) {
       )}
     </div>
   );
-}
+});

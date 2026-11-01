@@ -357,16 +357,27 @@ function Sheet({
     void cloud.checkSignIn();
   }, [cloud]);
 
+  // Stable across renders, so the memoised header and sections below see the same callbacks
+  // on every keystroke and skip their render when their data did not change.
+  const onSectionChange = useCallback(
+    (next: SectionKey | null) => navigate({ name: 'character', id, section: next }),
+    [id],
+  );
+  const onBack = useCallback(() => navigate({ name: 'list' }), []);
+  const onExport = useCallback(() => download(CharacterFile.of(sheet, new Date())), [sheet]);
+  const onOpenRawJson = useCallback(() => navigate({ name: 'raw', id }), [id]);
+  const onUpload = useCallback(() => void cloud.upload(id), [cloud, id]);
+
   return (
     <CharacterHub
       data={data}
       actions={actions}
       section={section}
-      onSectionChange={(next) => navigate({ name: 'character', id, section: next })}
-      onBack={() => navigate({ name: 'list' })}
-      onExport={() => download(CharacterFile.of(sheet, new Date()))}
-      onOpenRawJson={() => navigate({ name: 'raw', id })}
-      onUpload={() => void cloud.upload(id)}
+      onSectionChange={onSectionChange}
+      onBack={onBack}
+      onExport={onExport}
+      onOpenRawJson={onOpenRawJson}
+      onUpload={onUpload}
       uploadDisabled={status !== 'signedIn'}
       uploadHint={status === 'unknown' || status === 'signingIn' ? null : SIGN_IN_TO_UPLOAD}
       uploadNotice={
