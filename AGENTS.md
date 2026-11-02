@@ -297,6 +297,70 @@ back on the next load (criterion 14).
       `step: 1` last on every counter: the list wrote it back
     - at 320px the row's name ellipsises at 139px and neither the page nor the dialog scrolls
       sideways; the box is 40px for `4.5` and 52px for `12.125`
+- **Reordering by drag** (2026-11-02). Categories, and the items within one or within
+  Uncategorized, are reordered by holding a row or a category header and dragging it, in Feats &
+  Traits, Spell List and Counters. `docs/superpowers/specs/2026-11-02-reorder-by-drag-design.md`
+  is the design and `docs/superpowers/plans/2026-11-02-reorder-by-drag.md` the plan. Built
+  without a round of questions, like v7; the spec marks the decisions it assumed.
+  - **No schema change.** Order is array position, as it has been since the 2026-09-20
+    restructure, so a reorder is a splice. `CategorizedBO.reorderCategories(ids)`,
+    `CategorizedBO.reorderUncategorized(ids)` and `CategoryBO.reorderItems(ids)` take the
+    **whole new order** and splice the same nodes into it: every item keeps its identity. The
+    whole order rather than an index, because the Spell List sorts its view by level over the
+    stored order, so its list and the stored one need not agree. `ORDER_MISMATCH` when the ids
+    are not exactly the list's, each once; checked before anything is written.
+  - **The Spell List keeps its level sort.** The stored order is what was dropped; the view
+    sorts over it, so a spell dragged above a lower level lands first within its own level.
+  - **dnd-kit** (`@dnd-kit/core` 6.3.1, `@dnd-kit/sortable` 10.0.0, `@dnd-kit/utilities` 3.2.2,
+    about 17 kB gzipped together). `src/ui/components/SortableList.tsx` is its only importer, by
+    convention, as `bind.ts` is mobx's. Mouse and touch are **separate sensors on a 250 ms hold
+    with 5 px tolerance**, not one pointer sensor: a pointer sensor needs `touch-action: none` on
+    every row to work on a phone, which would stop the list scrolling by touching a row. Checked
+    in the installed source rather than recalled: a finger that moves before the hold scrolls;
+    after it, `touchmove` is prevented; the context menu is prevented from pointer-down on; text
+    selection is cleared at activation; and with a `DragOverlay` the held node is still sorted,
+    which is what lets it be the skeleton.
+  - **What it looks like.** A lifted copy of the row follows the pointer in a `DragOverlay`
+    portaled to the body (a transformed ancestor would catch `position: fixed`); the row's own
+    wrapper, `.sortrow.held`, becomes a dashed skeleton with two grey bars that slides to the
+    landing slot; the others slide by the transform dnd-kit sets inline. The skeleton uses an
+    outline and a `clip-path`, not a border or `overflow: hidden`: either of those would stop a
+    block header's 22px top margin collapsing through the wrapper and shift the list the moment
+    it is held. Under `prefers-reduced-motion` the stylesheet's `!important` outranks the inline
+    transition, and the drop animation is `null`.
+  - **Nested lists, not one.** `CategorizedSection` wraps the category blocks in one
+    `SortableList` whose handle is the `Block` header row, and each block's rows in a list of
+    their own whose handle is the wrapper. A row is not inside a header, so a hold reaches one
+    `DndContext` and never both. Every block collapses while a category is held (the remembered
+    open state is untouched; the drop restores it), and the library's own ResizeObserver, live
+    while a drag is on, remeasures the collapsed blocks. Uncategorized stays last and is not in
+    the categories' list; its rows reorder. Nothing moves between buckets by drag: the dialog's
+    Category select does that, as before. Equipment's blocks pass no handle and are unchanged.
+  - **A wrapper per row** makes every `.rec` the first of its type, so the hairline between rows
+    is `.sortrow + .sortrow > .rec` now.
+  - **Testing dnd-kit in jsdom.** The sensors do run there: a `mouseDown` plus 250 ms on fake
+    timers activates a drag, which is how `CategorizedSection.test.tsx` checks the collapse and
+    the skeleton. Two traps, both found the hard way: after a drop the sensor keeps a
+    click-swallowing listener on the document for 50 ms (`AbstractPointerSensor.detach`), which
+    on a fake clock must be run or it swallows the next test's clicks; and the overlay's copy
+    is removed a microtask after the drop, so a test awaits one. `SortableList.test.tsx` mocks
+    `DndContext` to a pass-through for feeding drops in, and uses the real one for the test that
+    needs the sensors' listeners to exist.
+  - **No keyboard path yet.** The row's one focusable control is the button that opens the
+    dialog; dnd-kit's keyboard sensor would need a control of its own. In the backlog.
+  - **Verified in Chromium** (Playwright, Pixel 5 at 393px, real touch events through CDP, light
+    and dark; and a mouse at 1024px):
+    - a 350 ms hold on Sneak Attack dragged below Uncanny Dodge reads
+      `Cunning Action · Uncanny Dodge · Sneak Attack`, and so after a reload
+    - a tap on a row opens its dialog; an 80 ms hold followed by a move moves nothing; with a
+      mouse, a click opens the dialog and a drag without the hold moves nothing
+    - Rogue held and dropped below Background reads `Wizard · Background · Rogue` after a
+      reload, and the Rogue and Wizard blocks, open before the hold, are open after the drop
+    - Fireball (3rd) dragged above Fire Bolt (a cantrip) is stored first in Combat and still
+      shown last, by level
+    - neither the page nor the section scrolls sideways
+    - a check script that reloaded within autosave's 500 ms debounce saw the old order: wait
+      past it before reading back
 - The storage-layer work the followups doc called the sharpest risk is done: `createIndexedDbRepository`
   takes an injectable `registry` and `openDb`, reports `blocked`, `blocking` and `terminated`
   through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
@@ -475,7 +539,7 @@ back on the next load (criterion 14).
       - summarise from the raw JSON and validate in full only on restore, which would change
         when a damaged sheet is flagged (spec §4)
   - **The Firebase chunk is dynamic** (`import()`, never on launch): `firestoreRepository-*.js` is
-    196.63 kB (58.94 kB gzip), split out of a main bundle of 465.04 kB (134.74 kB gzip) — from
+    194.12 kB (57.90 kB gzip), split out of a main bundle of 560.22 kB (161.98 kB gzip) — from
     `npm run build`; re-run it if these drift.
   - **Project setup** (done 2026-09-25; the list is what a fresh project would need):
     - Firestore database `(default)` in **production mode** — test mode's default rules open
@@ -665,7 +729,8 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
   inventory.ts         InventoryBO / CoinsBO / InventoryItemBO
   equipment.ts         EquipmentBO / EquipmentItemBO / WeaponBO (the attack roll, ability first;
                        the count, stackable first), plus derived (never stored) attuned/equipped
-  categorized.ts       CategorizedBO / CategoryBO / CategorizedItemBO, shared by the three below
+  categorized.ts       CategorizedBO / CategoryBO / CategorizedItemBO, shared by the three below;
+                       reorderCategories / reorderItems / reorderUncategorized, the whole order as ids
   featsAndTraits.ts    FeatBO, over categorized.ts
   spellList.ts         SpellListBO / SpellBO, over categorized.ts plus spellcasting
   spellcasting.ts      SpellcastingBO / SpellcastingEntryBO, keyed by ability — no id, like hit dice
@@ -696,6 +761,7 @@ src/ui/                components are presentational: data in, callbacks out, no
   route.ts             hash routing, hand-rolled; three routes, no dependency
   UpdatePrompt.tsx     "a new version is ready": saves pending edits, then lets the new service
                        worker take over. Rendered from main.tsx so App never imports virtual:pwa-*
+  components/SortableList.tsx  hold-and-drag reordering over dnd-kit; the only importer of it
   components/, screens/   the wireframe's screens; fixtures.ts feeds the stories. AbilityPicker is
                        the one row of ability buttons both attack dialogs share
 src/main.tsx           the composition root; the only place the real library is constructed

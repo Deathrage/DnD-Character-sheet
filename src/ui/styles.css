@@ -1131,11 +1131,13 @@ button:not(:disabled):active {
    would stop a block header's top margin collapsing through the wrapper and shift the list by
    22px the moment it is held) and two grey bars where the name and the preview line sit. A
    category block collapsed under a hold is only its header, so its skeleton is the header's
-   height and the second bar sits inside it unseen. */
+   height and the second bar falls outside it: the clip, which unlike `overflow: hidden` starts
+   no formatting context and so lets that margin collapse, cuts it off. */
 .sortrow.held {
   outline: 1.5px dashed var(--line);
   outline-offset: -1.5px;
   border-radius: 12px;
+  clip-path: inset(0 round 12px);
 }
 .sortrow.held > * {
   visibility: hidden;

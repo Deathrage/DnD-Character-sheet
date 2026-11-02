@@ -175,3 +175,20 @@ checked in a browser, and the tests cover what surrounds it:
 
 Dragging an item into another category; reordering Inventory, Equipment and classes; a keyboard
 path for reordering; the hub's section order. The first three go to `docs/BACKLOG.md`.
+
+## 8. Deviations
+
+The build matches this design except for these details.
+
+- **Size.** §2 estimated 13 kB gzipped for the three packages; measured on the installed
+  minified builds together they are about 17 kB.
+- **The skeleton clips.** §4 said the skeleton's bars sit where the name and the preview line
+  are. A category block held is only its header, so the second bar fell below it; the wrapper now
+  clips with `clip-path: inset(0 round 12px)`, chosen over `overflow: hidden` because a clip
+  starts no formatting context and so lets the header's top margin keep collapsing through the
+  wrapper.
+- **"The only importer" is a convention**, not a lint rule, like `bind.ts` being mobx's.
+- **The browser check** ran at 393 px (Playwright's Pixel 5) rather than 360 px, and a mouse at
+  1024 px besides. A hold shorter than the delay was checked at 80 ms, not "just under 250".
+- **Two jsdom traps** are recorded in AGENTS.md: dnd-kit's 50 ms click-swallowing listener after
+  a drop, and the overlay copy going a microtask later.

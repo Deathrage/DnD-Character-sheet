@@ -74,6 +74,12 @@ commit or PR that shipped it, rather than deleting it.
   offer to delete its feat. Needs a schema version bump — read `src/data/schema/README.md` first.
   A dangling link must fail validation (the one promise).
 
+- **Reordering by drag, the rest of it.** Rows in Inventory, Equipment and the class list, and
+  the hub's section order: `SortableList` is already the mechanism, and each needs only a
+  `reorder…(ids)` on its business object and a handle. Dragging an item into another category
+  would need one `DndContext` over the whole section and `moveTo(category, index)`. A keyboard
+  path (dnd-kit's `KeyboardSensor` with `sortableKeyboardCoordinates`) needs a focusable handle
+  of its own on each row, since the row's button opens the dialog.
 - **Item weight.** A `weight` on inventory items (per unit) and equipment; the inventory shows the
   total, derived and never stored like `level` (add it to the spec §1 exception list). No units,
   no coin weight, no encumbrance — those are rules. Open: default `0` vs "not entered".
@@ -104,3 +110,8 @@ commit or PR that shipped it, rather than deleting it.
   remaining and total may be fractions of up to three places. Design in
   `docs/superpowers/specs/2026-11-01-decimal-counters-design.md`; AGENTS.md's "Schema v7" entry
   has the rest.
+- **Reordering by drag.** Shipped on branch `claude/drag-drop-reorder-categories-qioc1n`: hold a
+  feat, spell or counter row, or a category header, and drag it to a new place; a lifted copy
+  follows the finger and a skeleton marks the landing slot. No schema change: order is array
+  position. Design in `docs/superpowers/specs/2026-11-02-reorder-by-drag-design.md`; AGENTS.md's
+  "Reordering by drag" entry has the rest.
