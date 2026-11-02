@@ -4,7 +4,13 @@ import { stubDialogElement } from '../../test/stubDialog.js';
 import { CategorizedSection } from './CategorizedSection.js';
 
 const noop = () => null;
-const actions = { createCategory: noop, renameCategory: noop, removeCategory: () => {} };
+const actions = {
+  createCategory: noop,
+  renameCategory: noop,
+  removeCategory: () => {},
+  reorderCategories: () => {},
+  reorderItems: () => {},
+};
 const data = {
   categories: [{ id: 'c1', name: 'Rogue', items: [{ id: 'a', name: 'Sneak Attack' }] }],
   uncategorized: [{ id: 'b', name: 'Darkvision' }],

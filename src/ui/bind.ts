@@ -142,8 +142,15 @@ function itemById<TItem extends { id: string }>(
 
 /** Identical in all three sections, down to the method names, so it is written once. */
 function categoryActions(bo: {
-  categories: { id: string; setName(value: string): void; remove(): void }[];
+  categories: {
+    id: string;
+    setName(value: string): void;
+    remove(): void;
+    reorderItems(ids: readonly string[]): void;
+  }[];
   createCategory(name: string): unknown;
+  reorderCategories(ids: readonly string[]): void;
+  reorderUncategorized(ids: readonly string[]): void;
 }): CategoryActions {
   return {
     createCategory: (name) =>
@@ -152,6 +159,11 @@ function categoryActions(bo: {
       }),
     renameCategory: (id, name) => attempt(() => byId(bo.categories, id, 'category').setName(name)),
     removeCategory: (id) => byId(bo.categories, id, 'category').remove(),
+    reorderCategories: (ids) => bo.reorderCategories(ids),
+    reorderItems: (categoryId, ids) =>
+      categoryId === null
+        ? bo.reorderUncategorized(ids)
+        : byId(bo.categories, categoryId, 'category').reorderItems(ids),
   };
 }
 

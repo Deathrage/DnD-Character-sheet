@@ -144,6 +144,14 @@ export interface CategoryActions {
   renameCategory(id: string, name: string): NameResult;
   /** Moves the category's items to Uncategorized, then deletes it. */
   removeCategory(id: string): void;
+  /**
+   * The whole new order, as ids, after a drag. The whole order rather than a moved id and an
+   * index, because the Spell List's view is sorted by level and so need not agree with the
+   * stored list. Not rejectable: a mismatch is a bug in the caller, and stays loud.
+   */
+  reorderCategories(ids: string[]): void;
+  /** `categoryId` is `null` for Uncategorized, as everywhere else. */
+  reorderItems(categoryId: string | null, ids: string[]): void;
 }
 
 export type FeatView = NamedItemView;

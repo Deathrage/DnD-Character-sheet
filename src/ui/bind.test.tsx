@@ -572,6 +572,71 @@ describe('toSheetActions', () => {
     ]);
   });
 
+  it('reorders categories and the items of one, in each section', () => {
+    const sheet = newSheet();
+    const actions = toSheetActions(sheet);
+    actions.counters.createCategory('Class features');
+    actions.counters.createCategory('Consumables');
+    const [features, consumables] = toSheetData(sheet).counters.categories.map((c) => c.id);
+    actions.counters.addCounter(features!, { name: 'Rage', description: '', total: 3, step: 1 });
+    actions.counters.addCounter(features!, { name: 'Ki', description: '', total: 5, step: 1 });
+    actions.counters.addCounter(null, { name: 'Inspiration', description: '', total: 1, step: 1 });
+    actions.counters.addCounter(null, { name: 'Luck', description: '', total: 3, step: 1 });
+    const before = toSheetData(sheet).counters;
+    const [rage, ki] = before.categories[0]!.items.map((item) => item.id);
+    const [inspiration, luck] = before.uncategorized.map((item) => item.id);
+
+    actions.counters.reorderCategories([consumables!, features!]);
+    actions.counters.reorderItems(features!, [ki!, rage!]);
+    actions.counters.reorderItems(null, [luck!, inspiration!]);
+
+    const doc = sheet.toDocument().counters;
+    expect(doc.categories.map((c) => c.name)).toEqual(['Consumables', 'Class features']);
+    expect(doc.categories[1]?.items.map((item) => item.name)).toEqual(['Ki', 'Rage']);
+    expect(doc.uncategorized.map((item) => item.name)).toEqual(['Luck', 'Inspiration']);
+  });
+
+  // The stored order is what was dropped; the view still sorts by level over it, so a spell
+  // dragged above a lower level lands first within its own.
+  it('keeps the spell view sorted by level after a reorder', () => {
+    const sheet = newSheet();
+    const actions = toSheetActions(sheet);
+    actions.spellList.addSpell(null, {
+      name: 'Light',
+      description: '',
+      level: 'c',
+      prepared: true,
+    });
+    actions.spellList.addSpell(null, {
+      name: 'Fireball',
+      description: '',
+      level: 3,
+      prepared: true,
+    });
+    actions.spellList.addSpell(null, {
+      name: 'Counterspell',
+      description: '',
+      level: 3,
+      prepared: true,
+    });
+    const [light, fireball, counterspell] = toSheetData(sheet).spellList.uncategorized.map(
+      (spell) => spell.id,
+    );
+
+    actions.spellList.reorderItems(null, [counterspell!, light!, fireball!]);
+
+    expect(sheet.toDocument().spellList.uncategorized.map((spell) => spell.name)).toEqual([
+      'Counterspell',
+      'Light',
+      'Fireball',
+    ]);
+    expect(toSheetData(sheet).spellList.uncategorized.map((spell) => spell.name)).toEqual([
+      'Light',
+      'Counterspell',
+      'Fireball',
+    ]);
+  });
+
   /**
    * `moveSpell` and `moveCounter` are separate lines from `moveFeat`, and each resolves its
    * destination against its own section — a line that reached for the wrong section's category

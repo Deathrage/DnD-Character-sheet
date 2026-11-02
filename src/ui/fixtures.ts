@@ -477,6 +477,8 @@ export const noFeatsActions: FeatsAndTraitsActions = {
   createCategory: () => null,
   renameCategory: () => null,
   removeCategory: () => {},
+  reorderCategories: () => {},
+  reorderItems: () => {},
 };
 
 export const noJournalActions: JournalAndNotesActions = {
@@ -525,6 +527,8 @@ export const noSpellListActions: SpellListActions = {
   createCategory: () => null,
   renameCategory: () => null,
   removeCategory: () => {},
+  reorderCategories: () => {},
+  reorderItems: () => {},
 };
 
 export const noCountersActions: CountersActions = {
@@ -544,6 +548,8 @@ export const noCountersActions: CountersActions = {
   createCategory: () => null,
   renameCategory: () => null,
   removeCategory: () => {},
+  reorderCategories: () => {},
+  reorderItems: () => {},
 };
 
 export const noAbilitiesActions: AbilitiesAndSkillsActions = {
