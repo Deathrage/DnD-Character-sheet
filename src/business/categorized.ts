@@ -107,6 +107,29 @@ export abstract class CategorizedItemBO<TData extends NamedItemData> extends Nam
   }
 }
 
+/**
+ * Puts `list` into the order `ids` gives, in one splice of the same nodes: nothing is cloned,
+ * so every item keeps its identity and the business objects that wrap it. The whole order rather
+ * than an index, because the caller's list and this one need not agree — the Spell List sorts
+ * its view by level over the stored order — and "these ids in this order" means one thing for
+ * any list. `ORDER_MISMATCH` when `ids` is not exactly the list's ids, each once: a missing id,
+ * an extra one, a repeat. Checked in full before anything is written.
+ */
+function reorder<T extends { id: string }>(list: T[], ids: readonly string[]): void {
+  const byId = new Map(list.map((node) => [node.id, node]));
+  if (ids.length !== list.length || new Set(ids).size !== ids.length) {
+    throw new RuleViolation('ORDER_MISMATCH', 'the order must list every item exactly once');
+  }
+  const ordered = ids.map((id) => {
+    const node = byId.get(id);
+    if (node === undefined) {
+      throw new RuleViolation('ORDER_MISMATCH', `no item with id ${id} is in this list`);
+    }
+    return node;
+  });
+  list.splice(0, list.length, ...ordered);
+}
+
 type Make<TData extends NamedItemData, TItemBO> = (
   node: TData,
   siblings: TData[],
@@ -159,6 +182,15 @@ export class CategorizedBO<TData extends NamedItemData, TItemBO> {
     const node = pushAndRead(this.#node.uncategorized, this.#fill(init));
     return this.#make(node, this.#node.uncategorized, this.#node);
   }
+
+  /** The categories in this order, each one whole. See `reorder`. */
+  reorderCategories(ids: readonly string[]): void {
+    reorder(this.#node.categories, ids);
+  }
+
+  reorderUncategorized(ids: readonly string[]): void {
+    reorder(this.#node.uncategorized, ids);
+  }
 }
 
 export class CategoryBO<TData extends NamedItemData, TItemBO> {
@@ -207,6 +239,12 @@ export class CategoryBO<TData extends NamedItemData, TItemBO> {
     this.#require();
     const node = pushAndRead(this.#node.items, this.#fill(init));
     return this.#make(node, this.#node.items, this.#owner);
+  }
+
+  /** This category's items in this order. See `reorder`. */
+  reorderItems(ids: readonly string[]): void {
+    this.#require();
+    reorder(this.#node.items, ids);
   }
 
   /** Rehomes the category's items before deleting it — removing a category is not a bulk delete. */

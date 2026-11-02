@@ -334,3 +334,109 @@ function arrayValuedProperties(obj: object): unknown[][] {
   }
   return arrays;
 }
+
+// Reordering by drag (2026-11-02). A list's order is set in one call from its ids, as the whole
+// new order: the UI's list and the stored list need not agree (the Spell List sorts its view by
+// level), and "put these ids in this order" has one meaning for any list where "move this id to
+// index 3" has one only when the two agree.
+describe('reordering', () => {
+  const three = () => {
+    const sheet = sheetFor();
+    const { featsAndTraits } = sheet;
+    const combat = featsAndTraits.createCategory('Combat');
+    const social = featsAndTraits.createCategory('Social');
+    const magic = featsAndTraits.createCategory('Magic');
+    return { sheet, featsAndTraits, combat, social, magic };
+  };
+  const names = (items: { name: string }[]) => items.map((item) => item.name);
+
+  it('reorders the categories, keeping each one whole', () => {
+    const { featsAndTraits, combat, social, magic } = three();
+    combat.add({ name: 'Rage', description: 'Angry.' });
+
+    featsAndTraits.reorderCategories([magic.id, combat.id, social.id]);
+
+    expect(names(featsAndTraits.categories)).toEqual(['Magic', 'Combat', 'Social']);
+    expect(featsAndTraits.categories.map((c) => c.id)).toEqual([magic.id, combat.id, social.id]);
+    expect(featsAndTraits.categories[1]?.items.map((i) => i.description)).toEqual(['Angry.']);
+  });
+
+  it("reorders a category's items, keeping their ids and contents", () => {
+    const { combat } = three();
+    const rage = combat.add({ name: 'Rage', description: 'Angry.' });
+    const reckless = combat.add({ name: 'Reckless Attack' });
+    const danger = combat.add({ name: 'Danger Sense' });
+
+    combat.reorderItems([danger.id, rage.id, reckless.id]);
+
+    expect(names(combat.items)).toEqual(['Danger Sense', 'Rage', 'Reckless Attack']);
+    expect(combat.items.map((i) => i.id)).toEqual([danger.id, rage.id, reckless.id]);
+    expect(combat.items[1]?.description).toBe('Angry.');
+  });
+
+  it('reorders the uncategorized items', () => {
+    const { featsAndTraits } = three();
+    const a = featsAndTraits.add({ name: 'Darkvision' });
+    const b = featsAndTraits.add({ name: 'Lucky' });
+
+    featsAndTraits.reorderUncategorized([b.id, a.id]);
+
+    expect(names(featsAndTraits.uncategorized)).toEqual(['Lucky', 'Darkvision']);
+  });
+
+  it('keeps a held item usable after a reorder, writing through to the document', () => {
+    const { sheet, combat } = three();
+    const rage = combat.add({ name: 'Rage' });
+    const reckless = combat.add({ name: 'Reckless Attack' });
+
+    combat.reorderItems([reckless.id, rage.id]);
+    rage.setDescription('Once per long rest.');
+    reckless.remove();
+
+    expect(sheet.toDocument().featsAndTraits.categories[0]?.items).toMatchObject([
+      { name: 'Rage', description: 'Once per long rest.' },
+    ]);
+    expect(CURRENT_SCHEMA.safeParse(sheet.toDocument()).success).toBe(true);
+  });
+
+  it('accepts the order it already has', () => {
+    const { featsAndTraits, combat, social, magic } = three();
+    featsAndTraits.reorderCategories([combat.id, social.id, magic.id]);
+    expect(names(featsAndTraits.categories)).toEqual(['Combat', 'Social', 'Magic']);
+  });
+
+  it.each([
+    ['a missing id', (ids: string[]) => ids.slice(1)],
+    ['an extra id', (ids: string[]) => [...ids, 'not-here']],
+    ['a repeated id', (ids: string[]) => [ids[0]!, ids[0]!, ids[2]!]],
+    ['an unknown id in place of one', (ids: string[]) => ['not-here', ids[1]!, ids[2]!]],
+    ['nothing at all', () => []],
+  ])('throws ORDER_MISMATCH for %s, changing nothing', (_, mangle) => {
+    const { featsAndTraits, combat, social, magic } = three();
+    const ids = [magic.id, combat.id, social.id];
+
+    expect(() => featsAndTraits.reorderCategories(mangle(ids))).toThrow(
+      expect.objectContaining({ code: 'ORDER_MISMATCH' }) as Error,
+    );
+    expect(names(featsAndTraits.categories)).toEqual(['Combat', 'Social', 'Magic']);
+  });
+
+  it('throws ORDER_MISMATCH for items too', () => {
+    const { combat } = three();
+    const rage = combat.add({ name: 'Rage' });
+    combat.add({ name: 'Reckless Attack' });
+
+    expect(() => combat.reorderItems([rage.id])).toThrow(
+      expect.objectContaining({ code: 'ORDER_MISMATCH' }) as Error,
+    );
+    expect(names(combat.items)).toEqual(['Rage', 'Reckless Attack']);
+  });
+
+  it('throws GONE when reordering the items of a removed category', () => {
+    const { combat } = three();
+    combat.remove();
+    expect(() => combat.reorderItems([])).toThrow(
+      expect.objectContaining({ code: 'GONE' }) as Error,
+    );
+  });
+});

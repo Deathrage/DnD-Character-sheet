@@ -41,8 +41,14 @@ function fill(sheet: CharacterSheetBO): void {
   sheet.spellList.createCategory('Evocation').add({ name: 'Fire Bolt' });
   sheet.spellList.add({ name: 'Prestidigitation' });
   sheet.spellList.spellcasting.add('intelligence', { attackBonus: 6, saveDc: 14 });
-  sheet.counters.createCategory('Class features').add({ name: 'Rage' });
+  const features = sheet.counters.createCategory('Class features');
+  features.add({ name: 'Rage' });
+  const sorcery = features.add({ name: 'Sorcery Points' });
   sheet.counters.add({ name: 'Inspiration' });
+  // Reordered by drag: the same nodes in another order, which must still be one document.
+  sheet.counters.createCategory('Consumables');
+  sheet.counters.reorderCategories(sheet.counters.categories.map((c) => c.id).reverse());
+  features.reorderItems([sorcery.id, features.items[0]!.id]);
   // Three places, the most the schema allows, so the two layers' limits are shown to agree.
   const oil = sheet.counters.add({ name: 'Lantern oil' });
   oil.setStep(0.125);

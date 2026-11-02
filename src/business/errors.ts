@@ -24,6 +24,7 @@ export type RuleCode =
   | 'NOT_FINITE'
   | 'TOO_PRECISE'
   | 'NOT_POSITIVE'
+  | 'ORDER_MISMATCH'
   | 'GONE';
 
 export class RuleViolation extends Error {

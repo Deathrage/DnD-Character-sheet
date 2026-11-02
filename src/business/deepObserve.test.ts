@@ -146,3 +146,23 @@ describe('CharacterSheetBO.observe', () => {
     expect(sheet.toDocument().featsAndTraits.uncategorized[0]?.name).toBe('Sneak Attack (2d6)');
   });
 });
+
+// A reorder is one splice that removes every node and adds the same nodes back. The node leaves
+// and arrives in the same change, so it is released and attached again; an edit to it afterwards
+// must still be seen, or a dragged item's next edit would show on screen and never be saved.
+describe('deepObserve across a reorder', () => {
+  it('fires once for the splice, and again for an edit to a moved item', () => {
+    const doc = treeFor();
+    doc.weapons.push({ id: 'w2', name: 'Dagger', attack: { bonus: 1 } });
+    const listener = vi.fn();
+    deepObserve(doc, listener);
+
+    const [rapier, dagger] = doc.weapons;
+    doc.weapons.splice(0, doc.weapons.length, dagger!, rapier!);
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    dagger!.attack!.bonus = 2;
+    rapier!.name = 'Rapier +1';
+    expect(listener).toHaveBeenCalledTimes(3);
+  });
+});
