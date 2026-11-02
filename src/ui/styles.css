@@ -1110,6 +1110,79 @@ button:not(:disabled):active {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* ---------- reordering by drag ---------- */
+/* A list the player reorders by holding an item (`SortableList`). The wrapper is what dnd-kit
+   moves: the others slide aside by the transform it sets inline, and the held item's own
+   wrapper, `.held`, is the skeleton that marks where it will land. The lifted copy that follows
+   the finger is `.draglift`, portaled to the body. Holding is a press, so a wrapper selects no
+   text and shows no callout; dnd-kit prevents the long-press context menu itself. */
+.sortrow {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+/* A wrapper per row makes every row the first of its kind, which `.rec:first-of-type` above
+   reads as the first in a block; the hairline between rows goes on the wrapper's row instead. */
+.sortrow + .sortrow > .rec {
+  border-top: 1px solid var(--fill);
+}
+/* The skeleton: the row's own box, its contents hidden, a dashed outline (not a border, which
+   would stop a block header's top margin collapsing through the wrapper and shift the list by
+   22px the moment it is held) and two grey bars where the name and the preview line sit. A
+   category block collapsed under a hold is only its header, so its skeleton is the header's
+   height and the second bar sits inside it unseen. */
+.sortrow.held {
+  outline: 1.5px dashed var(--line);
+  outline-offset: -1.5px;
+  border-radius: 12px;
+}
+.sortrow.held > * {
+  visibility: hidden;
+}
+.sortrow.held::before,
+.sortrow.held::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  height: 11px;
+  border-radius: 6px;
+  background: var(--fill);
+}
+.sortrow.held::before {
+  top: 15px;
+  width: 42%;
+}
+.sortrow.held::after {
+  top: 36px;
+  width: 64%;
+}
+.draglift {
+  pointer-events: none;
+  cursor: grabbing;
+}
+.draglift .rec,
+.draglift .sechead-row {
+  margin: 0;
+  padding-left: 12px;
+  padding-right: 12px;
+  background: var(--paper);
+  border: none;
+  border-radius: 12px;
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--ink) 18%, transparent),
+    0 12px 28px -6px color-mix(in srgb, var(--ink) 35%, transparent);
+  transform: scale(1.02);
+}
+.draglift .sechead-row {
+  min-height: 44px;
+}
+@media (prefers-reduced-motion: reduce) {
+  /* dnd-kit sets the slide inline; a stylesheet `!important` is what outranks that. */
+  .sortrow {
+    transition: none !important;
+  }
+}
 .newcat {
   margin-top: 22px;
   width: 100%;

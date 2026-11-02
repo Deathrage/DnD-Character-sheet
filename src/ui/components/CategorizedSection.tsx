@@ -4,6 +4,7 @@ import { usePersistedState } from '../persistedState.js';
 import { NameField } from './NameField.js';
 import { ResponsiveDialog } from './ResponsiveDialog.js';
 import { ConfirmDelete } from './ConfirmDelete.js';
+import { SortableList, type DragHandle } from './SortableList.js';
 import type { CategoryActions, CategorizedView, CategoryView } from '../types.js';
 
 interface Props<T> {
@@ -55,6 +56,10 @@ export function CategorizedSection<T extends { id: string }>({
     {},
   );
   const toggle = (key: string) => setExpanded({ ...expanded, [key]: expanded[key] !== true });
+  // While a category is held, every block shows collapsed: a category is its header and its
+  // rows, and dragging an open block of twenty rows past another is unworkable on a phone. The
+  // remembered state is not touched, so the drop opens again what was open.
+  const [draggingCategory, setDraggingCategory] = useState(false);
 
   const [dialog, setDialog] = useState<{ kind: 'edit'; id: string } | { kind: 'new' } | null>(null);
   const close = () => setDialog(null);
@@ -75,27 +80,35 @@ export function CategorizedSection<T extends { id: string }>({
 
         {children}
 
-        {data.categories.map((category) => (
-          <Block
-            key={category.id}
-            name={category.name}
-            items={category.items}
-            renderRow={renderRow}
-            count={count(category.items)}
-            collapsed={expanded[category.id] !== true}
-            onToggle={() => toggle(category.id)}
-            onAdd={() => onAdd(category.id)}
-            onEditCategory={() => setDialog({ kind: 'edit', id: category.id })}
-          />
-        ))}
+        <SortableList
+          items={data.categories}
+          onReorder={actions.reorderCategories}
+          onDragging={setDraggingCategory}
+        >
+          {(category, handle) => (
+            <Block
+              name={category.name}
+              items={category.items}
+              renderRow={renderRow}
+              count={count(category.items)}
+              collapsed={draggingCategory || expanded[category.id] !== true}
+              onToggle={() => toggle(category.id)}
+              onAdd={() => onAdd(category.id)}
+              onEditCategory={() => setDialog({ kind: 'edit', id: category.id })}
+              onReorder={(ids) => actions.reorderItems(category.id, ids)}
+              handle={handle}
+            />
+          )}
+        </SortableList>
 
         <Block
           name="Uncategorized"
           items={data.uncategorized}
           renderRow={renderRow}
           count={count(data.uncategorized)}
-          collapsed={false}
+          collapsed={draggingCategory}
           onAdd={() => onAdd(null)}
+          onReorder={(ids) => actions.reorderItems(null, ids)}
         />
 
         <button type="button" className="newcat" onClick={() => setDialog({ kind: 'new' })}>
@@ -136,6 +149,10 @@ interface BlockProps<T> {
   onAdd?: () => void;
   /** Absent for Uncategorized, which is not a category and cannot be renamed or deleted. */
   onEditCategory?: () => void;
+  /** The rows' new order after a drag. Absent for Equipment's blocks, whose rows do not move. */
+  onReorder?: (ids: string[]) => void;
+  /** Makes the header row the thing to hold to drag the whole block. Absent for Equipment's. */
+  handle?: DragHandle;
 }
 
 /**
@@ -152,10 +169,12 @@ export function Block<T extends { id: string }>({
   onToggle,
   onAdd,
   onEditCategory,
+  onReorder,
+  handle,
 }: BlockProps<T>) {
   return (
     <>
-      <div className="sechead-row">
+      <div className="sechead-row" {...handle}>
         {onToggle ? (
           <button type="button" className="sechead" onClick={onToggle} aria-expanded={!collapsed}>
             <span className="caret" aria-hidden="true">
@@ -196,6 +215,10 @@ export function Block<T extends { id: string }>({
       {!collapsed &&
         (items.length === 0 ? (
           <div className="empty">{empty}</div>
+        ) : onReorder ? (
+          <SortableList items={items} onReorder={onReorder} wholeItem>
+            {renderRow}
+          </SortableList>
         ) : (
           items.map((item) => <Fragment key={item.id}>{renderRow(item)}</Fragment>)
         ))}

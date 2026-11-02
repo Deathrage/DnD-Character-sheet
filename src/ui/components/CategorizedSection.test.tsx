@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { stubDialogElement } from '../../test/stubDialog.js';
 import { CategorizedSection } from './CategorizedSection.js';
 
@@ -154,5 +154,109 @@ describe('CategorizedSection remembers what was open', () => {
 
     expect(uncaught).not.toHaveBeenCalled();
     expect(screen.getByText('Sneak Attack')).toBeTruthy();
+  });
+});
+
+// Reordering by drag (2026-11-02). The drag itself needs a browser; what jsdom can check is where
+// the handles are and what a category drag does to the blocks.
+describe('CategorizedSection reordering', () => {
+  beforeEach(() => localStorage.clear());
+
+  const two = {
+    categories: [
+      { id: 'c1', name: 'Rogue', items: [{ id: 'a', name: 'Sneak Attack' }] },
+      { id: 'c2', name: 'Wizard', items: [{ id: 'w', name: 'Arcane Recovery' }] },
+    ],
+    uncategorized: [
+      { id: 'b', name: 'Darkvision' },
+      { id: 'd', name: 'Lucky' },
+    ],
+  };
+  const section = () =>
+    render(
+      <CategorizedSection
+        characterId="c"
+        title="Feats"
+        data={two}
+        actions={actions}
+        onClose={() => {}}
+        onAdd={() => {}}
+        renderRow={(item) => <div className="rec">{item.name}</div>}
+      />,
+    );
+
+  /**
+   * After the drop, dnd-kit keeps a click-swallowing listener on the document for 50 ms (checked
+   * in the installed `AbstractPointerSensor.detach`) so the click that ends a mouse drag opens
+   * nothing. On the fake clock that timeout must be run, or it outlives the test and swallows
+   * the next test's clicks.
+   */
+  const letGo = () => {
+    act(() => {
+      vi.advanceTimersByTime(100);
+    });
+    vi.useRealTimers();
+  };
+
+  it('puts every category block, and every row, inside a sortable wrapper', () => {
+    const { container } = section();
+    const header = (name: string) =>
+      screen.getByRole('button', { name: new RegExp(`^${name}`) }).closest('.sechead-row');
+
+    expect(header('Rogue')?.closest('.sortrow')).not.toBeNull();
+    expect(header('Wizard')?.closest('.sortrow')).not.toBeNull();
+    // Uncategorized is not a category: it stays last and is not in the list.
+    expect(screen.getByText('Uncategorized').closest('.sortrow')).toBeNull();
+    expect(screen.getByText('Darkvision').closest('.sortrow')).not.toBeNull();
+    // Two lists: the categories', and Uncategorized's rows'. Collapsed blocks render no rows.
+    expect(container.querySelectorAll('.sortlist')).toHaveLength(2);
+  });
+
+  it('collapses every block while a category is held, and opens them again after', () => {
+    section();
+    fireEvent.click(screen.getByRole('button', { name: /^Rogue/ }));
+    expect(screen.getByText('Sneak Attack')).toBeTruthy();
+
+    // A hold on the header row: dnd-kit's mouse sensor activates after the delay.
+    vi.useFakeTimers();
+    const header = screen.getByRole('button', { name: /^Rogue/ }).closest('.sechead-row')!;
+    fireEvent.mouseDown(header, { button: 0, clientX: 10, clientY: 10 });
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    expect(screen.queryByText('Sneak Attack')).toBeNull();
+    expect(screen.queryByText('Darkvision')).toBeNull();
+
+    fireEvent.mouseUp(header);
+    letGo();
+    expect(screen.getByText('Sneak Attack')).toBeTruthy();
+    expect(screen.getByText('Darkvision')).toBeTruthy();
+  });
+
+  it('a hold on a row lifts a copy of it and collapses nothing', async () => {
+    // Reduced motion: no drop animation, so letting go removes the lifted copy at once. jsdom
+    // has no matchMedia; with one, the copy would stay until an animation jsdom cannot run.
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    section();
+    fireEvent.click(screen.getByRole('button', { name: /^Wizard/ }));
+    vi.useFakeTimers();
+    const row = screen.getByText('Darkvision');
+    fireEvent.mouseDown(row, { button: 0, clientX: 10, clientY: 10 });
+    act(() => {
+      vi.advanceTimersByTime(300);
+    });
+    // The row itself, now the skeleton, and the lifted copy in the overlay.
+    expect(screen.getAllByText('Darkvision')).toHaveLength(2);
+    expect(row.closest('.sortrow')?.classList.contains('held')).toBe(true);
+    expect(screen.getByText('Lucky')).toBeTruthy();
+    expect(screen.getByText('Arcane Recovery')).toBeTruthy();
+
+    fireEvent.mouseUp(row);
+    letGo();
+    // The copy goes once the (absent) drop animation has resolved: a microtask later.
+    await act(async () => {});
+    expect(screen.getAllByText('Darkvision')).toHaveLength(1);
+    expect(row.closest('.sortrow')?.classList.contains('held')).toBe(false);
+    vi.unstubAllGlobals();
   });
 });
