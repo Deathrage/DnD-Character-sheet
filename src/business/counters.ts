@@ -1,7 +1,13 @@
 import { CategorizedBO, CategorizedItemBO, type NewNamedItem } from './categorized.js';
 import { createId } from './createId.js';
 import { RuleViolation } from './errors.js';
-import { longText, nonNegativeInt, trimmedName } from './guards.js';
+import {
+  longText,
+  nonNegativeDecimal,
+  nonNegativeInt,
+  positiveDecimal,
+  trimmedName,
+} from './guards.js';
 import type { CounterData, CountersData, PactSlotsData, SpellSlotData } from './types.js';
 
 // Duplicated rather than imported: `schema/index.ts` deliberately does not export
@@ -10,13 +16,20 @@ import type { CounterData, CountersData, PactSlotsData, SpellSlotData } from './
 // is the point, since the business layer would need deliberate updating either way.
 const SPELL_SLOT_LEVELS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
 
+/**
+ * A generic counter counts in parts since v7: remaining, total and the step are decimals of at
+ * most three places. The step is what − and + move the counter by, entered by the player and
+ * never worked out from anything; the stepping itself is the UI's arithmetic (`addDecimals`),
+ * not a rule here. Nothing ties remaining or total to the step: 0.3 left with a step of 0.5 is
+ * what the player typed.
+ */
 export class CounterBO extends CategorizedItemBO<CounterData> {
   get current(): number {
     return this.node.current;
   }
 
   setCurrent(value: number): void {
-    this.node.current = nonNegativeInt(value);
+    this.node.current = nonNegativeDecimal(value);
   }
 
   get total(): number {
@@ -24,7 +37,15 @@ export class CounterBO extends CategorizedItemBO<CounterData> {
   }
 
   setTotal(value: number): void {
-    this.node.total = nonNegativeInt(value);
+    this.node.total = nonNegativeDecimal(value);
+  }
+
+  get step(): number {
+    return this.node.step;
+  }
+
+  setStep(value: number): void {
+    this.node.step = positiveDecimal(value);
   }
 }
 
@@ -114,6 +135,7 @@ export class CountersBO extends CategorizedBO<CounterData, CounterBO> {
         description: longText(description),
         current: 0,
         total: 0,
+        step: 1,
       }),
     );
     this.#node = node;

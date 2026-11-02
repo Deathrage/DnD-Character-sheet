@@ -5,12 +5,15 @@ import {
   ABILITY_KEYS,
   abilityKey,
   damageText,
+  decimal,
   integer,
   longText,
   MAX_CATEGORY_NAME,
   MAX_LONG_TEXT,
   MAX_SHORT_NAME,
+  nonNegativeDecimal,
   nonNegativeInt,
+  positiveDecimal,
   trimmedName,
 } from './guards.js';
 
@@ -129,6 +132,63 @@ describe('nonNegativeInt', () => {
 
   it('throws RuleViolation, not a bare Error', () => {
     expect(() => nonNegativeInt(-1)).toThrow(RuleViolation);
+  });
+});
+
+describe('decimal', () => {
+  it.each([0, 1, 0.5, 1.005, 4.125, -2.5, Number.MAX_SAFE_INTEGER])('accepts %j', (value) => {
+    expect(decimal(value)).toBe(value);
+  });
+
+  it.each([NaN, Infinity, -Infinity])('rejects %j as NOT_FINITE', (value) => {
+    expect(() => decimal(value)).toThrow(expect.objectContaining({ code: 'NOT_FINITE' }) as Error);
+  });
+
+  // Integers all, with no places to count: TOO_PRECISE would be false of them. Past the safe
+  // range the schema refuses them, as it refuses the whole numbers `integer` guards.
+  it.each([Number.MAX_SAFE_INTEGER + 2, -Number.MAX_SAFE_INTEGER - 2, 1e17])(
+    'rejects %j as UNSAFE_INTEGER',
+    (value) => {
+      expect(() => decimal(value)).toThrow(
+        expect.objectContaining({ code: 'UNSAFE_INTEGER' }) as Error,
+      );
+    },
+  );
+
+  // 1e-7 prints with an exponent, so its places cannot be counted; it has more than three.
+  it.each([0.0001, 1.0005, 1e-7, 0.1 + 0.2])('rejects %j as TOO_PRECISE', (value) => {
+    expect(() => decimal(value)).toThrow(expect.objectContaining({ code: 'TOO_PRECISE' }) as Error);
+  });
+});
+
+describe('nonNegativeDecimal', () => {
+  it('accepts zero and a fraction', () => {
+    expect(nonNegativeDecimal(0)).toBe(0);
+    expect(nonNegativeDecimal(0.5)).toBe(0.5);
+  });
+
+  it('rejects a negative fraction as NEGATIVE, not TOO_PRECISE', () => {
+    expect(() => nonNegativeDecimal(-0.5)).toThrow(
+      expect.objectContaining({ code: 'NEGATIVE' }) as Error,
+    );
+  });
+});
+
+describe('positiveDecimal', () => {
+  it.each([1, 0.5, 0.001])('accepts %j', (value) => {
+    expect(positiveDecimal(value)).toBe(value);
+  });
+
+  it.each([0, -1, -0.5])('rejects %j as NOT_POSITIVE', (value) => {
+    expect(() => positiveDecimal(value)).toThrow(
+      expect.objectContaining({ code: 'NOT_POSITIVE' }) as Error,
+    );
+  });
+
+  it('checks the number first: NaN is NOT_FINITE, not NOT_POSITIVE', () => {
+    expect(() => positiveDecimal(NaN)).toThrow(
+      expect.objectContaining({ code: 'NOT_FINITE' }) as Error,
+    );
   });
 });
 

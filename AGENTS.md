@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 2079 tests across 89 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 2446 tests across 94 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -244,6 +244,59 @@ back on the next load (criterion 14).
       161px of a 288px row at 320px, and neither the page nor the dialog scrolls sideways
     - a v5 document put straight into IndexedDB is listed undamaged and reads back as v6, with
       `count: null` last on every weapon: the list wrote it back
+- **Schema v7: counters that count in parts** (2026-11-01). v6 was on `main`, so frozen.
+  `docs/superpowers/specs/2026-11-01-decimal-counters-design.md` is the design and
+  `docs/superpowers/plans/2026-11-01-decimal-counters.md` the plan it was built from. The request
+  was one sentence and the design was made without a round of questions; the decisions the spec
+  marks _assumed_ are the author's reading, and the first thing to revisit.
+  - **What v7 adds.** A generic counter's `current` and `total` are decimals of at most three
+    places, and it gains `step`, a positive decimal, required and last: what − and + move it by.
+    0.5 for hours of lantern oil, 0.25 for a potion by the dose. Spell slots, pact slots, hit dice
+    and death saves stay whole numbers. Nothing ties remaining or total to the step: 0.3 left
+    with a step of 0.5 is what the player typed.
+  - **The rule is on the text.** `nonNegativeDecimal` and `positiveDecimal` in `v7/primitives.ts`
+    check `String(value)` against `/^\d+(\.\d{1,3})?$/`, not `value * 1000`, because
+    `1.005 * 1000` is `1004.9999999999999`. Bounded by `Number.MAX_SAFE_INTEGER` too, as `.int()`
+    bounded the whole numbers: past it every double is an integer with no places to count. The
+    regex is duplicated in `src/shared/decimal.ts` (`MAX_DECIMALS`, `decimalPlaces`,
+    `addDecimals`) on purpose: a version directory shares nothing.
+  - **Stepping rounds.** `0.2 + 0.1` is `0.30000000000000004`, which the schema rightly refuses,
+    so `NumberField` steps with `addDecimals`, rounding to the more precise operand's places.
+    Nothing about it is a rule: it is the arithmetic of the press the player made. The business
+    layer's `decimal` guard (`NOT_FINITE`, `UNSAFE_INTEGER`, `TOO_PRECISE`) is the net under it,
+    and `positiveDecimal` adds `NOT_POSITIVE` for a step of 0.
+  - **`migrateV6ToV7`** gives every counter, in every category and in `uncategorized`,
+    `step: 1`, last, and reads nothing else. `v6DocFor` carries the bait: a counter "Lantern oil"
+    in a category of its own, described as "Counted in half hours."
+  - **UI.** The counter row's field is `decimal` and steps by `counter.step`; it takes `4,5` as
+    well as `4.5`, because a phone keyboard in `decimal` mode offers the locale's separator.
+    Both counter dialogs have a **Step** field (smallest 0.001, so a typed 0 never reaches the
+    setter) and a hint under it. `NumberField`'s `decimal` is opt-in, so every other field is
+    the whole-number field it was.
+  - **The row box grows with its value, where the browser can.** `.curinp` is 40px, which fits
+    four characters at 19px: `9.75` and `12.5` fit, `10.25` is 43px and `12.125` 52px. An
+    `@supports (field-sizing: content)` block lets it grow to its value in Chromium and Firefox;
+    a fixed `width` defeats `field-sizing`, which is why the base rule keeps 40px and the block
+    sets `width: auto` with a 40px minimum and an 80px cap: the box grows to the draft, not only
+    to the stored value, and twenty digits that will never commit must not push the stepper off
+    a 320px row. Elsewhere the box stays 40px, as before, and a long value scrolls inside it.
+    The header's hit-point and hit-die boxes are more specific and stay 40px.
+  - **`NumberField` has one parser.** One pattern per field — a sign when `signed`, a fraction
+    when `decimal` — and one rule after it: the number must be the one typed. Past 2^52 a double
+    has no room for a fraction, so `Number('9007199254740990.5')` is `…990`, a valid number that
+    is not what the player wrote; the parse refuses any text whose shortest form is not
+    `String(value)`, once a comma, a plus, a leading zero and a fraction's trailing zeros are set
+    aside. The stepper's edge guards look a whole step ahead, not one: a step of 5 from 2 below
+    the edge would otherwise throw `UNSAFE_INTEGER` out of a click.
+  - **Verified in Chromium** on a fresh dev seed, at 360px and 320px, light and dark:
+    - the seeded Lantern oil reads `4.5 / 6`; − three times reads 3, and that survives a reload,
+      stored as `current: 3, total: 6, step: 0.5` with `step` last
+    - a new counter with total 10 and a step typed as `0,25` starts at 10; − reads 9.75, that
+      survives a reload, and the edit dialog shows the step as 0.25
+    - a v6 document put straight into IndexedDB is listed undamaged and reads back as v7 with
+      `step: 1` last on every counter: the list wrote it back
+    - at 320px the row's name ellipsises at 139px and neither the page nor the dialog scrolls
+      sideways; the box is 40px for `4.5` and 52px for `12.125`
 - The storage-layer work the followups doc called the sharpest risk is done: `createIndexedDbRepository`
   takes an injectable `registry` and `openDb`, reports `blocked`, `blocking` and `terminated`
   through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
@@ -492,7 +545,7 @@ were arrived at _after_ getting them wrong once.
 Each version owns a self-contained directory under `src/data/schema/`. **Nothing is shared between
 versions.** `v2/` began as a literal copy of `v1/` and diverged (2026-09-26), `v3/` began as a
 copy of `v2/` the same day, `v4/` as a copy of `v3/` on 2026-09-27, `v5/` as a copy of `v4/`
-on 2026-10-18, and `v6/` as a copy of `v5/` on 2026-10-20.
+on 2026-10-18, `v6/` as a copy of `v5/` on 2026-10-20, and `v7/` as a copy of `v6/` on 2026-11-01.
 
 Do not "DRY this up" by extracting shared primitives or a shared base schema. The duplication _is_
 the isolation mechanism. The migration loop validates a document _at its own version_, so a
@@ -599,7 +652,9 @@ rejects a bare `baseUrl`. Guessing produced wrong code three times during the bu
 
 ```
 src/shared/            slug(), formatBytes() — decimal units, shared by the quota message and the
-                       cloud screen's usage line
+                       cloud screen's usage line; decimal.ts — MAX_DECIMALS, decimalPlaces and
+                       addDecimals, the arithmetic of a counter that counts in parts, shared by
+                       the business guard and NumberField
 src/business/          index.ts is the public face; CharacterSheetBO is the observable root
   characterSheet.ts    id, name, armorClass, initiative, the derived `level`, toDocument() (a toJS
                        copy)
@@ -614,8 +669,8 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
   featsAndTraits.ts    FeatBO, over categorized.ts
   spellList.ts         SpellListBO / SpellBO, over categorized.ts plus spellcasting
   spellcasting.ts      SpellcastingBO / SpellcastingEntryBO, keyed by ability — no id, like hit dice
-  counters.ts          CounterBO / SpellSlotBO / PactSlotsBO, over categorized.ts plus the nine fixed
-                       slots and the pact slots
+  counters.ts          CounterBO (decimal current, total and step) / SpellSlotBO / PactSlotsBO, over
+                       categorized.ts plus the nine fixed slots and the pact slots
   abilitiesAndSkills.ts AbilityBO / SkillBO, fixed key sets built once in the constructor
   errors.ts            RuleViolation, RuleCode — every rule this layer enforces, plus the
                        re-exports `ui` needs but may not import from `data`: describeLoadError,
@@ -651,12 +706,13 @@ src/data/schema/       index.ts is the public face; README.md governs versioning
   v3/                  frozen: v2 plus the initiative bonus
   v4/                  frozen: v3 plus death saves
   v5/                  frozen: v4 plus pact slots
-  v6/                  current: v5 plus weapon counts; blank lives here now
+  v6/                  frozen: v5 plus weapon counts
+  v7/                  current: v6 plus counters that count in parts, with a step; blank lives here now
 src/data/migration/    versionOf, versioned.ts (parseVersioned, the generic validate-migrate walk
                        shared by `schemaVersion` and `layoutVersion`), parseCharacter (now a thin
                        wrapper over it), the LoadError taxonomy, v1ToV2.ts, v2ToV3.ts,
-                       v3ToV4.ts, v4ToV5.ts and v5ToV6.ts (the migrations, registered in
-                       migrations.ts)
+                       v3ToV4.ts, v4ToV5.ts, v5ToV6.ts and v6ToV7.ts (the migrations, registered
+                       in migrations.ts)
 src/data/serialization/ export and import (three-outcome ParseTextResult)
 src/data/repository/   the IndexedDB repository (characters + portraits stores), ListEntry, summarize,
                        portrait.ts — the portrait rule
@@ -671,7 +727,7 @@ src/data/remote/       types.ts (CloudRepository and its shapes), codec.ts, clou
 src/data/characterLifecycle.test.ts   end-to-end across all four modules
 src/test/              fake-indexeddb setup
 src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, v1DocFor, v2DocFor, v3DocFor, v4DocFor, v5DocFor,
-                       wipe, createOpener, putRaw — shared so the data-layer test files stop each defining their own
+                       v6DocFor, wipe, createOpener, putRaw — shared so the data-layer test files stop each defining their own
 ```
 
 Tests are colocated: `foo.ts` is tested by `foo.test.ts` beside it.

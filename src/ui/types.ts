@@ -198,6 +198,8 @@ export interface SpellListActions extends CategoryActions {
 export interface CounterView extends NamedItemView {
   current: number;
   total: number;
+  /** What − and + move it by; a fraction for a counter that counts in parts. */
+  step: number;
 }
 
 /**
@@ -219,12 +221,13 @@ export interface CountersView extends CategorizedView<CounterView> {
 export interface CountersActions extends CategoryActions {
   addCounter(
     categoryId: string | null,
-    counter: { name: string; description: string; total: number },
+    counter: { name: string; description: string; total: number; step: number },
   ): void;
   renameCounter(id: string, name: string): NameResult;
   setCounterDescription(id: string, description: string): void;
   setCounterCurrent(id: string, value: number): void;
   setCounterTotal(id: string, value: number): void;
+  setCounterStep(id: string, step: number): void;
   moveCounter(id: string, categoryId: string | null): void;
   removeCounter(id: string): void;
   setSpellSlotCurrent(level: number, value: number): void;

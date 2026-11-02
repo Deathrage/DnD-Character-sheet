@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { addDecimals, MAX_DECIMALS } from '../../shared/decimal.js';
 import { useSelectOnFocus } from './selectOnFocus.js';
 
 interface Props {
@@ -15,6 +16,14 @@ interface Props {
   stepper?: boolean;
   /** The lowest value an unsigned field accepts; typed text below it never reaches `onChange`. */
   min?: number;
+  /**
+   * Accepts a fraction of up to three places, typed with a point or a comma — a phone keyboard
+   * in `decimal` mode offers whichever its locale uses, and a Czech or German phone offers the
+   * comma. Opt-in: a counter counts in parts since schema v7, nothing else on the sheet does.
+   */
+  decimal?: boolean;
+  /** What − and + add or subtract. A counter's step; one for everything else. */
+  step?: number;
   className?: string;
   /**
    * Selects the whole value when a click or tap focuses the field, so typing replaces it. On by
@@ -44,6 +53,8 @@ export function NumberField({
   stepper = false,
   className = 'num',
   min = 0,
+  decimal = false,
+  step = 1,
   selectOnFocus = true,
 }: Props) {
   const [draft, setDraft] = useState<string | null>(null);
@@ -55,9 +66,12 @@ export function NumberField({
    * way to `45`, `value` is already 4 — and if it holds something unparseable, `value` is still
    * the last good one. Dropping the draft afterwards is what makes the new number appear.
    */
-  const step = (delta: number) => {
+  const nudge = (delta: number) => {
     setDraft(null);
-    onChange(signed ? value + delta : Math.max(min, value + delta));
+    // Rounded to the operands' places: 0.2 + 0.1 must be 0.3, not 0.30000000000000004, which the
+    // setter would store and the schema then refuse. A whole number plus 1 is unchanged by it.
+    const next = addDecimals(value, delta * step);
+    onChange(signed ? next : Math.max(min, next));
   };
 
   const input = (
@@ -67,7 +81,7 @@ export function NumberField({
       // scroll wheel that changes values by accident, and a `value` that reads back as '' for
       // anything it considers invalid — which is exactly the draft text this component exists
       // to keep hold of.
-      inputMode={signed ? 'text' : 'numeric'}
+      inputMode={signed ? 'text' : decimal ? 'decimal' : 'numeric'}
       // Chrome on Android otherwise puts its autofill bar — saved passwords, cards, addresses —
       // above the keyboard on every field, and nothing on a character sheet is one of those.
       autoComplete="off"
@@ -76,7 +90,7 @@ export function NumberField({
       onChange={(event) => {
         const text = event.target.value;
         setDraft(text);
-        const parsed = parse(text, signed);
+        const parsed = parse(text, signed, decimal);
         if (parsed !== null && (signed || parsed >= min)) onChange(parsed);
       }}
       {...selectOnPress}
@@ -94,8 +108,8 @@ export function NumberField({
         aria-label={`Decrease ${label}`}
         // At zero there is nowhere down to go for an unsigned field, and calling the setter
         // anyway would throw `NEGATIVE`. Disabling says so before the tap rather than after.
-        disabled={signed ? value <= -Number.MAX_SAFE_INTEGER : value <= min}
-        onClick={() => step(-1)}
+        disabled={signed ? addDecimals(value, -step) < -Number.MAX_SAFE_INTEGER : value <= min}
+        onClick={() => nudge(-1)}
       >
         {'−'}
       </button>
@@ -104,9 +118,10 @@ export function NumberField({
         type="button"
         className="step"
         aria-label={`Increase ${label}`}
-        // Past this the setter would throw `UNSAFE_INTEGER`, for the reason the − button gives.
-        disabled={value >= Number.MAX_SAFE_INTEGER}
-        onClick={() => step(1)}
+        // Past this the setter would throw `UNSAFE_INTEGER`, for the reason the − button gives;
+        // by the step, not by one, or a step of 5 would carry a value 2 short of the edge over it.
+        disabled={addDecimals(value, step) > Number.MAX_SAFE_INTEGER}
+        onClick={() => nudge(1)}
       >
         +
       </button>
@@ -118,14 +133,46 @@ function format(value: number, signed: boolean): string {
   return signed && value >= 0 ? `+${value}` : String(value);
 }
 
+const FRACTION = `(?:[.,]\\d{1,${MAX_DECIMALS}})?`;
+// Built once: `parse` runs on every keystroke of every numeric field on the sheet.
+const PATTERNS = {
+  whole: /^\d+$/,
+  signed: /^[+-]?\d+$/,
+  decimal: new RegExp(`^\\d+${FRACTION}$`),
+  signedDecimal: new RegExp(`^[+-]?\\d+${FRACTION}$`),
+};
+
 /**
- * `null` for anything that is not a whole number the caller accepts. Twenty digits match the
- * pattern, but `Number` rounds them to an integer the schema cannot store, so a value past
- * `Number.MAX_SAFE_INTEGER` is `null` too.
+ * `null` for anything that is not a number the caller accepts: an optional sign when `signed`,
+ * digits, and when `decimal` an optional point or comma with up to three places. One shape for
+ * every field, so a whole number is a decimal with no places and the two cannot drift apart.
+ * `4.` or `.5` is a draft, not a number.
+ *
+ * The number must also be the one typed. Twenty digits match the pattern, but `Number` rounds
+ * them to an integer the schema cannot store; and near that edge a fraction is dropped without
+ * a word (`9007199254740990.5` reads back as `…990`). So a value past `Number.MAX_SAFE_INTEGER`
+ * is `null`, and so is one whose shortest text is not the text typed, once a comma, a plus, a
+ * leading zero and a fraction's trailing zeros — all of which `Number` legitimately forgets —
+ * are set aside. That last rule also refuses `-0`, which prints as `0` and is nothing the
+ * document wants.
  */
-function parse(text: string, signed: boolean): number | null {
-  const pattern = signed ? /^[+-]?\d+$/ : /^\d+$/;
-  if (!pattern.test(text.trim())) return null;
-  const value = Number(text.trim());
-  return Number.isSafeInteger(value) ? value : null;
+function parse(text: string, signed: boolean, decimal: boolean): number | null {
+  const trimmed = text.trim();
+  const pattern = signed
+    ? decimal
+      ? PATTERNS.signedDecimal
+      : PATTERNS.signed
+    : decimal
+      ? PATTERNS.decimal
+      : PATTERNS.whole;
+  if (!pattern.test(trimmed)) return null;
+  const canonical = trimmed
+    .replace(',', '.')
+    .replace(/^\+/, '')
+    .replace(/^(-?)0+(?=\d)/, '$1')
+    .replace(/(\.\d*?)0+$/, '$1')
+    .replace(/\.$/, '');
+  const value = Number(canonical);
+  if (Math.abs(value) > Number.MAX_SAFE_INTEGER || String(value) !== canonical) return null;
+  return value;
 }

@@ -43,6 +43,11 @@ function fill(sheet: CharacterSheetBO): void {
   sheet.spellList.spellcasting.add('intelligence', { attackBonus: 6, saveDc: 14 });
   sheet.counters.createCategory('Class features').add({ name: 'Rage' });
   sheet.counters.add({ name: 'Inspiration' });
+  // Three places, the most the schema allows, so the two layers' limits are shown to agree.
+  const oil = sheet.counters.add({ name: 'Lantern oil' });
+  oil.setStep(0.125);
+  oil.setTotal(6);
+  oil.setCurrent(4.5);
   sheet.counters.spellSlots[0]?.setTotal(4);
   // Level 9, the top of its range, so the two layers' limits are shown to agree at the boundary.
   sheet.counters.pactSlots.setLevel(9);

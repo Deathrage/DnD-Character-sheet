@@ -99,3 +99,8 @@ commit or PR that shipped it, rather than deleting it.
 - **Pact slots.** Shipped on branch `feature/pact-slots` as schema v5: `counters.pactSlots`, one
   entry whose level the player chooses, first in the Counters spell slot table. Design in
   `docs/superpowers/specs/2026-10-18-pact-slots-design.md`.
+- **Counters that count in parts.** Shipped on branch `claude/decimal-step-counters-qrw4xr` as
+  schema v7: every generic counter has a `step` (0.5, 0.25, 0.1) that − and + move it by, and its
+  remaining and total may be fractions of up to three places. Design in
+  `docs/superpowers/specs/2026-11-01-decimal-counters-design.md`; AGENTS.md's "Schema v7" entry
+  has the rest.

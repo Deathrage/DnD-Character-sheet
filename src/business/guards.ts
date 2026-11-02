@@ -1,4 +1,5 @@
 import { MAX_PORTRAIT, portraitSchema } from '../data/repository/portrait.js';
+import { decimalPlaces, MAX_DECIMALS } from '../shared/decimal.js';
 import type { AbilityKey } from './abilitiesAndSkills.js';
 import { RuleViolation } from './errors.js';
 
@@ -90,6 +91,51 @@ export function integer(value: number): number {
 export function nonNegativeInt(value: number): number {
   if (integer(value) < 0) {
     throw new RuleViolation('NEGATIVE', `expected a non-negative integer, got ${value}`);
+  }
+  return value;
+}
+
+/**
+ * v7. What a generic counter stores: a number of at most `MAX_DECIMALS` places — hours of oil,
+ * days of rations — within the range the schema's text check and safe-integer bound accept. The
+ * same net as `integer`, for the same reason: `NumberField` never passes on `4.` or a fourth
+ * place, so reaching a throw here is a UI bug.
+ *
+ * `MAX_DECIMALS` is imported, not duplicated like the limits above: it is `shared`'s rule, which
+ * every layer may read, not a fact about one schema version. Each code is true of every value it
+ * rejects: `NOT_FINITE` of NaN and both infinities, `UNSAFE_INTEGER` of 1e17 (an integer, with
+ * no places to count), `TOO_PRECISE` of 1.0001.
+ */
+export function decimal(value: number): number {
+  if (!Number.isFinite(value)) {
+    throw new RuleViolation('NOT_FINITE', `expected a finite number, got ${value}`);
+  }
+  if (Math.abs(value) > Number.MAX_SAFE_INTEGER) {
+    throw new RuleViolation(
+      'UNSAFE_INTEGER',
+      `expected a number within ±${Number.MAX_SAFE_INTEGER}, got ${value}`,
+    );
+  }
+  if (decimalPlaces(value) > MAX_DECIMALS) {
+    throw new RuleViolation(
+      'TOO_PRECISE',
+      `expected at most ${MAX_DECIMALS} decimal places, got ${value}`,
+    );
+  }
+  return value;
+}
+
+export function nonNegativeDecimal(value: number): number {
+  if (decimal(value) < 0) {
+    throw new RuleViolation('NEGATIVE', `expected a non-negative number, got ${value}`);
+  }
+  return value;
+}
+
+/** A counter's step: 0 would be a button that does nothing, and a negative one a − that adds. */
+export function positiveDecimal(value: number): number {
+  if (decimal(value) <= 0) {
+    throw new RuleViolation('NOT_POSITIVE', `expected a number above 0, got ${value}`);
   }
   return value;
 }

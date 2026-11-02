@@ -232,6 +232,13 @@ const seedSable = seeder('Sable Nightwind', (sheet) => {
     7,
     5,
   );
+  // Counts in parts: a half-hour step, so a fractional counter is on screen from the seed.
+  counter(
+    itemCounters.add({ name: 'Lantern oil (hours)', description: 'One flask burns six hours.' }),
+    6,
+    4.5,
+    0.5,
+  );
   // Spent, so a dimmed counter is on screen without having to spend one first.
   counter(
     sheet.counters.add({ name: 'Inspiration', description: 'DM-granted; spend for advantage.' }),
@@ -305,7 +312,8 @@ function spell(added: SpellBO, level: SpellLevel, prepared: boolean): void {
   added.setPrepared(prepared);
 }
 
-function counter(added: CounterBO, total: number, current: number): void {
+function counter(added: CounterBO, total: number, current: number, step = 1): void {
+  added.setStep(step);
   added.setTotal(total);
   added.setCurrent(current);
 }
