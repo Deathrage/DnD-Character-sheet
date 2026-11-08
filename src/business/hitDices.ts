@@ -4,11 +4,25 @@ import type { CharacterData, HitDieData } from './types.js';
 
 type HitDices = CharacterData['hitDices'];
 
-export class HitDicesBO {
-  readonly #dice: HitDices;
+/**
+ * Re-read on every access, never held: assigning an object to an observable stores a copy, so a
+ * record captured before it was switched off and on again would be a detached object.
+ */
+type Resolve = () => HitDices | null;
 
-  constructor(dice: HitDices) {
-    this.#dice = dice;
+function record(resolve: Resolve): HitDices {
+  const dice = resolve();
+  if (dice === null) {
+    throw new RuleViolation('GONE', 'these hit dice are switched off or no longer in the document');
+  }
+  return dice;
+}
+
+export class HitDicesBO {
+  readonly #resolve: Resolve;
+
+  constructor(resolve: Resolve) {
+    this.#resolve = resolve;
   }
 
   /**
@@ -16,10 +30,12 @@ export class HitDicesBO {
    * numeric order, but sorting explicitly says so rather than relying on that.
    */
   get items(): HitDieBO[] {
-    return Object.keys(this.#dice)
+    const dice = this.#resolve();
+    if (dice === null) return [];
+    return Object.keys(dice)
       .map(Number)
       .sort((a, b) => a - b)
-      .map((size) => new HitDieBO(this.#dice, size));
+      .map((size) => new HitDieBO(this.#resolve, size));
   }
 
   /**
@@ -32,6 +48,7 @@ export class HitDicesBO {
    * alongside the `DUPLICATE_DIE` just below it.
    */
   add(size: number): HitDieBO {
+    const dice = record(this.#resolve);
     const key = String(size);
     if (!/^[1-9]\d*$/.test(key)) {
       throw new RuleViolation(
@@ -39,21 +56,21 @@ export class HitDicesBO {
         `a die size must be a whole number of at least 1 that stores as plain digits, got ${key}`,
       );
     }
-    if (key in this.#dice) {
+    if (key in dice) {
       throw new RuleViolation('DUPLICATE_DIE', `a d${key} is already present`);
     }
 
-    this.#dice[key] = { current: 0, total: 0 };
-    return new HitDieBO(this.#dice, size);
+    dice[key] = { current: 0, total: 0 };
+    return new HitDieBO(this.#resolve, size);
   }
 }
 
 export class HitDieBO {
-  readonly #dice: HitDices;
+  readonly #resolve: Resolve;
   readonly #key: string;
 
-  constructor(dice: HitDices, size: number) {
-    this.#dice = dice;
+  constructor(resolve: Resolve, size: number) {
+    this.#resolve = resolve;
     this.#key = String(size);
   }
 
@@ -79,7 +96,7 @@ export class HitDieBO {
 
   remove(): void {
     this.#require();
-    delete this.#dice[this.#key];
+    delete record(this.#resolve)[this.#key];
   }
 
   /**
@@ -91,7 +108,7 @@ export class HitDieBO {
   }
 
   #require(): HitDieData {
-    const node = this.#dice[this.#key];
+    const node = record(this.#resolve)[this.#key];
     if (node === undefined) {
       throw new RuleViolation('GONE', `the d${this.#key} is no longer in the document`);
     }
