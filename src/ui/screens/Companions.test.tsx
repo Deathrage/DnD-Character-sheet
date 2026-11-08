@@ -85,6 +85,18 @@ describe('Companions', () => {
     expect(screen.queryByRole('checkbox', { name: /proficiency/ })).toBeNull();
   });
 
+  // A sticky heading pins within its parent. Shared by all, a folded heading would pin too and an
+  // open one would never be pushed out where its body ends.
+  it("keeps each companion's heading and body in a block of their own", () => {
+    renderWith();
+    click('Vestige 9/16');
+    const block = (heading: string) => button(heading).parentElement!.parentElement!;
+
+    expect(block('Vestige 9/16')).not.toBe(block('Owl 0/1'));
+    expect(block('Vestige 9/16').contains(textbox('Vestige current hit points'))).toBe(true);
+    expect(block('Owl 0/1').children).toHaveLength(1);
+  });
+
   it('folds two companions with the same name separately', () => {
     renderWith([
       { ...vestige, id: 's1', name: 'Skeleton' },

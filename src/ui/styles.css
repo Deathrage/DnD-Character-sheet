@@ -1760,14 +1760,18 @@ button:not(:disabled):active {
   inset: -6px -2px;
 }
 .addmini::after,
-.editcat::after,
-.companion .sechead::after {
+.editcat::after {
   inset: -7px -2px;
 }
 .back::after,
 .close::after,
 .vtoggle::after {
   inset: -5px;
+}
+/* A companion's fold button is already 40px tall. More than 2px below a pinned heading would sit
+   over the top of whatever has scrolled beneath it. */
+.companion .sechead::after {
+  inset: -2px;
 }
 
 /* ---------- rows with a control beside the name ---------- */
@@ -2750,7 +2754,9 @@ button:not(:disabled):active {
   color: var(--ink-2);
 }
 /* An open companion's heading stays under the screen's title while its body scrolls, and the
-   whole row up to ✎ folds it, not only the text. `--svhead-h` is `.svhead`'s rendered height. */
+   whole row up to ✎ folds it, not only the text. `--svhead-h` is `.svhead`'s rendered height.
+   Each companion's heading and body share a `.compblock`, which bounds the sticking: a folded
+   block is only as tall as its heading, so that heading never pins. */
 .sv {
   --svhead-h: 50px;
 }
@@ -2759,6 +2765,9 @@ button:not(:disabled):active {
   top: var(--svhead-h);
   z-index: 4;
   background: var(--paper);
+  /* Every companion heading is the first div in its block, so `.sechead-row:first-of-type`
+     would give each one 10px. */
+  margin-top: 22px;
 }
 .sechead-row.companion .sechead {
   flex: 1 1 auto;

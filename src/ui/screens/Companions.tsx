@@ -104,8 +104,8 @@ type BlockDialog =
 
 /**
  * One companion, memoised: a change to another leaves `companion` the same object (`bind.ts`
- * keeps it), and everything else it takes is stable. Its dialogs live here, after its body, so a
- * companion or counter that vanishes takes its open dialog with it.
+ * keeps it), and everything else it takes is stable. Its dialogs live here, after its block, so
+ * a companion or counter that vanishes takes its open dialog with it.
  */
 const CompanionBlock = memo(function CompanionBlock({
   companion,
@@ -142,107 +142,111 @@ const CompanionBlock = memo(function CompanionBlock({
 
   return (
     <>
-      <div className="sechead-row companion">
-        <button
-          type="button"
-          className="sechead"
-          aria-expanded={open}
-          onClick={() => onFold(id, !open)}
-        >
-          <span className="caret" aria-hidden="true">
-            {open ? '▾' : '▸'}
-          </span>
-          {/* The space is for the accessible name, "Vestige 9/16"; a flex row drops it. */}
-          <span className="nmtxt">{name}</span>{' '}
-          <span className="ccount">{formatHitPoints(companion.hitPoints)}</span>
-        </button>
-        <span className="sec-actions">
+      {/* The heading's sticky box: it pins only while its own body scrolls past, is pushed out
+          where the body ends, and has nowhere to move while folded. */}
+      <div className="compblock">
+        <div className="sechead-row companion">
           <button
             type="button"
-            className="editcat"
-            onClick={() => setDialog({ kind: 'edit' })}
-            aria-label={`Edit companion ${name}`}
+            className="sechead"
+            aria-expanded={open}
+            onClick={() => onFold(id, !open)}
           >
-            {'✎'}
+            <span className="caret" aria-hidden="true">
+              {open ? '▾' : '▸'}
+            </span>
+            {/* The space is for the accessible name, "Vestige 9/16"; a flex row drops it. */}
+            <span className="nmtxt">{name}</span>{' '}
+            <span className="ccount">{formatHitPoints(companion.hitPoints)}</span>
           </button>
-        </span>
-      </div>
-
-      {open && (
-        <div className="compbody">
-          <VitalTiles
-            labelPrefix={name}
-            hitPoints={companion.hitPoints}
-            hitDices={companion.hitDices}
-            armorClass={companion.armorClass}
-            initiative={companion.initiative}
-            actions={own}
-            onOpenHitDice={() => setDialog({ kind: 'hitDice' })}
-          />
-
-          <SubHeading name={name} label="Abilities" {...abilities} />
-          {abilities.open && (
-            <div className="subbody">
-              <div className="abhead nomark" aria-hidden="true">
-                <span>Ability</span>
-                <span>Score</span>
-                <span>Mod</span>
-                <span>Save</span>
-              </div>
-              {ABILITIES.map((ability) => (
-                <AbilityRow
-                  key={ability.key}
-                  ability={ability}
-                  value={companion.abilities[ability.key]}
-                  actions={own}
-                  labelPrefix={name}
-                />
-              ))}
-            </div>
-          )}
-
-          <SubHeading name={name} label="Stat block" {...statBlock} />
-          {statBlock.open && (
-            <div className="subbody">
-              {/* Named by its label, not an id from the name: names may repeat. */}
-              <textarea
-                onPaste={pasteLists}
-                className="area"
-                aria-label={`${name} stat block`}
-                rows={8}
-                placeholder={'Speed, senses, traits, actions…'}
-                value={companion.description}
-                onChange={(event) => actions.setCompanionDescription(id, event.target.value)}
-              />
-            </div>
-          )}
-
-          {/* The + sits beside the fold, so a counter can be added while the list is folded. */}
-          <SubHeading name={name} label="Counters" {...counters}>
+          <span className="sec-actions">
             <button
               type="button"
-              className="addmini"
-              onClick={() => setDialog({ kind: 'newCounter' })}
-              aria-label={`Add counter to ${name}`}
+              className="editcat"
+              onClick={() => setDialog({ kind: 'edit' })}
+              aria-label={`Edit companion ${name}`}
             >
-              +
+              {'✎'}
             </button>
-          </SubHeading>
-          {counters.open && companion.counters.length > 0 && (
-            <div className="subbody">
-              {companion.counters.map((counter) => (
-                <CounterRow
-                  key={counter.id}
-                  counter={counter}
-                  onOpen={openCounter}
-                  onSetCurrent={own.setCounterCurrent}
-                  labelPrefix={name}
-                />
-              ))}
-            </div>
-          )}
+          </span>
         </div>
-      )}
+
+        {open && (
+          <div className="compbody">
+            <VitalTiles
+              labelPrefix={name}
+              hitPoints={companion.hitPoints}
+              hitDices={companion.hitDices}
+              armorClass={companion.armorClass}
+              initiative={companion.initiative}
+              actions={own}
+              onOpenHitDice={() => setDialog({ kind: 'hitDice' })}
+            />
+
+            <SubHeading name={name} label="Abilities" {...abilities} />
+            {abilities.open && (
+              <div className="subbody">
+                <div className="abhead nomark" aria-hidden="true">
+                  <span>Ability</span>
+                  <span>Score</span>
+                  <span>Mod</span>
+                  <span>Save</span>
+                </div>
+                {ABILITIES.map((ability) => (
+                  <AbilityRow
+                    key={ability.key}
+                    ability={ability}
+                    value={companion.abilities[ability.key]}
+                    actions={own}
+                    labelPrefix={name}
+                  />
+                ))}
+              </div>
+            )}
+
+            <SubHeading name={name} label="Stat block" {...statBlock} />
+            {statBlock.open && (
+              <div className="subbody">
+                {/* Named by its label, not an id from the name: names may repeat. */}
+                <textarea
+                  onPaste={pasteLists}
+                  className="area"
+                  aria-label={`${name} stat block`}
+                  rows={8}
+                  placeholder={'Speed, senses, traits, actions…'}
+                  value={companion.description}
+                  onChange={(event) => actions.setCompanionDescription(id, event.target.value)}
+                />
+              </div>
+            )}
+
+            {/* The + sits beside the fold, so a counter can be added while the list is folded. */}
+            <SubHeading name={name} label="Counters" {...counters}>
+              <button
+                type="button"
+                className="addmini"
+                onClick={() => setDialog({ kind: 'newCounter' })}
+                aria-label={`Add counter to ${name}`}
+              >
+                +
+              </button>
+            </SubHeading>
+            {counters.open && companion.counters.length > 0 && (
+              <div className="subbody">
+                {companion.counters.map((counter) => (
+                  <CounterRow
+                    key={counter.id}
+                    counter={counter}
+                    onOpen={openCounter}
+                    onSetCurrent={own.setCounterCurrent}
+                    labelPrefix={name}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {dialog?.kind === 'edit' && (
         <CompanionDialog companion={companion} actions={actions} onClose={close} />
