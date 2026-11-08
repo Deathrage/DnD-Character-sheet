@@ -30,6 +30,10 @@ const V5_JAVELINS_ID = 'abababab-abab-4bab-8bab-abababababab';
 const V5_JAVELIN_ITEM_ID = 'cdcdcdcd-cdcd-4dcd-8dcd-cdcdcdcdcdcd';
 const V6_SUPPLIES_CATEGORY_ID = 'efefefef-efef-4fef-8fef-efefefefefef';
 const V6_LANTERN_OIL_ID = 'a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1';
+const V7_RANGER_ID = 'b2b2b2b2-b2b2-4b2b-8b2b-b2b2b2b2b2b2';
+const V7_FAMILIAR_SPELL_ID = 'c3c3c3c3-c3c3-4c3c-8c3c-c3c3c3c3c3c3';
+const V7_PRIMAL_FEAT_ID = 'd4d4d4d4-d4d4-4d4d-8d4d-d4d4d4d4d4d4';
+const V7_OWL_HP_ID = 'e5e5e5e5-e5e5-4e5e-8e5e-e5e5e5e5e5e5';
 
 /**
  * A complete v1 document, written out by hand. `createCharacter` makes the current version, and
@@ -272,6 +276,65 @@ export function v6DocFor(id: string, name: string): Record<string, unknown> {
             },
           ],
         },
+      ],
+    },
+  };
+}
+
+/**
+ * A complete v7 document: `v6DocFor` with every counter's `step` filled in (the Lantern oil at
+ * 4.5 by 0.5, the rest by 1), plus bait for a v7 → v8 migration that would read companions from
+ * the sheet: a Ranger class, the spell Find Familiar, the feat Primal Companion, and a counter
+ * "Owl HP" at 1 of 1. None of them may become a companion. `fixtures.test.ts` checks it against
+ * `SCHEMAS[7]`.
+ */
+export function v7DocFor(id: string, name: string): Record<string, unknown> {
+  const v6 = v6DocFor(id, name) as {
+    classes: object[];
+    spellList: { uncategorized: object[] };
+    featsAndTraits: { uncategorized: object[] };
+    counters: {
+      categories: { items: Record<string, unknown>[] }[];
+      uncategorized: Record<string, unknown>[];
+    };
+  };
+  const withStep = (counter: Record<string, unknown>) => ({
+    ...counter,
+    ...(counter.id === V6_LANTERN_OIL_ID ? { current: 4.5, step: 0.5 } : { step: 1 }),
+  });
+  return {
+    ...v6,
+    schemaVersion: 7,
+    classes: [...v6.classes, { id: V7_RANGER_ID, name: 'Ranger', level: 3 }],
+    spellList: {
+      ...v6.spellList,
+      uncategorized: [
+        ...v6.spellList.uncategorized,
+        {
+          name: 'Find Familiar',
+          description: '',
+          id: V7_FAMILIAR_SPELL_ID,
+          level: 1,
+          prepared: true,
+        },
+      ],
+    },
+    featsAndTraits: {
+      ...v6.featsAndTraits,
+      uncategorized: [
+        ...v6.featsAndTraits.uncategorized,
+        { name: 'Primal Companion', description: '', id: V7_PRIMAL_FEAT_ID },
+      ],
+    },
+    counters: {
+      ...v6.counters,
+      categories: v6.counters.categories.map((category) => ({
+        ...category,
+        items: category.items.map(withStep),
+      })),
+      uncategorized: [
+        ...v6.counters.uncategorized.map(withStep),
+        { name: 'Owl HP', description: '', id: V7_OWL_HP_ID, current: 1, total: 1, step: 1 },
       ],
     },
   };

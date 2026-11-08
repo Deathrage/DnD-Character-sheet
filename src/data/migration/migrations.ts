@@ -4,6 +4,7 @@ import { migrateV3ToV4 } from './v3ToV4.js';
 import { migrateV4ToV5 } from './v4ToV5.js';
 import { migrateV5ToV6 } from './v5ToV6.js';
 import { migrateV6ToV7 } from './v6ToV7.js';
+import { migrateV7ToV8 } from './v7ToV8.js';
 
 /** Migrates a document from version N to N+1. Pure; assumes its input already validated at N. */
 export type Migration = (doc: unknown) => unknown;
@@ -16,4 +17,5 @@ export const MIGRATIONS = new Map<number, Migration>([
   [4, migrateV4ToV5],
   [5, migrateV5ToV6],
   [6, migrateV6ToV7],
+  [7, migrateV7ToV8],
 ]);
