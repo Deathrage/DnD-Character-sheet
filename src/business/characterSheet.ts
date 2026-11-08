@@ -10,7 +10,7 @@ import { EquipmentBO } from './equipment.js';
 import { type FeatsAndTraitsBO, makeFeatsAndTraits } from './featsAndTraits.js';
 import { integer, nonNegativeInt, portrait, trimmedName } from './guards.js';
 import { HitDicesBO } from './hitDices.js';
-import { HitPointsBO } from './hitPoints.js';
+import { HitPointsWithDeathSavesBO } from './hitPoints.js';
 import { InventoryBO } from './inventory.js';
 import { JournalAndNotesBO } from './journalAndNotes.js';
 import './mobxConfig.js';
@@ -33,7 +33,7 @@ export class CharacterSheetBO {
   readonly #disposers: (() => void)[] = [];
 
   readonly classes: ClassesBO;
-  readonly hitPoints: HitPointsBO;
+  readonly hitPoints: HitPointsWithDeathSavesBO;
   readonly hitDices: HitDicesBO;
   readonly journalAndNotes: JournalAndNotesBO;
   readonly inventory: InventoryBO;
@@ -55,7 +55,7 @@ export class CharacterSheetBO {
     this.#doc = observable(doc);
     this.#portrait = observable({ value: portrait });
     this.classes = new ClassesBO(this.#doc.classes);
-    this.hitPoints = new HitPointsBO(this.#doc.hitPoints);
+    this.hitPoints = new HitPointsWithDeathSavesBO(this.#doc.hitPoints);
     this.hitDices = new HitDicesBO(() => this.#doc.hitDices);
     this.journalAndNotes = new JournalAndNotesBO(this.#doc.journalAndNotes);
     this.inventory = new InventoryBO(this.#doc.inventory.coins, this.#doc.inventory.items);

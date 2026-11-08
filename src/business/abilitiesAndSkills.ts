@@ -1,5 +1,10 @@
 import { integer, nonNegativeInt } from './guards.js';
-import type { AbilityData, CharacterData, CreatureAbilityData, SkillData } from './types.js';
+import type {
+  AbilityData,
+  AbilityWithSaveProficiencyData,
+  CharacterData,
+  SkillData,
+} from './types.js';
 
 type AbilitiesAndSkillsData = CharacterData['abilitiesAndSkills'];
 export type AbilityKey = keyof AbilitiesAndSkillsData['abilities'];
@@ -7,7 +12,7 @@ export type SkillKey = keyof AbilitiesAndSkillsData['skills'];
 
 export class AbilitiesAndSkillsBO {
   readonly #node: AbilitiesAndSkillsData;
-  readonly abilities: Record<AbilityKey, AbilityBO>;
+  readonly abilities: Record<AbilityKey, AbilityWithSaveProficiencyBO>;
   readonly skills: Record<SkillKey, SkillBO>;
 
   constructor(node: AbilitiesAndSkillsData) {
@@ -18,9 +23,9 @@ export class AbilitiesAndSkillsBO {
     this.abilities = Object.fromEntries(
       Object.keys(node.abilities).map((key) => [
         key,
-        new AbilityBO(node.abilities[key as AbilityKey]),
+        new AbilityWithSaveProficiencyBO(node.abilities[key as AbilityKey]),
       ]),
-    ) as Record<AbilityKey, AbilityBO>;
+    ) as Record<AbilityKey, AbilityWithSaveProficiencyBO>;
 
     this.skills = Object.fromEntries(
       Object.keys(node.skills).map((key) => [key, new SkillBO(node.skills[key as SkillKey])]),
@@ -54,10 +59,10 @@ export class AbilitiesAndSkillsBO {
 }
 
 /** No `proficient`: ability-check proficiency has no referent in the rules (spec section 3.1). */
-export class CreatureAbilityBO {
-  readonly #node: CreatureAbilityData;
+export class AbilityBO {
+  readonly #node: AbilityData;
 
-  constructor(node: CreatureAbilityData) {
+  constructor(node: AbilityData) {
     this.#node = node;
   }
 
@@ -88,10 +93,10 @@ export class CreatureAbilityBO {
 }
 
 /** A character's ability: the creature's three numbers plus saving-throw proficiency. */
-export class AbilityBO extends CreatureAbilityBO {
-  readonly #node: AbilityData;
+export class AbilityWithSaveProficiencyBO extends AbilityBO {
+  readonly #node: AbilityWithSaveProficiencyData;
 
-  constructor(node: AbilityData) {
+  constructor(node: AbilityWithSaveProficiencyData) {
     super(node);
     this.#node = node;
   }

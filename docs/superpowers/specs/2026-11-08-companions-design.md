@@ -485,7 +485,7 @@ Chromium at 320px, 360px and 412px, light and dark:
 
 ## 10. Deviations
 
-Where the build departed from this design or from the plan, and why. The ninth came from the browser checks.
+Where the build departed from this design or from the plan, and why. The ninth came from the browser checks, and the tenth from the owner's review of the pull request.
 
 - **`HitDicesBO.items` returns `[]` while the dice are switched off.** §4 says every call throws
   `GONE` while the record is `null`. Every other call does. `items` is the one exception, made in
@@ -530,6 +530,13 @@ Where the build departed from this design or from the plan, and why. The ninth c
   `minmax(0, 1fr) auto minmax(0, 1fr)`: each tile is 98.5px wide at 320px in that browser and both off tiles stay
   on one line. A companion rarely has more than one die size, so its hit dices need less room
   than a multiclass character's. The header is unchanged.
+- **The shared bases keep the plain names.** §4 named them `CreatureHitPointsBO` and
+  `CreatureAbilityBO`, over `CreatureHitPointsData` and `CreatureAbilityData`, and left the
+  character's classes as `HitPointsBO` and `AbilityBO`. In review the owner asked for the
+  reverse: the general shape keeps the plain name, and the more specific one carries the
+  qualifier. The bases are `HitPointsBO` / `HitPointsData` and `AbilityBO` / `AbilityData`; the
+  character's are `HitPointsWithDeathSavesBO` / `HitPointsWithDeathSavesData` and
+  `AbilityWithSaveProficiencyBO` / `AbilityWithSaveProficiencyData`.
 - **Kept as designed after checking in the browser:**
   - `--svhead-h` stays 50px: `.svhead` measured 50px at 320px, 360px and 412px.
   - The first companion heading sits 22px below the title, which is where every other section's

@@ -9,10 +9,10 @@ import {
   positiveDecimal,
   trimmedName,
 } from './guards.js';
-import { CreatureAbilityBO, type AbilityKey } from './abilitiesAndSkills.js';
+import { AbilityBO, type AbilityKey } from './abilitiesAndSkills.js';
 import { newCounter } from './counters.js';
 import { HitDicesBO } from './hitDices.js';
-import { CreatureHitPointsBO } from './hitPoints.js';
+import { HitPointsBO } from './hitPoints.js';
 import { NamedItemBO } from './namedItem.js';
 import { pushAndRead } from './observableList.js';
 import type { CompanionCounterData, CompanionData } from './types.js';
@@ -48,16 +48,16 @@ export class CompanionsBO {
 }
 
 export class CompanionBO extends NamedItemBO<CompanionData> {
-  readonly hitPoints: CreatureHitPointsBO;
-  readonly abilities: Record<AbilityKey, CreatureAbilityBO>;
+  readonly hitPoints: HitPointsBO;
+  readonly abilities: Record<AbilityKey, AbilityBO>;
   readonly counters: CompanionCountersBO;
 
   constructor(node: CompanionData, siblings: CompanionData[]) {
     super(node, siblings);
-    this.hitPoints = new CreatureHitPointsBO(node.hitPoints);
+    this.hitPoints = new HitPointsBO(node.hitPoints);
     this.abilities = Object.fromEntries(
-      ABILITY_KEYS.map((key) => [key, new CreatureAbilityBO(node.abilities[key])]),
-    ) as Record<AbilityKey, CreatureAbilityBO>;
+      ABILITY_KEYS.map((key) => [key, new AbilityBO(node.abilities[key])]),
+    ) as Record<AbilityKey, AbilityBO>;
     this.counters = new CompanionCountersBO(node, siblings);
   }
 

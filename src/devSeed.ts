@@ -1,10 +1,10 @@
 import type {
   AbilityBO,
+  AbilityWithSaveProficiencyBO,
   CharacterLibraryBO,
   CharacterSheetBO,
   CompanionCounterBO,
   CounterBO,
-  CreatureAbilityBO,
   SkillBO,
   SpellBO,
   SpellLevel,
@@ -400,7 +400,7 @@ function counter(
 }
 
 function ability(
-  target: AbilityBO,
+  target: AbilityWithSaveProficiencyBO,
   score: number,
   modifier: number,
   savingThrowModifier: number,
@@ -412,7 +412,7 @@ function ability(
 
 /** A companion's ability: the same three numbers, and no P mark. */
 function creatureAbility(
-  target: CreatureAbilityBO,
+  target: AbilityBO,
   score: number,
   modifier: number,
   savingThrowModifier: number,

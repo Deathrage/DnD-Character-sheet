@@ -140,7 +140,7 @@ back on the next load (criterion 14).
   is the design, and its one open question was the user's to answer.
   - **What v4 adds.** `hitPoints.deathSaves`, `{ successes, failures }`, each a count of ticked
     boxes from 0 to 3. Counts rather than three booleans a side: the boxes have no identity, and
-    booleans could store a gap no sheet shows. `HitPointsBO.deathSaves` is a `DeathSavesBO`
+    booleans could store a gap no sheet shows. `HitPointsWithDeathSavesBO.deathSaves` is a `DeathSavesBO`
     (`setSuccesses`, `setFailures`, `clear`); a fourth tick is `ABOVE_THREE`, because the schema
     would refuse to save it.
   - **Not a rule.** The app never ticks a box, never marks anyone dead at three failures, and never
@@ -322,8 +322,8 @@ back on the next load (criterion 14).
     record, and MobX stores a copy, so `HitDicesBO` and `HitDieBO` now resolve their record on
     every access (`() => doc.hitDices` for the character) and throw `GONE` while it is `null`, except `items`, which returns `[]`.
     Adding a die or a counter to a removed companion throws `GONE` too.
-  - **Shared bases.** `CreatureHitPointsBO` (`HitPointsBO` adds death saves) and
-    `CreatureAbilityBO` (`AbilityBO` adds the P). `CompanionCounterBO` repeats `CounterBO`'s three
+  - **Shared bases.** `HitPointsBO` (`HitPointsWithDeathSavesBO` adds death saves) and
+    `AbilityBO` (`AbilityWithSaveProficiencyBO` adds the P). `CompanionCounterBO` repeats `CounterBO`'s three
     guarded setters, because `CounterBO` needs a categorized owner; the blank counter is one
     `newCounter` in `counters.ts`, shared by both.
   - **`migrateV7ToV8`** adds `companions: []`, last, and reads nothing else. `v7DocFor` carries the
@@ -736,8 +736,8 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
   characterSheet.ts    id, name, armorClass, initiative, the derived `level`, toDocument() (a toJS
                        copy)
   classes.ts           ClassesBO / ClassBO
-  hitPoints.ts         CreatureHitPointsBO (current, total, temporary, shared with companions) /
-                       HitPointsBO / DeathSavesBO — counts of ticked boxes, never ticked for you
+  hitPoints.ts         HitPointsBO (current, total, temporary, shared with companions) /
+                       HitPointsWithDeathSavesBO / DeathSavesBO — counts of ticked boxes, never ticked for you
   hitDices.ts          HitDicesBO / HitDieBO, keyed by die size — no id, the size is the identity;
                        they resolve their record on every access, so a companion's can switch off
   journalAndNotes.ts   JournalAndNotesBO / JournalDayBO — append or delete-the-newest-day only
@@ -751,7 +751,7 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
   counters.ts          CounterBO (decimal current, total and step) / SpellSlotBO / PactSlotsBO, over
                        categorized.ts plus the nine fixed slots and the pact slots; newCounter, the
                        blank counter, shared with companions
-  abilitiesAndSkills.ts CreatureAbilityBO (score, modifier, save) / AbilityBO (adds the P) /
+  abilitiesAndSkills.ts AbilityBO (score, modifier, save) / AbilityWithSaveProficiencyBO (adds the P) /
                        SkillBO, fixed key sets built once in the constructor
   companions.ts        CompanionsBO / CompanionBO (the initiative and hit dices switches) /
                        CompanionCountersBO / CompanionCounterBO, a flat list with no categories

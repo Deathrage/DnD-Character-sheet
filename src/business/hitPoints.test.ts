@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCharacter } from '../data/schema/index.js';
 import { CharacterSheetBO } from './characterSheet.js';
-import { CreatureHitPointsBO } from './hitPoints.js';
+import { HitPointsBO } from './hitPoints.js';
 
 const sheetFor = () =>
   new CharacterSheetBO(
@@ -12,7 +12,7 @@ const sheetFor = () =>
     }),
   );
 
-describe('HitPointsBO', () => {
+describe('HitPointsWithDeathSavesBO', () => {
   it('starts at zero across all three fields', () => {
     const { hitPoints } = sheetFor();
     expect([hitPoints.current, hitPoints.total, hitPoints.temporary]).toEqual([0, 0, 0]);
@@ -140,19 +140,19 @@ describe('DeathSavesBO', () => {
   });
 });
 
-describe('CreatureHitPointsBO', () => {
-  it('a CreatureHitPointsBO has no death saves', () => {
-    expect(new CreatureHitPointsBO({ current: 1, total: 2, temporary: 0 })).not.toHaveProperty(
+describe('HitPointsBO', () => {
+  it('a HitPointsBO has no death saves', () => {
+    expect(new HitPointsBO({ current: 1, total: 2, temporary: 0 })).not.toHaveProperty(
       'deathSaves',
     );
   });
 
-  it('a HitPointsBO is a CreatureHitPointsBO', () => {
-    expect(sheetFor().hitPoints).toBeInstanceOf(CreatureHitPointsBO);
+  it('a HitPointsWithDeathSavesBO is a HitPointsBO', () => {
+    expect(sheetFor().hitPoints).toBeInstanceOf(HitPointsBO);
   });
 
   it.each(['setCurrent', 'setTotal', 'setTemporary'] as const)('%s guards its value', (setter) => {
-    const hp = new CreatureHitPointsBO({ current: 1, total: 2, temporary: 0 });
+    const hp = new HitPointsBO({ current: 1, total: 2, temporary: 0 });
     expect(() => hp[setter](-1)).toThrow(expect.objectContaining({ code: 'NEGATIVE' }));
     expect(() => hp[setter](1.5)).toThrow(expect.objectContaining({ code: 'NOT_AN_INTEGER' }));
     expect(hp.current).toBe(1);

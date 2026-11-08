@@ -10,8 +10,8 @@ import type { CharacterDocument } from '../data/schema/index.js';
  */
 export type CharacterData = CharacterDocument;
 export type ClassData = CharacterDocument['classes'][number];
-export type HitPointsData = CharacterDocument['hitPoints'];
-export type DeathSavesData = HitPointsData['deathSaves'];
+export type HitPointsWithDeathSavesData = CharacterDocument['hitPoints'];
+export type DeathSavesData = HitPointsWithDeathSavesData['deathSaves'];
 export type HitDieData = CharacterDocument['hitDices'][string];
 export type JournalAndNotesData = CharacterDocument['journalAndNotes'];
 export type CoinsData = CharacterDocument['inventory']['coins'];
@@ -29,10 +29,11 @@ export type SpellcastingEntryData = NonNullable<SpellcastingData['intelligence']
 export type CountersData = CharacterDocument['counters'];
 export type SpellSlotData = CharacterDocument['counters']['spellSlots']['1'];
 export type PactSlotsData = CountersData['pactSlots'];
-export type AbilityData = CharacterDocument['abilitiesAndSkills']['abilities']['strength'];
+export type AbilityWithSaveProficiencyData =
+  CharacterDocument['abilitiesAndSkills']['abilities']['strength'];
 export type SkillData = CharacterDocument['abilitiesAndSkills']['skills']['stealth'];
 // Plain shapes, shared by a character and a companion: neither is a slice of one document.
-export type CreatureHitPointsData = { current: number; total: number; temporary: number };
-export type CreatureAbilityData = { score: number; modifier: number; savingThrowModifier: number };
+export type HitPointsData = { current: number; total: number; temporary: number };
+export type AbilityData = { score: number; modifier: number; savingThrowModifier: number };
 export type CompanionData = CharacterDocument['companions'][number];
 export type CompanionCounterData = CompanionData['counters'][number];

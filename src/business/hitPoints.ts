@@ -1,6 +1,6 @@
 import { RuleViolation } from './errors.js';
 import { nonNegativeInt } from './guards.js';
-import type { CreatureHitPointsData, DeathSavesData, HitPointsData } from './types.js';
+import type { DeathSavesData, HitPointsData, HitPointsWithDeathSavesData } from './types.js';
 
 // Duplicated rather than imported, like `SPELL_SLOT_LEVELS` in `counters.ts`: it is a fact about
 // one schema version (v4's `deathSaveCount`), and `src/business/` may not import a version
@@ -8,10 +8,10 @@ import type { CreatureHitPointsData, DeathSavesData, HitPointsData } from './typ
 const DEATH_SAVE_BOXES = 3;
 
 /** The three numbers a character and a companion share. Death saves are the character's alone. */
-export class CreatureHitPointsBO {
-  readonly #node: CreatureHitPointsData;
+export class HitPointsBO {
+  readonly #node: HitPointsData;
 
-  constructor(node: CreatureHitPointsData) {
+  constructor(node: HitPointsData) {
     this.#node = node;
   }
 
@@ -44,10 +44,10 @@ export class CreatureHitPointsBO {
   }
 }
 
-export class HitPointsBO extends CreatureHitPointsBO {
+export class HitPointsWithDeathSavesBO extends HitPointsBO {
   readonly deathSaves: DeathSavesBO;
 
-  constructor(node: HitPointsData) {
+  constructor(node: HitPointsWithDeathSavesData) {
     super(node);
     this.deathSaves = new DeathSavesBO(node.deathSaves);
   }
