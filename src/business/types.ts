@@ -31,3 +31,6 @@ export type SpellSlotData = CharacterDocument['counters']['spellSlots']['1'];
 export type PactSlotsData = CountersData['pactSlots'];
 export type AbilityData = CharacterDocument['abilitiesAndSkills']['abilities']['strength'];
 export type SkillData = CharacterDocument['abilitiesAndSkills']['skills']['stealth'];
+// Plain shapes, shared by a character and a companion: neither is a slice of one document.
+export type CreatureHitPointsData = { current: number; total: number; temporary: number };
+export type CreatureAbilityData = { score: number; modifier: number; savingThrowModifier: number };

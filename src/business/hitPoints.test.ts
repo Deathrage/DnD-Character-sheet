@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCharacter } from '../data/schema/index.js';
 import { CharacterSheetBO } from './characterSheet.js';
+import { CreatureHitPointsBO } from './hitPoints.js';
 
 const sheetFor = () =>
   new CharacterSheetBO(
@@ -136,5 +137,24 @@ describe('DeathSavesBO', () => {
       expect(sheet.hitPoints.deathSaves.failures).toBe(3);
       expect(sheet.hitPoints.current).toBe(30);
     });
+  });
+});
+
+describe('CreatureHitPointsBO', () => {
+  it('a CreatureHitPointsBO has no death saves', () => {
+    expect(new CreatureHitPointsBO({ current: 1, total: 2, temporary: 0 })).not.toHaveProperty(
+      'deathSaves',
+    );
+  });
+
+  it('a HitPointsBO is a CreatureHitPointsBO', () => {
+    expect(sheetFor().hitPoints).toBeInstanceOf(CreatureHitPointsBO);
+  });
+
+  it.each(['setCurrent', 'setTotal', 'setTemporary'] as const)('%s guards its value', (setter) => {
+    const hp = new CreatureHitPointsBO({ current: 1, total: 2, temporary: 0 });
+    expect(() => hp[setter](-1)).toThrow(expect.objectContaining({ code: 'NEGATIVE' }));
+    expect(() => hp[setter](1.5)).toThrow(expect.objectContaining({ code: 'NOT_AN_INTEGER' }));
+    expect(hp.current).toBe(1);
   });
 });

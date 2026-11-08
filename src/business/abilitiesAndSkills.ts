@@ -1,5 +1,5 @@
 import { integer, nonNegativeInt } from './guards.js';
-import type { AbilityData, CharacterData, SkillData } from './types.js';
+import type { AbilityData, CharacterData, CreatureAbilityData, SkillData } from './types.js';
 
 type AbilitiesAndSkillsData = CharacterData['abilitiesAndSkills'];
 export type AbilityKey = keyof AbilitiesAndSkillsData['abilities'];
@@ -54,10 +54,10 @@ export class AbilitiesAndSkillsBO {
 }
 
 /** No `proficient`: ability-check proficiency has no referent in the rules (spec section 3.1). */
-export class AbilityBO {
-  readonly #node: AbilityData;
+export class CreatureAbilityBO {
+  readonly #node: CreatureAbilityData;
 
-  constructor(node: AbilityData) {
+  constructor(node: CreatureAbilityData) {
     this.#node = node;
   }
 
@@ -84,6 +84,16 @@ export class AbilityBO {
 
   setSavingThrowModifier(value: number): void {
     this.#node.savingThrowModifier = integer(value);
+  }
+}
+
+/** A character's ability: the creature's three numbers plus saving-throw proficiency. */
+export class AbilityBO extends CreatureAbilityBO {
+  readonly #node: AbilityData;
+
+  constructor(node: AbilityData) {
+    super(node);
+    this.#node = node;
   }
 
   get savingThrowProficient(): boolean {

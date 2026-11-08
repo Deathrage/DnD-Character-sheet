@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCharacter } from '../data/schema/index.js';
 import { CharacterSheetBO } from './characterSheet.js';
+import { CreatureAbilityBO } from './abilitiesAndSkills.js';
 
 const sheetFor = () =>
   new CharacterSheetBO(
@@ -168,5 +169,25 @@ describe('SkillBO', () => {
       proficient: true,
       expertise: false,
     });
+  });
+});
+
+describe('CreatureAbilityBO', () => {
+  const node = () => ({ score: 10, modifier: 0, savingThrowModifier: 0 });
+
+  it('a CreatureAbilityBO has no saving throw proficiency', () => {
+    expect(new CreatureAbilityBO(node())).not.toHaveProperty('savingThrowProficient');
+  });
+
+  it('an AbilityBO is a CreatureAbilityBO', () => {
+    expect(sheetFor().abilitiesAndSkills.abilities.strength).toBeInstanceOf(CreatureAbilityBO);
+  });
+
+  it('writes its three numbers', () => {
+    const a = new CreatureAbilityBO(node());
+    a.setScore(14);
+    a.setModifier(-1);
+    a.setSavingThrowModifier(3);
+    expect([a.score, a.modifier, a.savingThrowModifier]).toEqual([14, -1, 3]);
   });
 });
