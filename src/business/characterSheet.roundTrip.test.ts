@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CURRENT_SCHEMA, createCharacter } from '../data/schema/index.js';
 import { CharacterSheetBO } from './characterSheet.js';
+import type { AbilityKey } from './abilitiesAndSkills.js';
 
 const sheetFor = () =>
   new CharacterSheetBO(
@@ -57,6 +58,32 @@ function fill(sheet: CharacterSheetBO): void {
   sheet.abilitiesAndSkills.abilities.dexterity.setScore(18);
   sheet.abilitiesAndSkills.abilities.dexterity.setModifier(4);
   sheet.abilitiesAndSkills.skills.stealth.setProficient(true);
+  const owl = sheet.companions.add('Owl');
+  owl.setRollsInitiative(true);
+  owl.setInitiative(1);
+  owl.setHasHitDices(true);
+  owl.hitDices?.add(6).setTotal(3);
+  owl.setDescription('Flies silently.');
+  owl.setArmorClass(12);
+  owl.hitPoints.setTotal(5);
+  [
+    ['strength', 3],
+    ['dexterity', 15],
+    ['constitution', 8],
+    ['intelligence', 2],
+    ['wisdom', 12],
+    ['charisma', 7],
+  ].forEach(([key, score], index) => {
+    const ability = owl.abilities[key as AbilityKey];
+    ability.setScore(score as number);
+    ability.setModifier(index - 4);
+    ability.setSavingThrowModifier(index + 1);
+  });
+  const bites = owl.counters.add({ name: 'Talons' });
+  bites.setStep(0.125);
+  bites.setTotal(6);
+  bites.setCurrent(4.5);
+  sheet.companions.add('Skeleton');
 }
 
 describe('the business object tree, end to end', () => {
@@ -138,6 +165,9 @@ const overLongWrites: [string, (sheet: CharacterSheetBO) => void][] = [
   ['a new feat name', (sheet) => sheet.featsAndTraits.add({ name: LONG_NAME })],
   ['a new spell name', (sheet) => sheet.spellList.add({ name: LONG_NAME })],
   ['a new counter name', (sheet) => sheet.counters.add({ name: LONG_NAME })],
+  ['a companion name', (sheet) => sheet.companions.add(LONG_NAME)],
+  ['a companion rename', (sheet) => sheet.companions.items[0]?.setName(LONG_NAME)],
+  ['a companion stat block', (sheet) => sheet.companions.items[0]?.setDescription(LONG_TEXT)],
   ['a new category name', (sheet) => sheet.spellList.createCategory(LONG_CATEGORY_NAME)],
   ['a category rename', (sheet) => sheet.spellList.categories[0]?.setName(LONG_CATEGORY_NAME)],
   [
@@ -174,6 +204,7 @@ const unsafeWrites: [string, (sheet: CharacterSheetBO) => void][] = [
   ['the gold coins', (sheet) => sheet.inventory.coins.setGp(UNSAFE)],
   ['a weapon count', (sheet) => sheet.equipment.weapons[1]?.setCount(UNSAFE)],
   ['the initiative', (sheet) => sheet.setInitiative(-UNSAFE)],
+  ["a companion's initiative", (sheet) => sheet.companions.items[0]?.setInitiative(-UNSAFE)],
   ['a class level', (sheet) => sheet.classes.items[0]?.setLevel(UNSAFE)],
   ['a new inventory item count', (sheet) => sheet.inventory.add({ name: 'Arrows', count: UNSAFE })],
 ];

@@ -270,4 +270,22 @@ describe('Autosave', () => {
     await autosave.flush();
     expect(repository.portraits).toEqual([]);
   });
+
+  it("saves a companion's die added after switching hit dice on", async () => {
+    const sheet = newSheet();
+    const repository = stubRepository();
+    const autosave = new Autosave(sheet, repository, { debounceMs: 500, now: () => SAVED_AT });
+    autosave.start();
+
+    const owl = sheet.companions.add('Owl');
+    owl.setHasHitDices(true);
+    owl.hitDices?.add(6);
+    await vi.advanceTimersByTimeAsync(500);
+
+    expect(repository.saved).toHaveLength(1);
+    expect(repository.saved[0]?.companions[0]?.hitDices).toEqual({
+      '6': { current: 0, total: 0 },
+    });
+    autosave.stop();
+  });
 });

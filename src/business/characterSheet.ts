@@ -4,6 +4,7 @@ import { createCharacter, type CharacterDocument } from '../data/schema/index.js
 import { AbilitiesAndSkillsBO } from './abilitiesAndSkills.js';
 import { ClassesBO } from './classes.js';
 import { createId } from './createId.js';
+import { CompanionsBO } from './companions.js';
 import { CountersBO } from './counters.js';
 import { EquipmentBO } from './equipment.js';
 import { type FeatsAndTraitsBO, makeFeatsAndTraits } from './featsAndTraits.js';
@@ -41,6 +42,7 @@ export class CharacterSheetBO {
   readonly spellList: SpellListBO;
   readonly counters: CountersBO;
   readonly abilitiesAndSkills: AbilitiesAndSkillsBO;
+  readonly companions: CompanionsBO;
 
   /**
    * Not in `#doc`: the portrait is stored beside the document, in its own store, so `toDocument()`
@@ -62,6 +64,7 @@ export class CharacterSheetBO {
     this.spellList = new SpellListBO(this.#doc.spellList);
     this.counters = new CountersBO(this.#doc.counters);
     this.abilitiesAndSkills = new AbilitiesAndSkillsBO(this.#doc.abilitiesAndSkills);
+    this.companions = new CompanionsBO(this.#doc.companions);
   }
 
   get id(): string {

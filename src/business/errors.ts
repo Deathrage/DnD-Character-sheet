@@ -21,6 +21,7 @@ export type RuleCode =
   | 'DUPLICATE_SPELLCASTING'
   | 'NO_ATTACK'
   | 'NOT_STACKABLE'
+  | 'NO_INITIATIVE'
   | 'NOT_FINITE'
   | 'TOO_PRECISE'
   | 'NOT_POSITIVE'

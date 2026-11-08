@@ -35,6 +35,12 @@ export { CategoryBO, type NewNamedItem } from './categorized.js';
 export { FeatBO, type FeatsAndTraitsBO } from './featsAndTraits.js';
 export { SpellBO, SpellListBO, type SpellLevel } from './spellList.js';
 export { SpellcastingBO, SpellcastingEntryBO } from './spellcasting.js';
+export {
+  CompanionsBO,
+  CompanionBO,
+  CompanionCountersBO,
+  CompanionCounterBO,
+} from './companions.js';
 export { CountersBO, CounterBO, PactSlotsBO, SpellSlotBO } from './counters.js';
 export {
   AbilitiesAndSkillsBO,
