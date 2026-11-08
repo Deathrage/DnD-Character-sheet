@@ -122,22 +122,23 @@ export class PactSlotsBO extends SpellSlotBO {
  * The categorized shape plus the nine fixed spell slots and the pact slots, which sit alongside
  * the categories in the stored document rather than inside them.
  */
+/** A blank generic counter; shared with a companion's counters. */
+export function newCounter({ name, description = '' }: NewNamedItem): CounterData {
+  return {
+    id: createId(),
+    name: trimmedName(name),
+    description: longText(description),
+    current: 0,
+    total: 0,
+    step: 1,
+  };
+}
+
 export class CountersBO extends CategorizedBO<CounterData, CounterBO> {
   readonly #node: CountersData;
 
   constructor(node: CountersData) {
-    super(
-      node,
-      (item, siblings, owner) => new CounterBO(item, siblings, owner),
-      ({ name, description = '' }: NewNamedItem): CounterData => ({
-        id: createId(),
-        name: trimmedName(name),
-        description: longText(description),
-        current: 0,
-        total: 0,
-        step: 1,
-      }),
-    );
+    super(node, (item, siblings, owner) => new CounterBO(item, siblings, owner), newCounter);
     this.#node = node;
   }
 

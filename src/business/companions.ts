@@ -4,13 +4,13 @@ import { RuleViolation } from './errors.js';
 import {
   ABILITY_KEYS,
   integer,
-  longText,
   nonNegativeDecimal,
   nonNegativeInt,
   positiveDecimal,
   trimmedName,
 } from './guards.js';
 import { CreatureAbilityBO, type AbilityKey } from './abilitiesAndSkills.js';
+import { newCounter } from './counters.js';
 import { HitDicesBO } from './hitDices.js';
 import { CreatureHitPointsBO } from './hitPoints.js';
 import { NamedItemBO } from './namedItem.js';
@@ -118,18 +118,11 @@ export class CompanionCountersBO {
     return counters.map((node) => new CompanionCounterBO(node, counters));
   }
 
-  add({ name, description = '' }: NewNamedItem): CompanionCounterBO {
+  add(init: NewNamedItem): CompanionCounterBO {
     if (!this.#companions.includes(this.#companion)) {
       throw new RuleViolation('GONE', 'this companion is no longer in the document');
     }
-    const stored = pushAndRead(this.#companion.counters, {
-      id: createId(),
-      name: trimmedName(name),
-      description: longText(description),
-      current: 0,
-      total: 0,
-      step: 1,
-    });
+    const stored = pushAndRead(this.#companion.counters, newCounter(init));
     return new CompanionCounterBO(stored, this.#companion.counters);
   }
 }

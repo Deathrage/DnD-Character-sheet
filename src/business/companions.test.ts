@@ -177,3 +177,10 @@ describe('CompanionBO abilities', () => {
     expect(owl.abilities.dexterity.savingThrowModifier).toBe(3);
   });
 });
+
+describe('CompanionBO hit points', () => {
+  it('companion hit points have no death saves', () => {
+    const owl = sheetFor().companions.add('Owl');
+    expect(owl.hitPoints).not.toHaveProperty('deathSaves');
+  });
+});

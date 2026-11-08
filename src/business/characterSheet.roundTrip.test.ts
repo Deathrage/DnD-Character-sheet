@@ -62,7 +62,11 @@ function fill(sheet: CharacterSheetBO): void {
   owl.setRollsInitiative(true);
   owl.setInitiative(1);
   owl.setHasHitDices(true);
-  owl.hitDices?.add(6).setTotal(3);
+  const dice = owl.hitDices;
+  if (dice === null) throw new Error('hit dice did not switch on');
+  const d6 = dice.add(6);
+  d6.setTotal(3);
+  d6.setCurrent(2);
   owl.setDescription('Flies silently.');
   owl.setArmorClass(12);
   owl.hitPoints.setTotal(5);

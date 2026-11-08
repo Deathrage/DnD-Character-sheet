@@ -274,11 +274,12 @@ describe('Autosave', () => {
   it("saves a companion's die added after switching hit dice on", async () => {
     const sheet = newSheet();
     const repository = stubRepository();
+    // Before start(): only the die add is left for the observer to see.
+    const owl = sheet.companions.add('Owl');
+    owl.setHasHitDices(true);
     const autosave = new Autosave(sheet, repository, { debounceMs: 500, now: () => SAVED_AT });
     autosave.start();
 
-    const owl = sheet.companions.add('Owl');
-    owl.setHasHitDices(true);
     owl.hitDices?.add(6);
     await vi.advanceTimersByTimeAsync(500);
 
