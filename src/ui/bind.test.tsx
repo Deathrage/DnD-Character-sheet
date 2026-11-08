@@ -83,6 +83,27 @@ describe('toSheetData', () => {
     sheet.abilitiesAndSkills.skills.stealth.setModifier(9);
     sheet.abilitiesAndSkills.skills.stealth.setProficient(true);
     sheet.abilitiesAndSkills.skills.stealth.setExpertise(true);
+    const vestige = sheet.companions.add('Vestige');
+    vestige.hitPoints.setCurrent(9);
+    vestige.hitPoints.setTotal(16);
+    vestige.hitPoints.setTemporary(5);
+    vestige.setArmorClass(14);
+    vestige.setRollsInitiative(true);
+    vestige.setInitiative(2);
+    vestige.setHasHitDices(true);
+    vestige.hitDices?.add(8);
+    vestige.hitDices?.items[0]?.setTotal(4);
+    vestige.hitDices?.items[0]?.setCurrent(3);
+    vestige.abilities.wisdom.setScore(15);
+    vestige.abilities.wisdom.setModifier(2);
+    vestige.abilities.wisdom.setSavingThrowModifier(4);
+    vestige.setDescription('Speed 30 ft.');
+    const power = vestige.counters.add({ name: 'Divine Power', description: 'Per day' });
+    power.setTotal(3);
+    power.setCurrent(2);
+    power.setStep(0.5);
+    // Both switches off, so a view that read "no dice" as an empty list would show.
+    sheet.companions.add('Owl');
 
     const data = toSheetData(sheet);
     const doc = sheet.toDocument();
@@ -219,6 +240,39 @@ describe('toSheetData', () => {
     // All six and all eighteen, so a missing key is a failure rather than a gap.
     expect(Object.keys(data.abilitiesAndSkills.abilities)).toHaveLength(6);
     expect(Object.keys(data.abilitiesAndSkills.skills)).toHaveLength(18);
+
+    const [vestigeDoc, owlDoc] = doc.companions;
+    expect(data.companions).toHaveLength(2);
+    expect(data.companions[0]).toEqual({
+      id: vestigeDoc?.id,
+      name: 'Vestige',
+      hitPoints: { current: 9, total: 16, temporary: 5 },
+      hitDices: [{ size: 8, current: 3, total: 4 }],
+      armorClass: 14,
+      initiative: 2,
+      abilities: {
+        strength: { score: 0, modifier: 0, savingThrowModifier: 0 },
+        dexterity: { score: 0, modifier: 0, savingThrowModifier: 0 },
+        constitution: { score: 0, modifier: 0, savingThrowModifier: 0 },
+        intelligence: { score: 0, modifier: 0, savingThrowModifier: 0 },
+        wisdom: { score: 15, modifier: 2, savingThrowModifier: 4 },
+        charisma: { score: 0, modifier: 0, savingThrowModifier: 0 },
+      },
+      description: 'Speed 30 ft.',
+      counters: [
+        {
+          id: vestigeDoc?.counters[0]?.id,
+          name: 'Divine Power',
+          description: 'Per day',
+          current: 2,
+          total: 3,
+          step: 0.5,
+        },
+      ],
+    });
+    expect(vestigeDoc?.hitDices).toEqual({ '8': { current: 3, total: 4 } });
+    expect(data.companions[1]).toMatchObject({ id: owlDoc?.id, name: 'Owl', hitDices: null });
+    expect(data.companions[1]?.initiative).toBeNull();
   });
 
   it('orders spells by level within each bucket, cantrips first, leaving the document alone', () => {
@@ -431,6 +485,9 @@ describe('toSheetActions', () => {
     actions.counters.addCounter(null, { name: 'Inspiration', description: '', total: 0, step: 1 });
     actions.spellList.addSpellcasting('intelligence', { attackBonus: 1, saveDc: 2 });
 
+    actions.companions.addCompanion('Vestige');
+    actions.companions.addCompanion('Vestige');
+
     const before = toSheetData(sheet);
     const classId = before.character.classes[0]?.id ?? '';
     const itemId = before.inventory.items[0]?.id ?? '';
@@ -522,6 +579,73 @@ describe('toSheetActions', () => {
       modifier: 7,
       proficient: true,
     });
+
+    // Two companions with one name, so a lookup by name would write to the first, always.
+    const [firstId = '', secondId = ''] = before.companions.map((entry) => entry.id);
+    const c = actions.companions;
+    c.renameCompanion(secondId, 'Vestige II');
+    c.setCompanionCurrentHitPoints(secondId, 7);
+    c.setCompanionTotalHitPoints(secondId, 18);
+    c.setCompanionTemporaryHitPoints(secondId, 3);
+    c.setCompanionArmorClass(secondId, 13);
+    c.setCompanionRollsInitiative(secondId, true);
+    c.setCompanionInitiative(secondId, -1);
+    c.setCompanionHasHitDices(secondId, true);
+    expect(c.addCompanionHitDie(secondId, 10)).toBeNull();
+    expect(c.addCompanionHitDie(secondId, 10)).not.toBeNull();
+    c.setCompanionHitDieTotal(secondId, 10, 6);
+    c.setCompanionHitDieCurrent(secondId, 10, 5);
+    c.addCompanionHitDie(secondId, 6);
+    c.setCompanionAbilityScore(secondId, 'strength', 11);
+    c.setCompanionAbilityModifier(secondId, 'strength', 1);
+    c.setCompanionSavingThrowModifier(secondId, 'strength', 3);
+    c.setCompanionDescription(secondId, 'Flies');
+    c.addCompanionCounter(secondId, { name: 'Smite', description: '', total: 2, step: 1 });
+    const smiteId = toSheetData(sheet).companions[1]?.counters[0]?.id ?? '';
+    c.renameCompanionCounter(secondId, smiteId, 'Divine Smite');
+    c.setCompanionCounterDescription(secondId, smiteId, 'Radiant');
+    c.setCompanionCounterTotal(secondId, smiteId, 5);
+    c.setCompanionCounterCurrent(secondId, smiteId, 4);
+    c.setCompanionCounterStep(secondId, smiteId, 0.5);
+
+    const [firstDoc, secondDoc] = sheet.toDocument().companions;
+    expect(firstDoc?.id).toBe(firstId);
+    // The first is untouched, though the other one shares its name.
+    expect(firstDoc?.name).toBe('Vestige');
+    expect(firstDoc?.hitPoints).toEqual({ current: 0, total: 0, temporary: 0 });
+    expect(firstDoc?.hitDices).toBeNull();
+    expect(secondDoc).toMatchObject({
+      name: 'Vestige II',
+      hitPoints: { current: 7, total: 18, temporary: 3 },
+      armorClass: 13,
+      initiative: -1,
+      hitDices: { '6': { current: 0, total: 0 }, '10': { current: 5, total: 6 } },
+      description: 'Flies',
+    });
+    expect(secondDoc?.abilities.strength).toEqual({
+      score: 11,
+      modifier: 1,
+      savingThrowModifier: 3,
+    });
+    expect(secondDoc?.counters).toEqual([
+      {
+        id: smiteId,
+        name: 'Divine Smite',
+        description: 'Radiant',
+        current: 4,
+        total: 5,
+        step: 0.5,
+      },
+    ]);
+
+    c.removeCompanionHitDie(secondId, 6);
+    expect(sheet.toDocument().companions[1]?.hitDices).toEqual({ '10': { current: 5, total: 6 } });
+    c.setCompanionHasHitDices(secondId, false);
+    expect(sheet.toDocument().companions[1]?.hitDices).toBeNull();
+    c.removeCompanionCounter(secondId, smiteId);
+    expect(sheet.toDocument().companions[1]?.counters).toEqual([]);
+    c.removeCompanion(firstId);
+    expect(sheet.toDocument().companions.map((entry) => entry.id)).toEqual([secondId]);
 
     // The removals, last, so everything above was asserted while it was still there.
     actions.vitals.removeClass(classId);
@@ -645,6 +769,49 @@ describe('toSheetActions', () => {
     expect(actions.vitals.renameClass(id, 'Rogue')).toBeNull();
   });
 
+  it('adds a companion and returns its id', () => {
+    const sheet = newSheet();
+    const actions = toSheetActions(sheet);
+
+    const added = actions.companions.addCompanion('Owl');
+    expect(added).toEqual({ ok: true, id: sheet.toDocument().companions[0]?.id });
+
+    const blank = actions.companions.addCompanion('');
+    expect(blank).toEqual({ ok: false, message: expect.any(String) });
+    expect(sheet.toDocument().companions).toHaveLength(1);
+  });
+
+  it('a new companion counter starts full', () => {
+    const sheet = newSheet();
+    const actions = toSheetActions(sheet);
+    const added = actions.companions.addCompanion('Owl');
+    const id = added.ok ? added.id : '';
+
+    actions.companions.addCompanionCounter(id, {
+      name: 'Hoots',
+      description: '',
+      total: 4,
+      step: 0.5,
+    });
+
+    expect(sheet.toDocument().companions[0]?.counters[0]).toMatchObject({
+      current: 4,
+      total: 4,
+      step: 0.5,
+    });
+  });
+
+  it('rethrows NO_INITIATIVE', () => {
+    const sheet = newSheet();
+    const actions = toSheetActions(sheet);
+    const added = actions.companions.addCompanion('Owl');
+    const id = added.ok ? added.id : '';
+
+    expect(() => actions.companions.setCompanionInitiative(id, 2)).toThrow(/switch it on/);
+    expect(() => actions.companions.setCompanionHitDieCurrent(id, 8, 1)).toThrow(/no hit dices/);
+    expect(() => actions.companions.renameCompanion('nope', 'x')).toThrow(/no companion/);
+  });
+
   it('rethrows a rule that means the caller is wrong', () => {
     const sheet = newSheet();
     const actions = toSheetActions(sheet);
@@ -707,12 +874,18 @@ describe('useSheet', () => {
           <Probe name="inventory" value={data.inventory} />
           <Probe name="rope" value={data.inventory.items[0]} />
           <Probe name="torch" value={data.inventory.items[1]} />
+          <Probe name="companions" value={data.companions} />
+          <Probe name="vestige" value={data.companions[0]} />
+          <Probe name="owl" value={data.companions[1]} />
         </>
       );
     };
     const sheet = newSheet();
     sheet.inventory.add({ name: 'Rope' });
     sheet.inventory.add({ name: 'Torch' });
+    // One name for both, so a view kept by name would swap them.
+    sheet.companions.add('Familiar');
+    sheet.companions.add('Familiar');
     render(<Probes sheet={sheet} />);
     rendered.mockClear();
     const names = () => rendered.mock.calls.map(([name]) => name);
@@ -728,6 +901,12 @@ describe('useSheet', () => {
       sheet.inventory.items[1]?.setCount(3);
     });
     expect(names()).toEqual(['inventory', 'torch']);
+
+    rendered.mockClear();
+    act(() => {
+      sheet.companions.items[0]?.hitPoints.setCurrent(5);
+    });
+    expect(names()).toEqual(['companions', 'vestige']);
   });
 
   it('re-renders when the document changes without the UI touching it', () => {

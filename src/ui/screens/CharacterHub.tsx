@@ -13,6 +13,8 @@ import type {
   AbilitiesAndSkillsActions,
   AbilitiesAndSkillsView,
   CharacterView,
+  CompanionsActions,
+  CompanionView,
   CountersActions,
   CountersView,
   EquipmentActions,
@@ -45,6 +47,7 @@ export interface SheetData {
   spellList: SpellListView;
   counters: CountersView;
   abilitiesAndSkills: AbilitiesAndSkillsView;
+  companions: CompanionView[];
 }
 
 export interface SheetActions {
@@ -56,6 +59,7 @@ export interface SheetActions {
   spellList: SpellListActions;
   counters: CountersActions;
   abilitiesAndSkills: AbilitiesAndSkillsActions;
+  companions: CompanionsActions;
 }
 
 interface Props {

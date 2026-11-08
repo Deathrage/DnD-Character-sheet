@@ -5,6 +5,8 @@ import type {
   AbilityView,
   CharacterRow,
   CharacterView,
+  CompanionsActions,
+  CompanionView,
   CountersActions,
   CountersView,
   EquipmentActions,
@@ -433,6 +435,61 @@ export const sableJson = JSON.stringify(
   2,
 );
 
+const companionAbility = (score: number, modifier: number, savingThrowModifier: number) => ({
+  score,
+  modifier,
+  savingThrowModifier,
+});
+
+/** The Vestige and the Owl from the mockup: one with everything switched on, one with nothing. */
+export const companions: CompanionView[] = [
+  {
+    id: 'cp1',
+    name: 'Vestige',
+    hitPoints: { current: 9, total: 16, temporary: 5 },
+    hitDices: [{ size: 8, current: 2, total: 3 }],
+    armorClass: 14,
+    initiative: 2,
+    abilities: {
+      strength: companionAbility(14, 2, 2),
+      dexterity: companionAbility(12, 1, 1),
+      constitution: companionAbility(13, 1, 1),
+      intelligence: companionAbility(8, -1, -1),
+      wisdom: companionAbility(15, 2, 4),
+      charisma: companionAbility(10, 0, 0),
+    },
+    description: 'Speed 30 ft., darkvision 60 ft.\nRadiant Strike: +5 to hit, 1d8+2 radiant.',
+    counters: [
+      {
+        id: 'cpc1',
+        name: 'Divine Power',
+        description: 'Regained on a long rest.',
+        current: 2,
+        total: 3,
+        step: 1,
+      },
+    ],
+  },
+  {
+    id: 'cp2',
+    name: 'Owl',
+    hitPoints: { current: 1, total: 1, temporary: 0 },
+    hitDices: null,
+    armorClass: 11,
+    initiative: null,
+    abilities: {
+      strength: companionAbility(3, -4, -4),
+      dexterity: companionAbility(13, 1, 1),
+      constitution: companionAbility(8, -1, -1),
+      intelligence: companionAbility(2, -4, -4),
+      wisdom: companionAbility(12, 1, 1),
+      charisma: companionAbility(7, -2, -2),
+    },
+    description: '',
+    counters: [],
+  },
+];
+
 /** Everything the hub renders, for the stories that show the whole sheet. */
 export const sheetData: SheetData = {
   character: sable,
@@ -443,6 +500,7 @@ export const sheetData: SheetData = {
   spellList,
   counters,
   abilitiesAndSkills,
+  companions,
 };
 
 /** No-op actions, so a story that is only about layout does not need a stub each. */
@@ -559,6 +617,34 @@ export const noAbilitiesActions: AbilitiesAndSkillsActions = {
   setSkillExpertise: () => {},
 };
 
+export const noCompanionsActions: CompanionsActions = {
+  addCompanion: () => ({ ok: true, id: 'new' }),
+  renameCompanion: () => null,
+  removeCompanion: () => {},
+  setCompanionCurrentHitPoints: () => {},
+  setCompanionTotalHitPoints: () => {},
+  setCompanionTemporaryHitPoints: () => {},
+  setCompanionArmorClass: () => {},
+  setCompanionRollsInitiative: () => {},
+  setCompanionInitiative: () => {},
+  setCompanionHasHitDices: () => {},
+  addCompanionHitDie: () => null,
+  setCompanionHitDieCurrent: () => {},
+  setCompanionHitDieTotal: () => {},
+  removeCompanionHitDie: () => {},
+  setCompanionAbilityScore: () => {},
+  setCompanionAbilityModifier: () => {},
+  setCompanionSavingThrowModifier: () => {},
+  setCompanionDescription: () => {},
+  addCompanionCounter: () => {},
+  renameCompanionCounter: () => null,
+  setCompanionCounterDescription: () => {},
+  setCompanionCounterCurrent: () => {},
+  setCompanionCounterTotal: () => {},
+  setCompanionCounterStep: () => {},
+  removeCompanionCounter: () => {},
+};
+
 export const noSheetActions: SheetActions = {
   vitals: noVitalsActions,
   journalAndNotes: noJournalActions,
@@ -568,4 +654,5 @@ export const noSheetActions: SheetActions = {
   spellList: noSpellListActions,
   counters: noCountersActions,
   abilitiesAndSkills: noAbilitiesActions,
+  companions: noCompanionsActions,
 };
