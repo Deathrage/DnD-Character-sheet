@@ -378,7 +378,14 @@ export interface AbilitiesAndSkillsActions {
 }
 
 export type SectionKey =
-  'journal' | 'inventory' | 'feats' | 'equipment' | 'spells' | 'counters' | 'abilities';
+  | 'journal'
+  | 'inventory'
+  | 'feats'
+  | 'equipment'
+  | 'spells'
+  | 'counters'
+  | 'abilities'
+  | 'companions';
 
 export interface SectionTile {
   key: SectionKey;
@@ -399,10 +406,11 @@ export const SECTIONS: readonly SectionTile[] = [
   { key: 'equipment', icon: '⚔', title: 'Equipment', subtitle: 'weapons & gear' },
   { key: 'spells', icon: '✧', title: 'Spell List', subtitle: 'prepared & levels' },
   { key: 'counters', icon: ICONS.stopwatch, title: 'Counters', subtitle: 'slots & resources' },
+  { key: 'companions', icon: ICONS.paw, title: 'Companions', subtitle: 'familiars & mounts' },
 ];
 
 /**
- * Which tiles are live. All seven now are; the prop remains because HubGrid should not have
+ * Which tiles are live. All eight now are; the prop remains because HubGrid should not have
  * to be edited to stand a section down again, and a story shows the inert state.
  */
 export const WIRED_SECTIONS: readonly SectionKey[] = SECTIONS.map((section) => section.key);

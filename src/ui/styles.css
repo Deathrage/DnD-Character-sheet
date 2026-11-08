@@ -1744,7 +1744,8 @@ button:not(:disabled):active {
 .editcat,
 .back,
 .close,
-.vtoggle {
+.vtoggle,
+.companion .sechead {
   position: relative;
 }
 .step::after,
@@ -1752,13 +1753,15 @@ button:not(:disabled):active {
 .editcat::after,
 .back::after,
 .close::after,
-.vtoggle::after {
+.vtoggle::after,
+.companion .sechead::after {
   content: '';
   position: absolute;
   inset: -6px -2px;
 }
 .addmini::after,
-.editcat::after {
+.editcat::after,
+.companion .sechead::after {
   inset: -7px -2px;
 }
 .back::after,
@@ -2693,4 +2696,71 @@ button:not(:disabled):active {
   font-size: 15px;
   color: var(--ink-2);
   font-style: italic;
+}
+
+/* ---------- companions (docs/superpowers/specs/2026-11-08-companions-design.md §5) ---------- */
+/* A companion's body: the sheet's own tiles, ability rows and text, under its heading. */
+.compbody {
+  padding: 0 0 16px;
+}
+.compbody .tiles {
+  margin-top: 2px;
+}
+/* Abilities, Stat block and Counters each fold, like a category, at the size of their label.
+   Counters keeps its + beside the fold. */
+.compsub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+.compsub .dlabel {
+  margin: 0;
+}
+.subtoggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+/* A companion has no proficiency mark, so its Save is a box like Score and Mod. */
+.abhead.nomark,
+.abrow.nomark {
+  grid-template-columns: 44px 1fr 1fr 1fr;
+}
+/* The Stat block starts at Notes' 8 rows and grows with its text where the browser can. It has
+   no maximum: the block folds. */
+@supports (field-sizing: content) {
+  .compbody .area {
+    field-sizing: content;
+    min-height: calc(8lh + 18px);
+  }
+}
+/* Off, Initiative and Hit Dices are a state, not a number: set quieter than a typed value. */
+.tile .tval.off {
+  font-family: var(--font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+/* An open companion's heading stays under the screen's title while its body scrolls, and the
+   whole row up to ✎ folds it, not only the text. `--svhead-h` is `.svhead`'s rendered height. */
+.sv {
+  --svhead-h: 50px;
+}
+.sechead-row.companion {
+  position: sticky;
+  top: var(--svhead-h);
+  z-index: 4;
+  background: var(--paper);
+}
+.sechead-row.companion .sechead {
+  flex: 1 1 auto;
+  min-height: 40px;
 }
