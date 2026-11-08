@@ -1,11 +1,15 @@
 import { memo } from 'react';
+import { usePersistedState } from '../persistedState.js';
 import { AbilityRow } from '../components/AbilityRow.js';
 import { Mark } from '../components/Mark.js';
 import { NumberField } from '../components/NumberField.js';
 import { ABILITIES, SKILLS } from '../reference.js';
 import type { AbilitiesAndSkillsActions, AbilitiesAndSkillsView, SkillView } from '../types.js';
 
+type BlockKey = 'abilities' | 'skills';
+
 interface Props {
+  characterId: string;
   data: AbilitiesAndSkillsView;
   actions: AbilitiesAndSkillsActions;
   onClose(): void;
@@ -22,10 +26,31 @@ interface Props {
  * nothing else on the row.
  */
 export const AbilitiesAndSkills = memo(function AbilitiesAndSkills({
+  characterId,
   data,
   actions,
   onClose,
 }: Props) {
+  // A value means collapsed, as in Equipment; both blocks start open.
+  const [collapsed, setCollapsed] = usePersistedState<Partial<Record<BlockKey, boolean>>>(
+    `ui:${characterId}:abilities`,
+    {},
+  );
+  const fold = (key: BlockKey, name: string) => (
+    <div className="sechead-row">
+      <button
+        type="button"
+        className="sechead"
+        onClick={() => setCollapsed({ ...collapsed, [key]: collapsed[key] !== true })}
+        aria-expanded={collapsed[key] !== true}
+      >
+        <span className="caret" aria-hidden="true">
+          {collapsed[key] === true ? '▸' : '▾'}
+        </span>
+        <span className="nmtxt">{name}</span>
+      </button>
+    </div>
+  );
   return (
     <div className="bottom">
       <div className="sv">
@@ -66,35 +91,36 @@ export const AbilitiesAndSkills = memo(function AbilitiesAndSkills({
           </div>
         </div>
 
-        <div className="sechead-row">
-          <span className="sechead static">Abilities</span>
-        </div>
-        <div className="abhead" aria-hidden="true">
-          <span>Ability</span>
-          <span>Score</span>
-          <span>Mod</span>
-          <span>Save</span>
-        </div>
-        {ABILITIES.map((ability) => (
-          <AbilityRow
-            key={ability.key}
-            ability={ability}
-            value={data.abilities[ability.key]}
-            actions={actions}
-          />
-        ))}
+        {fold('abilities', 'Abilities')}
+        {collapsed.abilities !== true && (
+          <>
+            <div className="abhead" aria-hidden="true">
+              <span>Ability</span>
+              <span>Score</span>
+              <span>Mod</span>
+              <span>Save</span>
+            </div>
+            {ABILITIES.map((ability) => (
+              <AbilityRow
+                key={ability.key}
+                ability={ability}
+                value={data.abilities[ability.key]}
+                actions={actions}
+              />
+            ))}
+          </>
+        )}
 
-        <div className="sechead-row">
-          <span className="sechead static">Skills</span>
-        </div>
-        {SKILLS.map((skill) => (
-          <SkillRow
-            key={skill.key}
-            skill={skill}
-            value={data.skills[skill.key]}
-            actions={actions}
-          />
-        ))}
+        {fold('skills', 'Skills')}
+        {collapsed.skills !== true &&
+          SKILLS.map((skill) => (
+            <SkillRow
+              key={skill.key}
+              skill={skill}
+              value={data.skills[skill.key]}
+              actions={actions}
+            />
+          ))}
       </div>
     </div>
   );

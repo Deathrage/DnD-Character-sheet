@@ -190,6 +190,7 @@ function Section({
     case 'abilities':
       return (
         <AbilitiesAndSkills
+          characterId={data.character.id}
           data={data.abilitiesAndSkills}
           actions={actions.abilitiesAndSkills}
           onClose={onClose}

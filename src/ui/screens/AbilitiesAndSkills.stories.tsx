@@ -5,7 +5,7 @@ import { AbilitiesAndSkills } from './AbilitiesAndSkills.js';
 const meta = {
   title: 'Screens/Abilities & Skills',
   component: AbilitiesAndSkills,
-  args: { actions: noAbilitiesActions, onClose: () => {} },
+  args: { characterId: 'story', actions: noAbilitiesActions, onClose: () => {} },
 } satisfies Meta<typeof AbilitiesAndSkills>;
 
 export default meta;
