@@ -118,10 +118,6 @@ export class PactSlotsBO extends SpellSlotBO {
   }
 }
 
-/**
- * The categorized shape plus the nine fixed spell slots and the pact slots, which sit alongside
- * the categories in the stored document rather than inside them.
- */
 /** A blank generic counter; shared with a companion's counters. */
 export function newCounter({ name, description = '' }: NewNamedItem): CounterData {
   return {
@@ -134,6 +130,10 @@ export function newCounter({ name, description = '' }: NewNamedItem): CounterDat
   };
 }
 
+/**
+ * The categorized shape plus the nine fixed spell slots and the pact slots, which sit alongside
+ * the categories in the stored document rather than inside them.
+ */
 export class CountersBO extends CategorizedBO<CounterData, CounterBO> {
   readonly #node: CountersData;
 

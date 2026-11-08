@@ -485,8 +485,7 @@ Chromium at 320px, 360px and 412px, light and dark:
 
 ## 10. Deviations
 
-Where the build departed from this design or from the plan, and why. The progress ledger's
-rulings are the source for the first eight; the ninth came from the browser checks.
+Where the build departed from this design or from the plan, and why. The ninth came from the browser checks.
 
 - **`HitDicesBO.items` returns `[]` while the dice are switched off.** §4 says every call throws
   `GONE` while the record is `null`. Every other call does. `items` is the one exception, made in
@@ -524,9 +523,11 @@ rulings are the source for the first eight; the ninth came from the browser chec
 - **A companion's tiles split hit dices and initiative equally.** §5 says the tiles are the vitals
   header's own, and they are the same component, but the header's columns give hit dices two
   thirds of the space beside the AC shield. In a companion that left the initiative tile 44px of
-  content at 320px and 57px at 360px in Chromium, and "Uses yours" (59px) wrapped to two lines,
+  content at 320px and 57px at 360px in desktop Chromium, whose classic scrollbar takes 15px of
+  `.bottom` (on a phone, with an overlay scrollbar, the 2:1 split leaves about 62px at 360px, so
+  the wrap is still real at 320px), and "Uses yours" (59px) wrapped to two lines,
   as the mockup's own 320px screenshot shows. `.compbody .tiles` uses
-  `minmax(0, 1fr) auto minmax(0, 1fr)`: each tile is 98.5px wide at 320px and both off tiles stay
+  `minmax(0, 1fr) auto minmax(0, 1fr)`: each tile is 98.5px wide at 320px in that browser and both off tiles stay
   on one line. A companion rarely has more than one die size, so its hit dices need less room
   than a multiclass character's. The header is unchanged.
 - **Kept as designed after checking in the browser:**

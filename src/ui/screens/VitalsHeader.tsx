@@ -88,6 +88,8 @@ export const VitalsHeader = memo(function VitalsHeader({ character, actions, onB
         </div>
       </div>
 
+      {/* Initiative is stored beside armor class and, like it, edited only here. It took speed's
+          tile; speed is edited on Abilities & Skills only. */}
       {!collapsed && (
         <VitalTiles
           hitPoints={character.hitPoints}

@@ -113,8 +113,7 @@ export function VitalTiles({
       </div>
 
       {/* Rolled at the start of every fight, so it sits with AC rather than behind a tap.
-          Signed: it is a modifier. Stored beside armor class and, like it, edited only here.
-          It took speed's tile; speed is edited on Abilities & Skills only. */}
+          Signed: it is a modifier. */}
       <div className="tile">
         <div className="tl">Initiative</div>
         {initiative === null ? (

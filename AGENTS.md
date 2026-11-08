@@ -320,7 +320,7 @@ back on the next load (criterion 14).
     `setInitiative` while off throws `NO_INITIATIVE`, the one new `RuleCode`, not in
     `PRESENTABLE`: the field is hidden while off. Switching the dice off and on replaces the
     record, and MobX stores a copy, so `HitDicesBO` and `HitDieBO` now resolve their record on
-    every access (`() => doc.hitDices` for the character) and throw `GONE` while it is `null`.
+    every access (`() => doc.hitDices` for the character) and throw `GONE` while it is `null`, except `items`, which returns `[]`.
     Adding a die or a counter to a removed companion throws `GONE` too.
   - **Shared bases.** `CreatureHitPointsBO` (`HitPointsBO` adds death saves) and
     `CreatureAbilityBO` (`AbilityBO` adds the P). `CompanionCounterBO` repeats `CounterBO`'s three
@@ -346,25 +346,31 @@ back on the next load (criterion 14).
       pushed out where that block ends.
     - `usePersistedState`'s setter is stable now (`useCallback([key])`), so a fold callback built
       on it keeps memoised blocks memoised: stepping one companion's HP re-renders that companion
-      only (`bind.test.tsx`).
+      only (`src/ui/screens/Companions.test.tsx`).
   - **Verified in Chromium** on a fresh dev seed, whose Sable Nightwind has the mockup's Vestige
-    and Owl, at 320px, 360px and 412px, light and dark:
-    - a new companion with an 80-character name, HP 19/22 +4, AC 13, both switches on, initiative
+    and Owl. Widths and themes differ by check, as noted:
+    - (persistence, 320px light) a new companion with an 80-character name, HP 19/22 +4, AC 13, both switches on, initiative
       −2, a d10 at 3/4, a stat block, and a counter at total 2 with a step typed as `0,5`, stepped
       to 1.5: all of it survives a reload, and the counter's dialog shows the step as 0.5
     - at 320px that name ellipsises at 154px with its `19/22 +4` pill and ✎ in view, and
-      `document.documentElement.scrollWidth` equals the viewport at every width
-    - `Uses yours` (59px) and `No hit dices` stay on one line. At the header's two to one, the
-      initiative tile left 44px at 320px and 57px at 360px, and `Uses yours` wrapped; split
-      equally, each tile is 98.5px at 320px
-    - `.svhead` is 50px at every width, so `--svhead-h` is 50px: an open heading pins at the
+      `document.documentElement.scrollWidth` equals the viewport at 320px, 360px and 412px, light
+      and dark
+    - `Uses yours` (59px) and `No hit dices` stay on one line at 320px, 360px and 412px, light
+      and dark. At the header's two to one, the initiative tile left 44px at 320px and 57px at
+      360px, and `Uses yours` wrapped; split equally, each tile is 98.5px at 320px. Those widths
+      are from desktop Chromium, whose classic scrollbar takes 15px of `.bottom`; on a phone
+      (overlay scrollbar) the two to one leaves about 62px at 360px, so the wrap is still real
+      at 320px
+    - (sticky headings and tap band, 412px light; `.svhead` height, 320px, 360px and 412px, light
+      and dark) `.svhead` is 50px at every width, so `--svhead-h` is 50px: an open heading pins at the
       title's bottom edge, the next open one takes over where the block ends, and a folded one
       scrolls away
     - the heading's tap band is 44px, 2px over its 40px button. With the HP stepper 3px under a
       pinned heading, a tap 3.5px below the heading lands on the stepper
     - the Vestige's stat block is 452px tall at 412px: its whole text, attack line included, with
       nothing to scroll inside the box
-    - a v7 document put straight into IndexedDB is listed undamaged and reads back as v8 with
+    - (migration, 412px light) a v7 document put straight into IndexedDB is listed undamaged and
+      reads back as v8 with
       `companions: []` last: the list wrote it back. Its hub says `Nothing yet`
     - Abilities & Skills' two folds survive a reload
 - The storage-layer work the followups doc called the sharpest risk is done: `createIndexedDbRepository`
@@ -375,10 +381,10 @@ back on the next load (criterion 14).
 - The **business object tree** (`src/business/`) is done: `CharacterSheetBO`
   composes eleven subtree business objects — classes, hit points, hit dice, journal & notes,
   inventory, equipment, feats & traits, spell list, counters, abilities & skills, and companions —
-  over one MobX-observable document. That document lives behind a true `#doc` private field, not TypeScript's `private`:
-  `private` is erased at compile time, so a cast or plain JavaScript would still reach it, and
-  runtime enforcement is the point. There is no accessor anywhere in the tree that hands the
-  document back out — `src/business/characterSheet.roundTrip.test.ts` walks every property
+  over one MobX-observable document. That document lives behind a true `#doc` private field, not
+  TypeScript's `private`: `private` is erased at compile time, so a cast or plain JavaScript
+  would still reach it, and runtime enforcement is the point. There is no accessor anywhere in
+  the tree that hands the document back out — `src/business/characterSheet.roundTrip.test.ts` walks every property
   reachable from a `CharacterSheetBO`, including prototype getters, and asserts none of them exposes
   it. The same applies one level down: a `CategoryBO` (feats & traits, spell list, and counters are
   all `Categorized<T>`) does not expose its live storage array either. It used to, as a public
