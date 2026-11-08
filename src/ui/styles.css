@@ -2709,6 +2709,10 @@ button:not(:disabled):active {
 }
 .compbody .tiles {
   margin-top: 2px;
+  /* Hit dices and initiative share the row equally, not two to one as in the header: at 2:1,
+     "Uses yours" (59px) wrapped in the initiative tile's 44px at 320px and 57px at 360px. A
+     companion rarely has more than one die size, so its hit dices need less room. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 }
 /* Abilities, Stat block and Counters each fold, like a category, at the size of their label.
    Counters keeps its + beside the fold. */
@@ -2754,7 +2758,8 @@ button:not(:disabled):active {
   color: var(--ink-2);
 }
 /* An open companion's heading stays under the screen's title while its body scrolls, and the
-   whole row up to ✎ folds it, not only the text. `--svhead-h` is `.svhead`'s rendered height.
+   whole row up to ✎ folds it, not only the text. `--svhead-h` is `.svhead`'s rendered height,
+   measured in Chromium at 50px at 320, 360 and 412px wide.
    Each companion's heading and body share a `.compblock`, which bounds the sticking: a folded
    block is only as tall as its heading, so that heading never pins. */
 .sv {
