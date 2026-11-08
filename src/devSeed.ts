@@ -2,7 +2,9 @@ import type {
   AbilityBO,
   CharacterLibraryBO,
   CharacterSheetBO,
+  CompanionCounterBO,
   CounterBO,
+  CreatureAbilityBO,
   SkillBO,
   SpellBO,
   SpellLevel,
@@ -69,7 +71,7 @@ type Seeder = ((sheet: CharacterSheetBO) => void) & { characterName: string };
 const seeder = (characterName: string, fill: (sheet: CharacterSheetBO) => void): Seeder =>
   Object.assign(fill, { characterName });
 
-/** The wireframe's own sample character, filled in far enough to exercise all seven sections. */
+/** The wireframe's own sample character, filled in far enough to exercise all eight sections. */
 const seedSable = seeder('Sable Nightwind', (sheet) => {
   sheet.classes.add({ name: 'Rogue (Arcane Trickster)', level: 5 });
   sheet.classes.add({ name: 'Wizard (Evoker)', level: 2 });
@@ -274,6 +276,80 @@ const seedSable = seeder('Sable Nightwind', (sheet) => {
   skill(skills.sleightOfHand, 9, true, true);
   skill(skills.stealth, 9, true, true);
   skill(skills.survival, 1);
+
+  // The mockup's two companions. Sable has no warlock levels, so the Vestige carries a 3rd-level
+  // warlock's numbers as sample data; nothing reads classes, so nothing cross-checks it.
+  const vestige = sheet.companions.add('Vestige');
+  vestige.hitPoints.setTotal(16);
+  vestige.hitPoints.setCurrent(16);
+  vestige.setArmorClass(16);
+  // Initiative stays off ("Uses yours"); the hit dices are on, with a d6 pool.
+  vestige.setHasHitDices(true);
+  const vestigeD6 = vestige.hitDices?.add(6);
+  vestigeD6?.setTotal(3);
+  vestigeD6?.setCurrent(3);
+  creatureAbility(vestige.abilities.strength, 1, -5, -2);
+  creatureAbility(vestige.abilities.dexterity, 14, 2, 5);
+  creatureAbility(vestige.abilities.constitution, 10, 0, 3);
+  creatureAbility(vestige.abilities.intelligence, 15, 2, 5);
+  creatureAbility(vestige.abilities.wisdom, 15, 2, 5);
+  creatureAbility(vestige.abilities.charisma, 16, 3, 6);
+  vestige.setDescription(
+    [
+      'Small Undead, Neutral',
+      'Speed 5 ft., Fly 30 ft. (hover)',
+      'Resistances Necrotic',
+      'Immunities Charmed, Frightened, Prone',
+      'Senses Darkvision 60 ft.; Passive Perception 12',
+      'Languages Speaks the languages you know',
+      '',
+      'Traits',
+      'Pact Bond. Add your Proficiency Bonus to any ability check or saving throw the vestige makes.',
+      '',
+      'Actions',
+      "Vestige's Strike. Melee or Ranged Attack Roll: +6, reach 5 ft. or range 60 ft. Hit: 1d6 + 6 Necrotic damage.",
+      '',
+      'Bonus Actions',
+      'Divine Power (1/Day). Cursed Invocation: a creature within 30 ft. of the vestige is cursed for 1 minute.',
+    ].join('\n'),
+  );
+  counter(
+    vestige.counters.add({
+      name: 'Divine Power',
+      description: 'Bonus action. Cursed Invocation, Healing Light or Rot, by form.',
+    }),
+    1,
+    1,
+  );
+
+  // The switches the other way round: rolls its own initiative, and has no hit dices.
+  const owl = sheet.companions.add('Owl');
+  owl.hitPoints.setTotal(1);
+  owl.hitPoints.setCurrent(1);
+  owl.setArmorClass(11);
+  owl.setRollsInitiative(true);
+  owl.setInitiative(1);
+  creatureAbility(owl.abilities.strength, 3, -4, -4);
+  creatureAbility(owl.abilities.dexterity, 13, 1, 1);
+  creatureAbility(owl.abilities.constitution, 8, -1, -1);
+  creatureAbility(owl.abilities.intelligence, 2, -4, -4);
+  creatureAbility(owl.abilities.wisdom, 12, 1, 1);
+  creatureAbility(owl.abilities.charisma, 7, -2, -2);
+  owl.setDescription(
+    [
+      'Tiny Celestial, Neutral',
+      'Speed 5 ft., Fly 60 ft.',
+      'Skills Perception +5, Stealth +5',
+      'Senses Darkvision 120 ft.; Passive Perception 15',
+      'Languages None',
+      '',
+      'Traits',
+      "Flyby. The owl doesn't provoke Opportunity Attacks when it flies out of an enemy's reach.",
+      '',
+      'Actions',
+      'Talons. Melee Attack Roll: +3, reach 5 ft. Hit: 1 Slashing damage.',
+    ].join('\n'),
+  );
 });
 
 /** Deliberately sparse: the list should show a character that has barely been filled in. */
@@ -312,7 +388,12 @@ function spell(added: SpellBO, level: SpellLevel, prepared: boolean): void {
   added.setPrepared(prepared);
 }
 
-function counter(added: CounterBO, total: number, current: number, step = 1): void {
+function counter(
+  added: CounterBO | CompanionCounterBO,
+  total: number,
+  current: number,
+  step = 1,
+): void {
   added.setStep(step);
   added.setTotal(total);
   added.setCurrent(current);
@@ -325,10 +406,20 @@ function ability(
   savingThrowModifier: number,
   savingThrowProficient = false,
 ): void {
+  creatureAbility(target, score, modifier, savingThrowModifier);
+  target.setSavingThrowProficient(savingThrowProficient);
+}
+
+/** A companion's ability: the same three numbers, and no P mark. */
+function creatureAbility(
+  target: CreatureAbilityBO,
+  score: number,
+  modifier: number,
+  savingThrowModifier: number,
+): void {
   target.setScore(score);
   target.setModifier(modifier);
   target.setSavingThrowModifier(savingThrowModifier);
-  target.setSavingThrowProficient(savingThrowProficient);
 }
 
 function skill(target: SkillBO, modifier: number, proficient = false, expertise = false): void {
