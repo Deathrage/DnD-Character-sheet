@@ -760,14 +760,11 @@ function companionsActions(sheet: CharacterSheetBO): CompanionsActions {
     byId(companion(id).counters.items, counterId, 'counter');
   return {
     addCompanion: (name) => {
-      try {
-        return { ok: true, id: sheet.companions.add(name).id };
-      } catch (error) {
-        if (error instanceof RuleViolation && PRESENTABLE.includes(error.code)) {
-          return { ok: false, message: error.message };
-        }
-        throw error;
-      }
+      let id = '';
+      const message = attempt(() => {
+        id = sheet.companions.add(name).id;
+      });
+      return message === null ? { ok: true, id } : { ok: false, message };
     },
     renameCompanion: (id, name) => attempt(() => companion(id).setName(name)),
     removeCompanion: (id) => companion(id).remove(),

@@ -580,10 +580,10 @@ describe('toSheetActions', () => {
       proficient: true,
     });
 
-    // Two companions with one name, so a lookup by name would write to the first, always.
+    // Both companions are still named Vestige for every action but the last, so a lookup by
+    // name would write to the first, always. The rename comes last for that reason.
     const [firstId = '', secondId = ''] = before.companions.map((entry) => entry.id);
     const c = actions.companions;
-    c.renameCompanion(secondId, 'Vestige II');
     c.setCompanionCurrentHitPoints(secondId, 7);
     c.setCompanionTotalHitPoints(secondId, 18);
     c.setCompanionTemporaryHitPoints(secondId, 3);
@@ -607,6 +607,7 @@ describe('toSheetActions', () => {
     c.setCompanionCounterTotal(secondId, smiteId, 5);
     c.setCompanionCounterCurrent(secondId, smiteId, 4);
     c.setCompanionCounterStep(secondId, smiteId, 0.5);
+    expect(c.renameCompanion(secondId, 'Vestige II')).toBeNull();
 
     const [firstDoc, secondDoc] = sheet.toDocument().companions;
     expect(firstDoc?.id).toBe(firstId);
