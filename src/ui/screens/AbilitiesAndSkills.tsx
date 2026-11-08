@@ -1,12 +1,9 @@
 import { memo } from 'react';
+import { AbilityRow } from '../components/AbilityRow.js';
+import { Mark } from '../components/Mark.js';
 import { NumberField } from '../components/NumberField.js';
 import { ABILITIES, SKILLS } from '../reference.js';
-import type {
-  AbilitiesAndSkillsActions,
-  AbilitiesAndSkillsView,
-  AbilityView,
-  SkillView,
-} from '../types.js';
+import type { AbilitiesAndSkillsActions, AbilitiesAndSkillsView, SkillView } from '../types.js';
 
 interface Props {
   data: AbilitiesAndSkillsView;
@@ -103,51 +100,6 @@ export const AbilitiesAndSkills = memo(function AbilitiesAndSkills({
   );
 });
 
-/**
- * One row each, memoised: a keystroke in one score leaves every other row's `value` the same
- * object (`bind.ts` keeps it), so the other twenty-three rows skip their render.
- */
-const AbilityRow = memo(function AbilityRow({
-  ability,
-  value,
-  actions,
-}: {
-  ability: (typeof ABILITIES)[number];
-  value: AbilityView;
-  actions: AbilitiesAndSkillsActions;
-}) {
-  return (
-    <div className="abrow">
-      <span className="an">{ability.short}</span>
-      <NumberField
-        label={`${ability.short} score`}
-        value={value.score}
-        onChange={(next) => actions.setAbilityScore(ability.key, next)}
-      />
-      <NumberField
-        label={`${ability.short} modifier`}
-        value={value.modifier}
-        onChange={(next) => actions.setAbilityModifier(ability.key, next)}
-        signed
-      />
-      <div className="savecell">
-        <Mark
-          label={`${ability.short} saving throw proficiency`}
-          letter="P"
-          on={value.savingThrowProficient}
-          onChange={(next) => actions.setSavingThrowProficient(ability.key, next)}
-        />
-        <NumberField
-          label={`${ability.short} saving throw`}
-          value={value.savingThrowModifier}
-          onChange={(next) => actions.setSavingThrowModifier(ability.key, next)}
-          signed
-        />
-      </div>
-    </div>
-  );
-});
-
 const SkillRow = memo(function SkillRow({
   skill,
   value,
@@ -186,28 +138,3 @@ const SkillRow = memo(function SkillRow({
     </div>
   );
 });
-
-/** The wireframe's `.mk` square, as a toggle button so it reads as one to a screen reader. */
-function Mark({
-  label,
-  letter,
-  on,
-  onChange,
-}: {
-  label: string;
-  letter: string;
-  on: boolean;
-  onChange(value: boolean): void;
-}) {
-  return (
-    <button
-      type="button"
-      className={on ? 'mk on' : 'mk'}
-      aria-label={label}
-      aria-pressed={on}
-      onClick={() => onChange(!on)}
-    >
-      {letter}
-    </button>
-  );
-}

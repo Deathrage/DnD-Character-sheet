@@ -12,6 +12,8 @@ interface Props {
   after?: ReactNode;
   /** Dims the row: an unprepared spell, a spent counter. */
   dim?: boolean;
+  /** Names the open button instead of its text: a companion's counter, prefixed by its name. */
+  label?: string;
 }
 
 /**
@@ -22,7 +24,16 @@ interface Props {
  * beside the name is the only thing that differs across the five sections that use this row —
  * and some of those slots hold an input, which must not open the dialog when tapped.
  */
-export function ItemRow({ name, description, lead = '', onOpen, before, after, dim }: Props) {
+export function ItemRow({
+  name,
+  description,
+  lead = '',
+  onOpen,
+  before,
+  after,
+  dim,
+  label,
+}: Props) {
   const preview = description.replace(/\s+/g, ' ').trim();
 
   return (
@@ -30,7 +41,7 @@ export function ItemRow({ name, description, lead = '', onOpen, before, after, d
       {before}
       {/* The button covers the name and preview only. An input in `after` is a sibling, not a
           descendant — nesting a control inside a button is invalid and swallows its taps. */}
-      <button type="button" className="recopen" onClick={onOpen}>
+      <button type="button" className="recopen" aria-label={label} onClick={onOpen}>
         <span className="nm">{name}</span>
         {(lead !== '' || preview !== '') && (
           // The preview line is the one that cuts off with an ellipsis, so it is where a long
