@@ -14,7 +14,7 @@ stat block is resolved by the player, who types 16. Needs character schema v8.
 The design also makes the two blocks on the character's own Abilities & Skills screen fold (§7).
 The owner asked for that during this design.
 
-Status: **designed 2026-11-08, not built.**
+Status: **built 2026-11-08** on branch `feature/companions`, from `docs/superpowers/plans/2026-11-08-companions.md`.
 
 Mockups: `2026-11-08-companions-mockups/`.
 - **`companions.html`:** a clickable page that uses the app's real `src/ui/styles.css`. Open it
@@ -324,7 +324,7 @@ with the same name.
   - their steppers: "Decrease Vestige current hit points" and the rest
 - **Other tiles:**
   - "Vestige armor class", "Vestige initiative"
-  - the Hit Dices tile button: "Vestige hit dices"
+  - the Hit Dices tile button: "Vestige Hit Dices 2/3 d6", its summary included (see "Buttons that show a value" below)
 - **Abilities:** "Vestige STR score", "Vestige STR modifier", "Vestige STR saving throw".
 - **Fold buttons:** the heading's name is the companion's name, plus "Vestige abilities",
   "Vestige stat block" and "Vestige counters".
@@ -482,3 +482,58 @@ Chromium at 320px, 360px and 412px, light and dark:
 - reordering companions (they stay in creation order)
 - moving counters between a companion and the character
 - death saves for companions
+
+## 10. Deviations
+
+Where the build departed from this design or from the plan, and why. The progress ledger's
+rulings are the source for the first eight; the ninth came from the browser checks.
+
+- **`HitDicesBO.items` returns `[]` while the dice are switched off.** §4 says every call throws
+  `GONE` while the record is `null`. Every other call does. `items` is the one exception, made in
+  the plan, so a list of nothing reads as nothing rather than throwing out of a render.
+- **The blank counter is one `newCounter` in `counters.ts`,** shared by `CountersBO.add` and
+  `CompanionCountersBO.add`. The plan had the companion's list build its own copy; review found
+  the two fills duplicated, and one function keeps "a new counter" defined once.
+- **`CompanionCounterBO` repeats `CounterBO`'s three guarded setters,** as §4 already says. The
+  build kept it as planned: a mixin or a fake categorized owner would cost more than six one-line
+  guard calls.
+- **A companion's Hit Dices tile is named "Vestige Hit Dices 2/3 d6".** §5 named it two ways: a
+  bullet said "Vestige hit dices", and the later "Buttons that show a value" rule keeps the value.
+  The later rule won, so a screen reader hears the dice, and the bullet is corrected above.
+- **`usePersistedState`'s setter is stable** (`useCallback([key])`), in `src/ui/persistedState.ts`,
+  a file outside the plan. §5 requires one companion's HP step to re-render that companion only,
+  and a fresh setter on every render made every memoised block's fold callback new, so every block
+  re-rendered. Other screens using the hook see no change in behaviour.
+- **Each companion's heading and body are wrapped in a `div.compblock`.** The plan and the mockup
+  put them directly in `.sv` as siblings. A sticky box sticks within its parent, so there every
+  heading, folded or not, stuck and stacked under the title. Inside its own block a heading
+  sticks only while that block's body scrolls past, is pushed out where the block ends, and has
+  nowhere to move while folded: §5's "while a companion is open". Because every heading is now
+  the first `div` in its block, `.sechead-row.companion` restates `margin-top: 22px`, which
+  `.sechead-row:first-of-type` would otherwise cut to 10px.
+- **The heading's tap band reaches 2px past its 40px button, not `.editcat`'s 7px.** 44px is the
+  tap target already. A 7px band under a pinned heading lay over whatever had scrolled beneath it,
+  so a tap on an HP stepper could fold the companion instead. Measured in Chromium: with the
+  stepper 3px under a pinned heading, a tap 3.5px below the heading lands on the stepper.
+- **The dev seed's Vestige has a 3rd-level warlock's numbers.** The plan said `4 + 4 × Sable's
+  Warlock level`, but the seeded Sable Nightwind is Rogue (Arcane Trickster) 5 / Wizard (Evoker)
+  2, with no warlock level. She has both companions anyway, as §5 says: the Owl fits her wizard
+  levels, and the Vestige is sample data the app never checks against classes. It is HP 16/16,
+  AC 16, initiative off, and hit dices on with a d6 at 3/3. The Owl is at 1/1, where the mockup's
+  is at 0/1.
+- **A companion's tiles split hit dices and initiative equally.** §5 says the tiles are the vitals
+  header's own, and they are the same component, but the header's columns give hit dices two
+  thirds of the space beside the AC shield. In a companion that left the initiative tile 44px of
+  content at 320px and 57px at 360px in Chromium, and "Uses yours" (59px) wrapped to two lines,
+  as the mockup's own 320px screenshot shows. `.compbody .tiles` uses
+  `minmax(0, 1fr) auto minmax(0, 1fr)`: each tile is 98.5px wide at 320px and both off tiles stay
+  on one line. A companion rarely has more than one die size, so its hit dices need less room
+  than a multiclass character's. The header is unchanged.
+- **Kept as designed after checking in the browser:**
+  - `--svhead-h` stays 50px: `.svhead` measured 50px at 320px, 360px and 412px.
+  - The first companion heading sits 22px below the title, which is where every other section's
+    first heading sits: `.sechead-row:first-of-type` never matches inside `.sv`, because `.svhead`
+    is its first `div`.
+  - In the counter edit dialog opened from a companion, the Step field is alone in its `.row2`
+    and spans the dialog's width, under Remaining and Total. It reads as a full-width field like
+    Name, not as a missing column, so it is left as it is.

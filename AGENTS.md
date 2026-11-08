@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 2446 tests across 94 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 2847 tests across 103 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -297,15 +297,85 @@ back on the next load (criterion 14).
       `step: 1` last on every counter: the list wrote it back
     - at 320px the row's name ellipsises at 139px and neither the page nor the dialog scrolls
       sideways; the box is 40px for `4.5` and 52px for `12.125`
+- **Schema v8: companions** (2026-11-08). v7 was on `main`, so frozen.
+  `docs/superpowers/specs/2026-11-08-companions-design.md` is the design (its §10 lists where the
+  build departed from it) and `docs/superpowers/plans/2026-11-08-companions.md` the plan it was
+  built from.
+  - **What v8 adds.** `companions`, required and the last key of the document: a familiar, a
+    steed, a beast, a vestige, a summon. A companion's keys are, in order:
+    `id, name, hitPoints, hitDices, armorClass, initiative, abilities, description, counters`.
+    It is a plain `z.object`, not `nameAndDescription.extend`, because Zod emits keys in the
+    schema's order, and the stat block (`description`) belongs after the numbers in the raw-JSON
+    editor.
+    - `hitPoints` is `{ current, total, temporary }`. A companion has no death saves.
+    - `hitDices` is a die-size record or `null`. `null` is switched off, `{}` is on with no die.
+    - `initiative` is an integer or `null`. `null` uses the character's, and `0` is a real `+0`.
+    - each ability is `{ score, modifier, savingThrowModifier }`, with no proficiency mark
+    - `counters` is v8's own `countersItem`, so a companion's counter is a character counter
+    - names may repeat; every id, a companion's counters' included, is unique in the document
+  - **Nothing is computed.** HP is not worked out from a warlock level, "AC 13 + your Charisma
+    modifier" is the player's sum, and nothing refills on a rest.
+  - **Two switches.** `setRollsInitiative(on)` and `setHasHitDices(on)` keep a value already there
+    when turned on (`?? 0`, `?? {}`) and store `null` when turned off, with no confirmation.
+    `setInitiative` while off throws `NO_INITIATIVE`, the one new `RuleCode`, not in
+    `PRESENTABLE`: the field is hidden while off. Switching the dice off and on replaces the
+    record, and MobX stores a copy, so `HitDicesBO` and `HitDieBO` now resolve their record on
+    every access (`() => doc.hitDices` for the character) and throw `GONE` while it is `null`.
+    Adding a die or a counter to a removed companion throws `GONE` too.
+  - **Shared bases.** `CreatureHitPointsBO` (`HitPointsBO` adds death saves) and
+    `CreatureAbilityBO` (`AbilityBO` adds the P). `CompanionCounterBO` repeats `CounterBO`'s three
+    guarded setters, because `CounterBO` needs a categorized owner; the blank counter is one
+    `newCounter` in `counters.ts`, shared by both.
+  - **`migrateV7ToV8`** adds `companions: []`, last, and reads nothing else. `v7DocFor` carries the
+    bait: a Ranger 3 class, the spell Find Familiar, the feat Primal Companion and a counter
+    "Owl HP" at 1 of 1. None may become a companion. Its Lantern oil at 4.5 by 0.5 would show a
+    migration that reset steps.
+  - **UI.** An eighth hub section, **Companions** / `familiars & mounts`, summarised as
+    `Vestige 9/16 +5 · Owl 0/1 · 1 more`.
+    - Each companion is a foldable block like a category. It starts folded, except one just
+      created. Inside are the header's own tiles (extracted as `VitalTiles`, with `HitDiceDialog`),
+      `AbilityRow` without the P, a Stat block textarea that grows with its text, and the Counters
+      screen's rows and dialogs without a category picker.
+    - Off tiles read **Uses yours** and **No hit dices**. A companion's tiles split hit dices and
+      initiative equally; the header keeps two to one.
+    - Every accessible name inside a companion starts with its name: `Vestige current hit points`.
+    - Fold state is per character in `ui:${characterId}:companions`, keyed by id because names
+      repeat. Abilities & Skills' two blocks fold too, in `ui:${characterId}:abilities`.
+    - An open companion's heading sticks under the screen's title. Each companion's heading and
+      body share a `div.compblock`, so a heading sticks only while its own block is open, and is
+      pushed out where that block ends.
+    - `usePersistedState`'s setter is stable now (`useCallback([key])`), so a fold callback built
+      on it keeps memoised blocks memoised: stepping one companion's HP re-renders that companion
+      only (`bind.test.tsx`).
+  - **Verified in Chromium** on a fresh dev seed, whose Sable Nightwind has the mockup's Vestige
+    and Owl, at 320px, 360px and 412px, light and dark:
+    - a new companion with an 80-character name, HP 19/22 +4, AC 13, both switches on, initiative
+      −2, a d10 at 3/4, a stat block, and a counter at total 2 with a step typed as `0,5`, stepped
+      to 1.5: all of it survives a reload, and the counter's dialog shows the step as 0.5
+    - at 320px that name ellipsises at 154px with its `19/22 +4` pill and ✎ in view, and
+      `document.documentElement.scrollWidth` equals the viewport at every width
+    - `Uses yours` (59px) and `No hit dices` stay on one line. At the header's two to one, the
+      initiative tile left 44px at 320px and 57px at 360px, and `Uses yours` wrapped; split
+      equally, each tile is 98.5px at 320px
+    - `.svhead` is 50px at every width, so `--svhead-h` is 50px: an open heading pins at the
+      title's bottom edge, the next open one takes over where the block ends, and a folded one
+      scrolls away
+    - the heading's tap band is 44px, 2px over its 40px button. With the HP stepper 3px under a
+      pinned heading, a tap 3.5px below the heading lands on the stepper
+    - the Vestige's stat block is 452px tall at 412px: its whole text, attack line included, with
+      nothing to scroll inside the box
+    - a v7 document put straight into IndexedDB is listed undamaged and reads back as v8 with
+      `companions: []` last: the list wrote it back. Its hub says `Nothing yet`
+    - Abilities & Skills' two folds survive a reload
 - The storage-layer work the followups doc called the sharpest risk is done: `createIndexedDbRepository`
   takes an injectable `registry` and `openDb`, reports `blocked`, `blocking` and `terminated`
   through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
   the call instead of surfacing as an unhandled rejection. `save()` now throws a `StorageError`
   (`src/data/repository/storageFailure.ts`) instead of a `CharacterLoadError`.
 - The **business object tree** (`src/business/`) is done: `CharacterSheetBO`
-  composes ten subtree business objects — classes, hit points, hit dice, journal & notes, inventory,
-  equipment, feats & traits, spell list, counters, and abilities & skills — over one MobX-observable
-  document. That document lives behind a true `#doc` private field, not TypeScript's `private`:
+  composes eleven subtree business objects — classes, hit points, hit dice, journal & notes,
+  inventory, equipment, feats & traits, spell list, counters, abilities & skills, and companions —
+  over one MobX-observable document. That document lives behind a true `#doc` private field, not TypeScript's `private`:
   `private` is erased at compile time, so a cast or plain JavaScript would still reach it, and
   runtime enforcement is the point. There is no accessor anywhere in the tree that hands the
   document back out — `src/business/characterSheet.roundTrip.test.ts` walks every property
@@ -348,7 +418,7 @@ back on the next load (criterion 14).
     the refusal banner. `integer()` now throws `UNSAFE_INTEGER` past the safe range (not
     `NOT_AN_INTEGER`: 1e19 is an integer), and `NumberField` never passes such a value on: it
     stays a draft until blur, and the stepper stops at the edge.
-- **The sheet's views are eight MobX computeds, and the components below them are memoised**
+- **The sheet's views are nine MobX computeds, and the components below them are memoised**
   (2026-11-01). `useSheet` used to read `toSheetData(sheet)` in one reaction: every keystroke
   rebuilt the whole snapshot and re-rendered the header, the open section and every row in it,
   so a keystroke's cost grew with the character — measured at a 6× CPU throttle on a 468 KB
@@ -356,7 +426,7 @@ back on the next load (criterion 14).
   builds the same views as one `computed` per section, so a change re-runs only the section it
   touched, and `Keep` hands back the previous copy of a row's view while a fresh one says the
   same thing (`compareStructural`), keyed by id, ability key or list name. `VitalsHeader`, the
-  seven sections and their rows are `memo`, with the callbacks they take made stable in `Sheet`
+  eight sections and their rows are `memo`, with the callbacks they take made stable in `Sheet`
   (`useCallback`) and `CharacterHub`. `bind.test.tsx` renders memoised probes over `useSheet`
   and asserts a coin edit re-renders Inventory alone, and one item's count that item alone; it
   fails against the plain snapshot. `toSheetData` stays as the one-shot version for tests and
@@ -500,7 +570,7 @@ back on the next load (criterion 14).
 What is built: the versioned schema, the migration loop and its error taxonomy, export/import, the
 IndexedDB repository, the whole business layer, the presentational components, and `src/ui/bind.ts`
 binding the two, and the app shell — `src/main.tsx`, `src/ui/route.ts` and `src/ui/App.tsx` —
-composing the screens into an application (spec §7-8), with all seven hub sections wired.
+composing the screens into an application (spec §7-8), with all eight hub sections wired.
 
 ## Commands
 
@@ -545,7 +615,8 @@ were arrived at _after_ getting them wrong once.
 Each version owns a self-contained directory under `src/data/schema/`. **Nothing is shared between
 versions.** `v2/` began as a literal copy of `v1/` and diverged (2026-09-26), `v3/` began as a
 copy of `v2/` the same day, `v4/` as a copy of `v3/` on 2026-09-27, `v5/` as a copy of `v4/`
-on 2026-10-18, `v6/` as a copy of `v5/` on 2026-10-20, and `v7/` as a copy of `v6/` on 2026-11-01.
+on 2026-10-18, `v6/` as a copy of `v5/` on 2026-10-20, `v7/` as a copy of `v6/` on 2026-11-01,
+and `v8/` as a copy of `v7/` on 2026-11-08.
 
 Do not "DRY this up" by extracting shared primitives or a shared base schema. The duplication _is_
 the isolation mechanism. The migration loop validates a document _at its own version_, so a
@@ -659,8 +730,10 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
   characterSheet.ts    id, name, armorClass, initiative, the derived `level`, toDocument() (a toJS
                        copy)
   classes.ts           ClassesBO / ClassBO
-  hitPoints.ts         HitPointsBO / DeathSavesBO — counts of ticked boxes, never ticked for you
-  hitDices.ts          HitDicesBO / HitDieBO, keyed by die size — no id, the size is the identity
+  hitPoints.ts         CreatureHitPointsBO (current, total, temporary, shared with companions) /
+                       HitPointsBO / DeathSavesBO — counts of ticked boxes, never ticked for you
+  hitDices.ts          HitDicesBO / HitDieBO, keyed by die size — no id, the size is the identity;
+                       they resolve their record on every access, so a companion's can switch off
   journalAndNotes.ts   JournalAndNotesBO / JournalDayBO — append or delete-the-newest-day only
   inventory.ts         InventoryBO / CoinsBO / InventoryItemBO
   equipment.ts         EquipmentBO / EquipmentItemBO / WeaponBO (the attack roll, ability first;
@@ -670,8 +743,12 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
   spellList.ts         SpellListBO / SpellBO, over categorized.ts plus spellcasting
   spellcasting.ts      SpellcastingBO / SpellcastingEntryBO, keyed by ability — no id, like hit dice
   counters.ts          CounterBO (decimal current, total and step) / SpellSlotBO / PactSlotsBO, over
-                       categorized.ts plus the nine fixed slots and the pact slots
-  abilitiesAndSkills.ts AbilityBO / SkillBO, fixed key sets built once in the constructor
+                       categorized.ts plus the nine fixed slots and the pact slots; newCounter, the
+                       blank counter, shared with companions
+  abilitiesAndSkills.ts CreatureAbilityBO (score, modifier, save) / AbilityBO (adds the P) /
+                       SkillBO, fixed key sets built once in the constructor
+  companions.ts        CompanionsBO / CompanionBO (the initiative and hit dices switches) /
+                       CompanionCountersBO / CompanionCounterBO, a flat list with no categories
   errors.ts            RuleViolation, RuleCode — every rule this layer enforces, plus the
                        re-exports `ui` needs but may not import from `data`: describeLoadError,
                        LoadError, StorageFailure
@@ -697,7 +774,9 @@ src/ui/                components are presentational: data in, callbacks out, no
   UpdatePrompt.tsx     "a new version is ready": saves pending edits, then lets the new service
                        worker take over. Rendered from main.tsx so App never imports virtual:pwa-*
   components/, screens/   the wireframe's screens; fixtures.ts feeds the stories. AbilityPicker is
-                       the one row of ability buttons both attack dialogs share
+                       the one row of ability buttons both attack dialogs share. VitalTiles,
+                       HitDiceDialog, AbilityRow and Mark are shared by the character and its
+                       companions; screens/Companions.tsx is the eighth section
 src/main.tsx           the composition root; the only place the real library is constructed
 index.html             the app document; vite.config.ts builds and tests it
 src/data/schema/       index.ts is the public face; README.md governs versioning
@@ -707,12 +786,13 @@ src/data/schema/       index.ts is the public face; README.md governs versioning
   v4/                  frozen: v3 plus death saves
   v5/                  frozen: v4 plus pact slots
   v6/                  frozen: v5 plus weapon counts
-  v7/                  current: v6 plus counters that count in parts, with a step; blank lives here now
+  v7/                  frozen: v6 plus counters that count in parts, with a step
+  v8/                  current: v7 plus companions; blank lives here now
 src/data/migration/    versionOf, versioned.ts (parseVersioned, the generic validate-migrate walk
                        shared by `schemaVersion` and `layoutVersion`), parseCharacter (now a thin
                        wrapper over it), the LoadError taxonomy, v1ToV2.ts, v2ToV3.ts,
-                       v3ToV4.ts, v4ToV5.ts, v5ToV6.ts and v6ToV7.ts (the migrations, registered
-                       in migrations.ts)
+                       v3ToV4.ts, v4ToV5.ts, v5ToV6.ts, v6ToV7.ts and v7ToV8.ts (the migrations,
+                       registered in migrations.ts)
 src/data/serialization/ export and import (three-outcome ParseTextResult)
 src/data/repository/   the IndexedDB repository (characters + portraits stores), ListEntry, summarize,
                        portrait.ts — the portrait rule
@@ -727,7 +807,7 @@ src/data/remote/       types.ts (CloudRepository and its shapes), codec.ts, clou
 src/data/characterLifecycle.test.ts   end-to-end across all four modules
 src/test/              fake-indexeddb setup
 src/test/fixtures.ts   ID_A, ID_B, FIXED_NOW, docFor, v1DocFor, v2DocFor, v3DocFor, v4DocFor, v5DocFor,
-                       v6DocFor, wipe, createOpener, putRaw — shared so the data-layer test files stop each defining their own
+                       v6DocFor, v7DocFor, wipe, createOpener, putRaw — shared so the data-layer test files stop each defining their own
 ```
 
 Tests are colocated: `foo.ts` is tested by `foo.test.ts` beside it.
