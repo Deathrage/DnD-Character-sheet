@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 2845 tests across 103 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 2847 tests across 103 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -325,7 +325,8 @@ back on the next load (criterion 14).
     through a `protected die(size)`). The subclasses hold the companion and override `dice` to
     read the record it has now, so every die rule is inherited, and they throw `GONE` while it is
     `null`, except `items`, which returns `[]`. Adding a die or a counter to a removed companion
-    throws `GONE` too. The character's dice are the bases, unchanged in behaviour: its record is
+    throws `GONE` too; a die's setters there write to the detached node, as every setter on a
+    removed item does. The character's dice are the bases, unchanged in behaviour: its record is
     never replaced.
   - **Shared bases.** `HitPointsBO` (`HitPointsWithDeathSavesBO` adds death saves) and
     `AbilityBO` (`AbilityWithSaveProficiencyBO` adds the P). `CompanionCounterBO` repeats `CounterBO`'s three

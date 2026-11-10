@@ -108,6 +108,13 @@ function hitDicesOf(companion: CompanionData): HitDices {
   return companion.hitDices;
 }
 
+/** An add must not mint ids into a removed companion, as `CategoryBO.add` must not. */
+function requireInDocument(companion: CompanionData, companions: CompanionData[]): void {
+  if (!companions.includes(companion)) {
+    throw new RuleViolation('GONE', 'this companion is no longer in the document');
+  }
+}
+
 /**
  * Holds the companion, never its record: assigning `{}` to an observable stores a copy, so after
  * off and on the companion has a new record, and one held from before would be detached. So
@@ -142,9 +149,7 @@ export class CompanionHitDicesBO extends HitDicesBO {
 
   /** A setter on a removed companion writes to its detached node, but an add must not. */
   override add(size: number): HitDieBO {
-    if (!this.#companions.includes(this.#companion)) {
-      throw new RuleViolation('GONE', 'this companion is no longer in the document');
-    }
+    requireInDocument(this.#companion, this.#companions);
     return super.add(size);
   }
 }
@@ -178,9 +183,7 @@ export class CompanionCountersBO {
   }
 
   add(init: NewNamedItem): CompanionCounterBO {
-    if (!this.#companions.includes(this.#companion)) {
-      throw new RuleViolation('GONE', 'this companion is no longer in the document');
-    }
+    requireInDocument(this.#companion, this.#companions);
     const stored = pushAndRead(this.#companion.counters, newCounter(init));
     return new CompanionCounterBO(stored, this.#companion.counters);
   }

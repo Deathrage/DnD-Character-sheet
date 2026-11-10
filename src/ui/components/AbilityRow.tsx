@@ -17,7 +17,7 @@ interface Props {
     score: number;
     modifier: number;
     savingThrowModifier: number;
-    /** Absent for a creature with no P mark: the Save box then sits in the grid like the others. */
+    /** Absent for a companion, which has no P mark: the Save box then sits in the grid like the others. */
     savingThrowProficient?: boolean;
   };
   actions: AbilityRowActions;

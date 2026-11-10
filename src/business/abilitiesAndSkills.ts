@@ -92,7 +92,7 @@ export class AbilityBO {
   }
 }
 
-/** A character's ability: the creature's three numbers plus saving-throw proficiency. */
+/** A character's ability: `AbilityBO`'s three numbers plus saving-throw proficiency. */
 export class AbilityWithSaveProficiencyBO extends AbilityBO {
   readonly #node: AbilityWithSaveProficiencyData;
 

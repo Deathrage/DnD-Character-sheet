@@ -547,8 +547,11 @@ Where the build departed from this design or from the plan, and why. The ninth c
   now, so every die rule is inherited rather than repeated. `CompanionHitDicesBO` also overrides
   `items` (`[]` while off) and `add` (`GONE` on a removed companion). Every behaviour §4 and §8
   list still holds; the resolver's own tests in `hitDices.test.ts` are gone, and a held die while
-  off throwing `GONE` has a test of its own. `protected` is reachable by a deliberate cast, the
-  bar `NodeBO.node` already accepts.
+  off throwing `GONE` has a test of its own. One thing the resolver did that §4 never asked for is
+  gone: it threw `GONE` from a die's setters once the companion was removed. A die held on a
+  removed companion now writes to its detached node, as §4 says every setter does, and a test
+  pins that. `protected` is reachable by a deliberate cast, the bar `NodeBO.node` already
+  accepts.
 - **Kept as designed after checking in the browser:**
   - `--svhead-h` stays 50px: `.svhead` measured 50px at 320px, 360px and 412px.
   - The first companion heading sits 22px below the title, which is where every other section's

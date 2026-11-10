@@ -288,12 +288,12 @@ const seedSable = seeder('Sable Nightwind', (sheet) => {
   const vestigeD6 = vestige.hitDices?.add(6);
   vestigeD6?.setTotal(3);
   vestigeD6?.setCurrent(3);
-  creatureAbility(vestige.abilities.strength, 1, -5, -2);
-  creatureAbility(vestige.abilities.dexterity, 14, 2, 5);
-  creatureAbility(vestige.abilities.constitution, 10, 0, 3);
-  creatureAbility(vestige.abilities.intelligence, 15, 2, 5);
-  creatureAbility(vestige.abilities.wisdom, 15, 2, 5);
-  creatureAbility(vestige.abilities.charisma, 16, 3, 6);
+  companionAbility(vestige.abilities.strength, 1, -5, -2);
+  companionAbility(vestige.abilities.dexterity, 14, 2, 5);
+  companionAbility(vestige.abilities.constitution, 10, 0, 3);
+  companionAbility(vestige.abilities.intelligence, 15, 2, 5);
+  companionAbility(vestige.abilities.wisdom, 15, 2, 5);
+  companionAbility(vestige.abilities.charisma, 16, 3, 6);
   vestige.setDescription(
     [
       'Small Undead, Neutral',
@@ -329,12 +329,12 @@ const seedSable = seeder('Sable Nightwind', (sheet) => {
   owl.setArmorClass(11);
   owl.setRollsInitiative(true);
   owl.setInitiative(1);
-  creatureAbility(owl.abilities.strength, 3, -4, -4);
-  creatureAbility(owl.abilities.dexterity, 13, 1, 1);
-  creatureAbility(owl.abilities.constitution, 8, -1, -1);
-  creatureAbility(owl.abilities.intelligence, 2, -4, -4);
-  creatureAbility(owl.abilities.wisdom, 12, 1, 1);
-  creatureAbility(owl.abilities.charisma, 7, -2, -2);
+  companionAbility(owl.abilities.strength, 3, -4, -4);
+  companionAbility(owl.abilities.dexterity, 13, 1, 1);
+  companionAbility(owl.abilities.constitution, 8, -1, -1);
+  companionAbility(owl.abilities.intelligence, 2, -4, -4);
+  companionAbility(owl.abilities.wisdom, 12, 1, 1);
+  companionAbility(owl.abilities.charisma, 7, -2, -2);
   owl.setDescription(
     [
       'Tiny Celestial, Neutral',
@@ -406,12 +406,12 @@ function ability(
   savingThrowModifier: number,
   savingThrowProficient = false,
 ): void {
-  creatureAbility(target, score, modifier, savingThrowModifier);
+  companionAbility(target, score, modifier, savingThrowModifier);
   target.setSavingThrowProficient(savingThrowProficient);
 }
 
 /** A companion's ability: the same three numbers, and no P mark. */
-function creatureAbility(
+function companionAbility(
   target: AbilityBO,
   score: number,
   modifier: number,

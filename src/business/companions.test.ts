@@ -126,14 +126,25 @@ describe('CompanionBO hit dice', () => {
     expect(sheet.toDocument().companions[0]?.hitDices).toEqual({
       '8': { current: 0, total: 0 },
     });
+    expect(held?.items.map((d) => d.size)).toEqual([8]);
   });
 
-  it('a hit dice object held while off throws GONE', () => {
+  it('a hit dice object held while off throws GONE, whatever the size', () => {
     const owl = sheetFor().companions.add('Owl');
     owl.setHasHitDices(true);
     const held = owl.hitDices;
     owl.setHasHitDices(false);
     expect(code(() => held?.add(8))).toBe('GONE');
+    expect(code(() => held?.add(0))).toBe('GONE');
+  });
+
+  it('a hit dice object held while off lists nothing', () => {
+    const owl = sheetFor().companions.add('Owl');
+    owl.setHasHitDices(true);
+    const held = owl.hitDices;
+    held?.add(8);
+    owl.setHasHitDices(false);
+    expect(held?.items).toEqual([]);
   });
 
   it('a hit die held while off throws GONE', () => {
@@ -154,6 +165,17 @@ describe('CompanionBO removal and counters', () => {
     expect(code(() => dice?.add(6))).toBe('GONE');
     expect(code(() => owl.counters.add({ name: 'Bites' }))).toBe('GONE');
     expect(code(() => owl.remove())).toBe('GONE');
+  });
+
+  it('a die held on a removed companion writes to its detached node, as every setter does', () => {
+    const sheet = sheetFor();
+    const owl = sheet.companions.add('Owl');
+    owl.setHasHitDices(true);
+    const d8 = owl.hitDices?.add(8);
+    owl.remove();
+    d8?.setTotal(3);
+    expect(d8?.total).toBe(3);
+    expect(sheet.toDocument().companions).toEqual([]);
   });
 
   it('companion counters guard like character counters', () => {

@@ -45,8 +45,11 @@ export class HitDicesBO {
    * schema version accepts. `NOT_AN_INTEGER` was the previous answer and it lied: 0 and 1e21 are
    * both integers, and `NEGATIVE` would lie about the same two. Hence a die-specific code,
    * alongside the `DUPLICATE_DIE` just below it.
+   *
+   * `dice` is read first, so a companion's dice held while off answer `GONE` whatever the size.
    */
   add(size: number): HitDieBO {
+    const dice = this.dice;
     const key = String(size);
     if (!/^[1-9]\d*$/.test(key)) {
       throw new RuleViolation(
@@ -54,11 +57,11 @@ export class HitDicesBO {
         `a die size must be a whole number of at least 1 that stores as plain digits, got ${key}`,
       );
     }
-    if (key in this.dice) {
+    if (key in dice) {
       throw new RuleViolation('DUPLICATE_DIE', `a d${key} is already present`);
     }
 
-    this.dice[key] = { current: 0, total: 0 };
+    dice[key] = { current: 0, total: 0 };
     return this.die(size);
   }
 }
