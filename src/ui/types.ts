@@ -378,7 +378,14 @@ export interface AbilitiesAndSkillsActions {
 }
 
 export type SectionKey =
-  'journal' | 'inventory' | 'feats' | 'equipment' | 'spells' | 'counters' | 'abilities';
+  | 'journal'
+  | 'inventory'
+  | 'feats'
+  | 'equipment'
+  | 'spells'
+  | 'counters'
+  | 'abilities'
+  | 'companions';
 
 export interface SectionTile {
   key: SectionKey;
@@ -399,10 +406,11 @@ export const SECTIONS: readonly SectionTile[] = [
   { key: 'equipment', icon: '⚔', title: 'Equipment', subtitle: 'weapons & gear' },
   { key: 'spells', icon: '✧', title: 'Spell List', subtitle: 'prepared & levels' },
   { key: 'counters', icon: ICONS.stopwatch, title: 'Counters', subtitle: 'slots & resources' },
+  { key: 'companions', icon: ICONS.paw, title: 'Companions', subtitle: 'familiars & mounts' },
 ];
 
 /**
- * Which tiles are live. All seven now are; the prop remains because HubGrid should not have
+ * Which tiles are live. All eight now are; the prop remains because HubGrid should not have
  * to be edited to stand a section down again, and a story shows the inert state.
  */
 export const WIRED_SECTIONS: readonly SectionKey[] = SECTIONS.map((section) => section.key);
@@ -456,4 +464,63 @@ export interface ConflictView {
   localUpdatedAt: string | null;
   /** The file's or the cloud version's. */
   incomingUpdatedAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Companions
+// ---------------------------------------------------------------------------
+
+export interface CompanionAbilityView {
+  score: number;
+  modifier: number;
+  savingThrowModifier: number;
+}
+
+export interface CompanionView {
+  id: string;
+  name: string;
+  hitPoints: { current: number; total: number; temporary: number };
+  /** `null` is switched off, `[]` is on with no die. */
+  hitDices: HitDieView[] | null;
+  armorClass: number;
+  /** `null` is "uses yours". */
+  initiative: number | null;
+  abilities: Record<AbilityKey, CompanionAbilityView>;
+  /** The stat block. */
+  description: string;
+  counters: CounterView[];
+}
+
+/** `addCompanion` returns the new id so the screen can open it. */
+export type AddResult = { ok: true; id: string } | { ok: false; message: string };
+
+export interface CompanionsActions {
+  addCompanion(name: string): AddResult;
+  renameCompanion(id: string, name: string): NameResult;
+  removeCompanion(id: string): void;
+  setCompanionCurrentHitPoints(id: string, value: number): void;
+  setCompanionTotalHitPoints(id: string, value: number): void;
+  setCompanionTemporaryHitPoints(id: string, value: number): void;
+  setCompanionArmorClass(id: string, value: number): void;
+  setCompanionRollsInitiative(id: string, on: boolean): void;
+  setCompanionInitiative(id: string, value: number): void;
+  setCompanionHasHitDices(id: string, on: boolean): void;
+  addCompanionHitDie(id: string, size: number): NameResult;
+  setCompanionHitDieCurrent(id: string, size: number, value: number): void;
+  setCompanionHitDieTotal(id: string, size: number, value: number): void;
+  removeCompanionHitDie(id: string, size: number): void;
+  setCompanionAbilityScore(id: string, key: AbilityKey, value: number): void;
+  setCompanionAbilityModifier(id: string, key: AbilityKey, value: number): void;
+  setCompanionSavingThrowModifier(id: string, key: AbilityKey, value: number): void;
+  setCompanionDescription(id: string, text: string): void;
+  addCompanionCounter(
+    id: string,
+    counter: { name: string; description: string; total: number; step: number },
+  ): void;
+  renameCompanionCounter(id: string, counterId: string, name: string): NameResult;
+  setCompanionCounterDescription(id: string, counterId: string, text: string): void;
+  setCompanionCounterCurrent(id: string, counterId: string, value: number): void;
+  setCompanionCounterTotal(id: string, counterId: string, value: number): void;
+  setCompanionCounterStep(id: string, counterId: string, step: number): void;
+  removeCompanionCounter(id: string, counterId: string): void;
 }

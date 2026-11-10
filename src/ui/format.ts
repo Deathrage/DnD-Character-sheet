@@ -17,3 +17,8 @@ export function formatWhen(iso: string): string {
 export function formatSigned(value: number): string {
   return value >= 0 ? `+${value}` : String(value);
 }
+
+/** `9/16`, or `9/16 +5` with temporary hit points: one format for every place HP is summarised. */
+export function formatHitPoints(hp: { current: number; total: number; temporary: number }): string {
+  return `${hp.current}/${hp.total}${hp.temporary > 0 ? ` +${hp.temporary}` : ''}`;
+}

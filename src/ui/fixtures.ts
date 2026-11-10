@@ -5,6 +5,8 @@ import type {
   AbilityView,
   CharacterRow,
   CharacterView,
+  CompanionsActions,
+  CompanionView,
   CountersActions,
   CountersView,
   EquipmentActions,
@@ -433,6 +435,89 @@ export const sableJson = JSON.stringify(
   2,
 );
 
+const companionAbility = (score: number, modifier: number, savingThrowModifier: number) => ({
+  score,
+  modifier,
+  savingThrowModifier,
+});
+
+/** The Vestige and the Owl from the mockup: one with dice and a counter, one with neither. */
+export const companions: CompanionView[] = [
+  {
+    id: 'cp1',
+    name: 'Vestige',
+    hitPoints: { current: 9, total: 16, temporary: 0 },
+    hitDices: [{ size: 6, current: 2, total: 3 }],
+    armorClass: 16,
+    initiative: null,
+    abilities: {
+      strength: companionAbility(1, -5, -2),
+      dexterity: companionAbility(14, 2, 5),
+      constitution: companionAbility(10, 0, 3),
+      intelligence: companionAbility(15, 2, 5),
+      wisdom: companionAbility(15, 2, 5),
+      charisma: companionAbility(16, 3, 6),
+    },
+    description: [
+      'Small Undead, Neutral',
+      'Speed 5 ft., Fly 30 ft. (hover)',
+      'Resistances Necrotic',
+      'Immunities Charmed, Frightened, Prone',
+      'Senses Darkvision 60 ft.; Passive Perception 12',
+      'Languages Speaks the languages you know',
+      '',
+      'Traits',
+      'Pact Bond. Add your Proficiency Bonus to any ability check or saving throw the vestige makes.',
+      '',
+      'Actions',
+      "Vestige's Strike. Melee or Ranged Attack Roll: +6, reach 5 ft. or range 60 ft. Hit: 1d6 + 6 Necrotic damage.",
+      '',
+      'Bonus Actions',
+      'Divine Power (1/Day). Cursed Invocation: a creature within 30 ft. of the vestige is cursed for 1 minute.',
+    ].join('\n'),
+    counters: [
+      {
+        id: 'cpc1',
+        name: 'Divine Power',
+        description: 'Bonus action. Cursed Invocation, Healing Light or Rot, by form.',
+        current: 1,
+        total: 1,
+        step: 1,
+      },
+    ],
+  },
+  {
+    id: 'cp2',
+    name: 'Owl',
+    hitPoints: { current: 0, total: 1, temporary: 0 },
+    hitDices: null,
+    armorClass: 11,
+    initiative: 1,
+    abilities: {
+      strength: companionAbility(3, -4, -4),
+      dexterity: companionAbility(13, 1, 1),
+      constitution: companionAbility(8, -1, -1),
+      intelligence: companionAbility(2, -4, -4),
+      wisdom: companionAbility(12, 1, 1),
+      charisma: companionAbility(7, -2, -2),
+    },
+    description: [
+      'Tiny Celestial, Neutral',
+      'Speed 5 ft., Fly 60 ft.',
+      'Skills Perception +5, Stealth +5',
+      'Senses Darkvision 120 ft.; Passive Perception 15',
+      'Languages None',
+      '',
+      'Traits',
+      "Flyby. The owl doesn't provoke Opportunity Attacks when it flies out of an enemy's reach.",
+      '',
+      'Actions',
+      'Talons. Melee Attack Roll: +3, reach 5 ft. Hit: 1 Slashing damage.',
+    ].join('\n'),
+    counters: [],
+  },
+];
+
 /** Everything the hub renders, for the stories that show the whole sheet. */
 export const sheetData: SheetData = {
   character: sable,
@@ -443,6 +528,7 @@ export const sheetData: SheetData = {
   spellList,
   counters,
   abilitiesAndSkills,
+  companions,
 };
 
 /** No-op actions, so a story that is only about layout does not need a stub each. */
@@ -559,6 +645,34 @@ export const noAbilitiesActions: AbilitiesAndSkillsActions = {
   setSkillExpertise: () => {},
 };
 
+export const noCompanionsActions: CompanionsActions = {
+  addCompanion: () => ({ ok: true, id: 'new' }),
+  renameCompanion: () => null,
+  removeCompanion: () => {},
+  setCompanionCurrentHitPoints: () => {},
+  setCompanionTotalHitPoints: () => {},
+  setCompanionTemporaryHitPoints: () => {},
+  setCompanionArmorClass: () => {},
+  setCompanionRollsInitiative: () => {},
+  setCompanionInitiative: () => {},
+  setCompanionHasHitDices: () => {},
+  addCompanionHitDie: () => null,
+  setCompanionHitDieCurrent: () => {},
+  setCompanionHitDieTotal: () => {},
+  removeCompanionHitDie: () => {},
+  setCompanionAbilityScore: () => {},
+  setCompanionAbilityModifier: () => {},
+  setCompanionSavingThrowModifier: () => {},
+  setCompanionDescription: () => {},
+  addCompanionCounter: () => {},
+  renameCompanionCounter: () => null,
+  setCompanionCounterDescription: () => {},
+  setCompanionCounterCurrent: () => {},
+  setCompanionCounterTotal: () => {},
+  setCompanionCounterStep: () => {},
+  removeCompanionCounter: () => {},
+};
+
 export const noSheetActions: SheetActions = {
   vitals: noVitalsActions,
   journalAndNotes: noJournalActions,
@@ -568,4 +682,5 @@ export const noSheetActions: SheetActions = {
   spellList: noSpellListActions,
   counters: noCountersActions,
   abilitiesAndSkills: noAbilitiesActions,
+  companions: noCompanionsActions,
 };

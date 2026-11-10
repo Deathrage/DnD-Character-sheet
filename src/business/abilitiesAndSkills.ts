@@ -1,5 +1,10 @@
 import { integer, nonNegativeInt } from './guards.js';
-import type { AbilityData, CharacterData, SkillData } from './types.js';
+import type {
+  AbilityData,
+  AbilityWithSaveProficiencyData,
+  CharacterData,
+  SkillData,
+} from './types.js';
 
 type AbilitiesAndSkillsData = CharacterData['abilitiesAndSkills'];
 export type AbilityKey = keyof AbilitiesAndSkillsData['abilities'];
@@ -7,7 +12,7 @@ export type SkillKey = keyof AbilitiesAndSkillsData['skills'];
 
 export class AbilitiesAndSkillsBO {
   readonly #node: AbilitiesAndSkillsData;
-  readonly abilities: Record<AbilityKey, AbilityBO>;
+  readonly abilities: Record<AbilityKey, AbilityWithSaveProficiencyBO>;
   readonly skills: Record<SkillKey, SkillBO>;
 
   constructor(node: AbilitiesAndSkillsData) {
@@ -18,9 +23,9 @@ export class AbilitiesAndSkillsBO {
     this.abilities = Object.fromEntries(
       Object.keys(node.abilities).map((key) => [
         key,
-        new AbilityBO(node.abilities[key as AbilityKey]),
+        new AbilityWithSaveProficiencyBO(node.abilities[key as AbilityKey]),
       ]),
-    ) as Record<AbilityKey, AbilityBO>;
+    ) as Record<AbilityKey, AbilityWithSaveProficiencyBO>;
 
     this.skills = Object.fromEntries(
       Object.keys(node.skills).map((key) => [key, new SkillBO(node.skills[key as SkillKey])]),
@@ -84,6 +89,16 @@ export class AbilityBO {
 
   setSavingThrowModifier(value: number): void {
     this.#node.savingThrowModifier = integer(value);
+  }
+}
+
+/** A character's ability: `AbilityBO`'s three numbers plus saving-throw proficiency. */
+export class AbilityWithSaveProficiencyBO extends AbilityBO {
+  readonly #node: AbilityWithSaveProficiencyData;
+
+  constructor(node: AbilityWithSaveProficiencyData) {
+    super(node);
+    this.#node = node;
   }
 
   get savingThrowProficient(): boolean {

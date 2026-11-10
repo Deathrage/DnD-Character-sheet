@@ -8,6 +8,7 @@ import { migrateV3ToV4 } from '../migration/v3ToV4.js';
 import { migrateV4ToV5 } from '../migration/v4ToV5.js';
 import { migrateV5ToV6 } from '../migration/v5ToV6.js';
 import { migrateV6ToV7 } from '../migration/v6ToV7.js';
+import { migrateV7ToV8 } from '../migration/v7ToV8.js';
 import { CURRENT, type CharacterDocument } from '../schema/index.js';
 import {
   bytesToPortrait,
@@ -40,8 +41,10 @@ describe('codec', () => {
     // `parseCharacter` migrates a stored document.
     expect(decoded).toEqual({
       ok: true,
-      doc: migrateV6ToV7(
-        migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(zahir))))),
+      doc: migrateV7ToV8(
+        migrateV6ToV7(
+          migrateV5ToV6(migrateV4ToV5(migrateV3ToV4(migrateV2ToV3(migrateV1ToV2(zahir))))),
+        ),
       ),
       portrait: null,
     });

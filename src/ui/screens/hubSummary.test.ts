@@ -1,4 +1,5 @@
 import { sheetData } from '../fixtures.js';
+import type { CompanionView } from '../types.js';
 import type { SheetData } from './CharacterHub.js';
 import { summariseSections } from './hubSummary.js';
 
@@ -22,13 +23,34 @@ const empty: SheetData = {
     spellSlots: [1, 2, 3].map((level) => ({ level, current: 0, total: 0 })),
     pactSlots: { level: 1, current: 0, total: 0 },
   },
+  companions: [],
 };
 
 describe('summariseSections', () => {
   it('says so when a section holds nothing', () => {
     const lines = summariseSections(empty);
-    for (const key of ['journal', 'inventory', 'feats', 'equipment', 'spells', 'counters'] as const)
-      expect(lines[key]).toBe('Nothing yet');
+    const keys = [
+      'journal',
+      'inventory',
+      'feats',
+      'equipment',
+      'spells',
+      'counters',
+      'companions',
+    ] as const;
+    for (const key of keys) expect(lines[key]).toBe('Nothing yet');
+  });
+
+  // Two named at most, so each one's hit points still fit the hub's line at 320px.
+  it('names the first two companions with their hit points, then counts the rest', () => {
+    const [vestige, owl] = sheetData.companions as [CompanionView, CompanionView];
+    const two = [{ ...vestige, hitPoints: { ...vestige.hitPoints, temporary: 5 } }, owl];
+    expect(summariseSections({ ...empty, companions: two }).companions).toBe(
+      'Vestige 9/16 +5 · Owl 0/1',
+    );
+    expect(summariseSections({ ...empty, companions: [...two, owl] }).companions).toBe(
+      'Vestige 9/16 +5 · Owl 0/1 · 1 more',
+    );
   });
 
   it('counts journal days, singular and plural', () => {

@@ -145,4 +145,24 @@ describe('CharacterSheetBO.observe', () => {
     expect(listener).toHaveBeenCalledTimes(1);
     expect(sheet.toDocument().featsAndTraits.uncategorized[0]?.name).toBe('Sneak Attack (2d6)');
   });
+
+  it("sees a die added right after switching a companion's hit dice on", () => {
+    const sheet = new CharacterSheetBO(
+      createCharacter({
+        name: 'Sable',
+        id: '3f1a6c2e-8b4d-4a19-9c7e-1d2b3a4c5d6e',
+        now: new Date('2026-07-25T09:41:00.000Z'),
+      }),
+    );
+    const owl = sheet.companions.add('Owl');
+    const listener = vi.fn();
+    sheet.observe(listener);
+
+    owl.setHasHitDices(true);
+    listener.mockClear();
+    owl.hitDices?.add(6);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    expect(sheet.toDocument().companions[0]?.hitDices).toEqual({ '6': { current: 0, total: 0 } });
+  });
 });

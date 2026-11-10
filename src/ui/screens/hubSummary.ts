@@ -1,4 +1,4 @@
-import { formatSigned } from '../format.js';
+import { formatHitPoints, formatSigned } from '../format.js';
 import { COINS, ordinal } from '../reference.js';
 import type { CategorizedView, SectionKey } from '../types.js';
 import type { SheetData } from './CharacterHub.js';
@@ -52,6 +52,13 @@ export function summariseSections(data: SheetData): Record<SectionKey, string> {
         (slots.length > 0 ? `${otherCounters} more` : plural(otherCounters, 'counter')),
     ]),
     abilities: `Prof ${formatSigned(proficiencyBonus)} · Pas. per. ${passivePerception} · Speed ${speed}`,
+    // Two at most: at 320px the line has room for two names with their hit points.
+    companions: line([
+      ...data.companions
+        .slice(0, 2)
+        .map(({ name, hitPoints }) => `${name} ${formatHitPoints(hitPoints)}`),
+      data.companions.length > 2 && `${data.companions.length - 2} more`,
+    ]),
   };
 }
 

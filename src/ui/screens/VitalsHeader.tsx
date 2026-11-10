@@ -6,6 +6,9 @@ import { Portrait } from '../components/Portrait.js';
 import { PortraitCropper } from '../components/PortraitCropper.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import { ConfirmDelete } from '../components/ConfirmDelete.js';
+import { HitDiceDialog } from '../components/HitDiceDialog.js';
+import { VitalTiles } from '../components/VitalTiles.js';
+import { formatHitPoints } from '../format.js';
 import type { Crop } from '../portrait.js';
 import { usePersistedState } from '../persistedState.js';
 import type { CharacterView, DeathSavesView, HitPointsView, VitalsActions } from '../types.js';
@@ -85,71 +88,21 @@ export const VitalsHeader = memo(function VitalsHeader({ character, actions, onB
         </div>
       </div>
 
+      {/* Initiative is stored beside armor class and, like it, edited only here. It took speed's
+          tile; speed is edited on Abilities & Skills only. */}
       {!collapsed && (
-        <div className="tiles">
-          <div className="tile hp">
-            <div>
-              <div className="tl">Hit Points</div>
-              <div className="hpwrap">
-                {/* Steppers go on the numbers that move during a fight — current HP and temp —
-                  and not on max HP or AC, which are set once a level and would only lose the
-                  row the width. */}
-                <NumberField
-                  label="Current hit points"
-                  value={character.hitPoints.current}
-                  onChange={actions.setCurrentHitPoints}
-                  stepper
-                />
-                <span className="slash">/</span>
-                <NumberField
-                  label="Total hit points"
-                  value={character.hitPoints.total}
-                  onChange={actions.setTotalHitPoints}
-                />
-              </div>
-            </div>
-            <div className="tempbox">
-              <div className="tl">Temp</div>
-              <NumberField
-                label="Temporary hit points"
-                value={character.hitPoints.temporary}
-                onChange={actions.setTemporaryHitPoints}
-                stepper
-              />
-            </div>
-            {showsDeathSaves(character.hitPoints) && (
-              <DeathSaves saves={character.hitPoints.deathSaves} actions={actions} />
-            )}
-          </div>
-
-          <button type="button" className="tile btn" onClick={() => setDialog('hitDice')}>
-            <span className="tl">Hit Dices</span>
-            <span className="tval hdtile">{summariseHitDice(character)}</span>
-          </button>
-
-          <div className="tile ac">
-            {/* "AC", not "Armor Class": at a quarter of the row the long form wraps. */}
-            <div className="tl">AC</div>
-            <NumberField
-              label="Armor class"
-              value={character.armorClass}
-              onChange={actions.setArmorClass}
-            />
-          </div>
-
-          {/* Rolled at the start of every fight, so it sits with AC rather than behind a tap.
-              Signed: it is a modifier. Stored beside armor class and, like it, edited only here.
-              It took speed's tile; speed is edited on Abilities & Skills only. */}
-          <div className="tile">
-            <div className="tl">Initiative</div>
-            <NumberField
-              label="Initiative"
-              value={character.initiative}
-              onChange={actions.setInitiative}
-              signed
-            />
-          </div>
-        </div>
+        <VitalTiles
+          hitPoints={character.hitPoints}
+          hitDices={character.hitDices}
+          armorClass={character.armorClass}
+          initiative={character.initiative}
+          actions={actions}
+          onOpenHitDice={() => setDialog('hitDice')}
+        >
+          {showsDeathSaves(character.hitPoints) && (
+            <DeathSaves saves={character.hitPoints.deathSaves} actions={actions} />
+          )}
+        </VitalTiles>
       )}
 
       <ClassesDialog
@@ -161,7 +114,7 @@ export const VitalsHeader = memo(function VitalsHeader({ character, actions, onB
       <HitDiceDialog
         open={dialog === 'hitDice'}
         onClose={() => setDialog(null)}
-        character={character}
+        dice={character.hitDices}
         actions={actions}
       />
       <PortraitDialog
@@ -374,18 +327,11 @@ function DeathSaveBoxes({ side, label, count, onChange }: DeathSaveBoxesProps) {
   );
 }
 
-function summariseHitDice({ hitDices }: CharacterView): string {
-  if (hitDices.length === 0) return 'Tap to set up';
-  // A no-break space inside each die, so a narrow tile wraps between dice and never splits one.
-  return hitDices.map((die) => `${die.current}/${die.total}\u00a0d${die.size}`).join(' · ');
-}
-
 function summariseVitals({ level, hitPoints, hitDices, armorClass }: CharacterView): string {
-  const temp = hitPoints.temporary > 0 ? ` +${hitPoints.temporary}` : '';
   const { successes, failures } = hitPoints.deathSaves;
   return [
     `Lvl ${level}`,
-    `HP ${hitPoints.current}/${hitPoints.total}${temp}`,
+    `HP ${formatHitPoints(hitPoints)}`,
     ...(showsDeathSaves(hitPoints) ? [`Death ✓${successes} ✕${failures}`] : []),
     ...hitDices.map((die) => `${die.current}/${die.total} d${die.size}`),
     `AC ${armorClass}`,
@@ -438,59 +384,6 @@ function ClassesDialog({ open, onClose, character, actions }: DialogProps) {
         onAdd={actions.addClass}
       />
       <div className="hint">Total level: {character.level}</div>
-    </ResponsiveDialog>
-  );
-}
-
-function HitDiceDialog({ open, onClose, character, actions }: DialogProps) {
-  return (
-    <ResponsiveDialog title="Hit Dices" open={open} onClose={onClose}>
-      <div className="hint" style={{ marginTop: 0 }}>
-        Set up each die type with its total and current count.
-      </div>
-      {character.hitDices.length === 0 && <div className="empty">No hit dices yet.</div>}
-      {character.hitDices.map((die) => (
-        <div className="hdrow" key={die.size}>
-          {/* The die size is the key of the stored record, so it is displayed, not edited:
-              changing it would be a delete plus an add, which the two buttons already do. */}
-          <span className="dtype">d{die.size}</span>
-          <span className="lab">Cur</span>
-          {/* Spending and regaining hit dice on a rest is the other repeated tap. The total
-              beside it is a property of the character, not something you tick. */}
-          <NumberField
-            label={`Current d${die.size}`}
-            className="curinp"
-            value={die.current}
-            onChange={(value) => actions.setHitDieCurrent(die.size, value)}
-            stepper
-          />
-          <span className="lab">Total</span>
-          <NumberField
-            label={`Total d${die.size}`}
-            className="curinp total"
-            value={die.total}
-            onChange={(value) => actions.setHitDieTotal(die.size, value)}
-          />
-          <ConfirmDelete
-            className="delx"
-            aria-label={`Remove d${die.size}`}
-            what={`The d${die.size} hit die`}
-            onConfirm={() => actions.removeHitDie(die.size)}
-          >
-            {'✕'}
-          </ConfirmDelete>
-        </div>
-      ))}
-      <AddByName
-        label="New die size"
-        placeholder="8"
-        button="Add die type"
-        onAdd={(text) => {
-          const size = Number(text.trim());
-          if (!/^\d+$/.test(text.trim()) || size < 1) return 'A die size is a whole number, e.g. 8';
-          return actions.addHitDie(size);
-        }}
-      />
     </ResponsiveDialog>
   );
 }

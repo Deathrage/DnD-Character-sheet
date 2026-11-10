@@ -19,7 +19,7 @@
 export { CharacterSheetBO, createCharacterSheet } from './characterSheet.js';
 export { RuleViolation, type RuleCode } from './errors.js';
 export { ClassesBO, ClassBO, type NewClass } from './classes.js';
-export { DeathSavesBO, HitPointsBO } from './hitPoints.js';
+export { DeathSavesBO, HitPointsBO, HitPointsWithDeathSavesBO } from './hitPoints.js';
 export { HitDicesBO, HitDieBO } from './hitDices.js';
 export { JournalAndNotesBO, JournalDayBO } from './journalAndNotes.js';
 export { InventoryBO, CoinsBO, InventoryItemBO, type NewInventoryItem } from './inventory.js';
@@ -35,10 +35,17 @@ export { CategoryBO, type NewNamedItem } from './categorized.js';
 export { FeatBO, type FeatsAndTraitsBO } from './featsAndTraits.js';
 export { SpellBO, SpellListBO, type SpellLevel } from './spellList.js';
 export { SpellcastingBO, SpellcastingEntryBO } from './spellcasting.js';
+export {
+  CompanionsBO,
+  CompanionBO,
+  CompanionCountersBO,
+  CompanionCounterBO,
+} from './companions.js';
 export { CountersBO, CounterBO, PactSlotsBO, SpellSlotBO } from './counters.js';
 export {
   AbilitiesAndSkillsBO,
   AbilityBO,
+  AbilityWithSaveProficiencyBO,
   SkillBO,
   type AbilityKey,
   type SkillKey,

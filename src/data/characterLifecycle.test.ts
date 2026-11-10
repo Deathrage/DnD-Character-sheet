@@ -41,6 +41,37 @@ describe('the character lifecycle, end to end across the data layer', () => {
         step: 0.5,
       },
     ];
+    // A companion whose zeros and empties are values: 0 and {}, not null, so a hop that reads them
+    // as off fails. Distinct ability numbers, and a counter in parts.
+    created.companions = [
+      {
+        id: 'f6f6f6f6-f6f6-4f6f-8f6f-f6f6f6f6f6f6',
+        name: 'Owl',
+        hitPoints: { current: 1, total: 1, temporary: 0 },
+        hitDices: {},
+        armorClass: 11,
+        initiative: 0,
+        abilities: {
+          strength: { score: 3, modifier: -4, savingThrowModifier: -4 },
+          dexterity: { score: 13, modifier: 1, savingThrowModifier: 2 },
+          constitution: { score: 8, modifier: -1, savingThrowModifier: -1 },
+          intelligence: { score: 2, modifier: -4, savingThrowModifier: -3 },
+          wisdom: { score: 12, modifier: 1, savingThrowModifier: 3 },
+          charisma: { score: 7, modifier: -2, savingThrowModifier: -2 },
+        },
+        description: 'Flyby',
+        counters: [
+          {
+            id: '0a0a0a0a-0a0a-4a0a-8a0a-0a0a0a0a0a0a',
+            name: 'Talons',
+            description: '',
+            current: 0.5,
+            total: 1,
+            step: 0.25,
+          },
+        ],
+      },
+    ];
     // A stackable weapon with none left: 0, not null, so a hop that reads 0 as "no count" fails.
     created.equipment.weapons = [
       {

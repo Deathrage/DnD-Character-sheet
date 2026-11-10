@@ -1,19 +1,18 @@
 import { RuleViolation } from './errors.js';
 import { nonNegativeInt } from './guards.js';
-import type { DeathSavesData, HitPointsData } from './types.js';
+import type { DeathSavesData, HitPointsData, HitPointsWithDeathSavesData } from './types.js';
 
 // Duplicated rather than imported, like `SPELL_SLOT_LEVELS` in `counters.ts`: it is a fact about
 // one schema version (v4's `deathSaveCount`), and `src/business/` may not import a version
 // directory. A fourth tick would make the document unsaveable, so it is refused here instead.
 const DEATH_SAVE_BOXES = 3;
 
+/** The three numbers a character and a companion share. Death saves are the character's alone. */
 export class HitPointsBO {
   readonly #node: HitPointsData;
-  readonly deathSaves: DeathSavesBO;
 
   constructor(node: HitPointsData) {
     this.#node = node;
-    this.deathSaves = new DeathSavesBO(node.deathSaves);
   }
 
   get current(): number {
@@ -42,6 +41,15 @@ export class HitPointsBO {
 
   setTemporary(value: number): void {
     this.#node.temporary = nonNegativeInt(value);
+  }
+}
+
+export class HitPointsWithDeathSavesBO extends HitPointsBO {
+  readonly deathSaves: DeathSavesBO;
+
+  constructor(node: HitPointsWithDeathSavesData) {
+    super(node);
+    this.deathSaves = new DeathSavesBO(node.deathSaves);
   }
 }
 

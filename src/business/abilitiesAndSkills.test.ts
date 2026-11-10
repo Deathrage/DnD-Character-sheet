@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCharacter } from '../data/schema/index.js';
 import { CharacterSheetBO } from './characterSheet.js';
+import { AbilityBO } from './abilitiesAndSkills.js';
 
 const sheetFor = () =>
   new CharacterSheetBO(
@@ -69,7 +70,7 @@ describe('AbilitiesAndSkillsBO', () => {
   );
 });
 
-describe('AbilityBO', () => {
+describe('AbilityWithSaveProficiencyBO', () => {
   it.each(ABILITIES)('%s writes its four fields independently', (key) => {
     const { abilities } = sheetFor().abilitiesAndSkills;
     const ability = abilities[key];
@@ -168,5 +169,25 @@ describe('SkillBO', () => {
       proficient: true,
       expertise: false,
     });
+  });
+});
+
+describe('AbilityBO', () => {
+  const node = () => ({ score: 10, modifier: 0, savingThrowModifier: 0 });
+
+  it('an AbilityBO has no saving throw proficiency', () => {
+    expect(new AbilityBO(node())).not.toHaveProperty('savingThrowProficient');
+  });
+
+  it('an AbilityWithSaveProficiencyBO is an AbilityBO', () => {
+    expect(sheetFor().abilitiesAndSkills.abilities.strength).toBeInstanceOf(AbilityBO);
+  });
+
+  it('writes its three numbers', () => {
+    const a = new AbilityBO(node());
+    a.setScore(14);
+    a.setModifier(-1);
+    a.setSavingThrowModifier(3);
+    expect([a.score, a.modifier, a.savingThrowModifier]).toEqual([14, -1, 3]);
   });
 });

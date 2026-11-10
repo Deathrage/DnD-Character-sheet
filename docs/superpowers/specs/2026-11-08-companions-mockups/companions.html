@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<link rel="stylesheet" href="/src/ui/styles.css" />
+<style>
+  /* The design's new CSS, nothing else. Existing tokens only. */
+  /* 1. A companion's body: the sheet's own tiles, ability table and text, under its heading. */
+  .compbody { padding: 0 0 16px; }
+  .compbody .tiles { margin-top: 2px; }
+  /* 2. A companion has no proficiency mark, so its Save is a box like Score and Mod. */
+  .abhead.nomark, .abrow.nomark { grid-template-columns: 44px 1fr 1fr 1fr; }
+  /* 3. A companion's own Counters: a small label with its add button, then the Counters rows. */
+  .compsub { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+  .compsub .dlabel { margin: 0; }
+  /* 4. Abilities, Stat block and Counters each fold, like a category, at the size of their label. */
+  .subtoggle { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+  /* 6. The Stat block starts at Notes' 8 rows and grows with its text where the browser can. */
+  @supports (field-sizing: content) {
+    .compbody .area { field-sizing: content; min-height: calc(8lh + 18px); }
+  }
+  /* 7. Off, Initiative is a state, not a number: set quieter than a typed value. */
+  .tile .tval.off { font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: var(--ink-2); }
+  /* 8. An open companion's heading stays under the screen's title while its body scrolls, and the
+        whole heading row folds it, not only the text. */
+  .sechead-row[data-c] { position: sticky; top: var(--svhead-h, 52px); z-index: 4; background: var(--paper); }
+  .sechead-row[data-c] .sechead { flex: 1 1 auto; min-height: 40px; }
+</style>
+<title>Companions mockup: sheet</title></head><body><div id="root"><div class="app">
+<div class="vitals"><div class="vident"><button type="button" class="back" aria-label="Back to characters">‹</button><button type="button" class="token" aria-label="View portrait"><span class="portrait empty" aria-hidden="true">S</span></button><div class="vidmain"><div class="vtop"><span class="nameField"><input class="vname" autocomplete="off" aria-label="Character name" value="Sable Nightwind"></span><button type="button" class="vtoggle" aria-label="Collapse vitals" aria-expanded="true">›</button></div><button type="button" class="classbtn"><span class="lvpill">Lvl 5</span><span class="clsum">Warlock (Vestige) · Wizard (Evoker)</span><span class="chev">›</span></button></div></div><div class="tiles"><div class="tile hp"><div><div class="tl">Hit Points</div><div class="hpwrap"><span class="stepper"><button type="button" class="step">−</button><input class="num" value="31"><button type="button" class="step">+</button></span><span class="slash">/</span><input class="num" value="33"></div></div><div class="tempbox"><div class="tl">Temp</div><span class="stepper"><button type="button" class="step" disabled>−</button><input class="num" value="0"><button type="button" class="step">+</button></span></div></div><button type="button" class="tile btn"><span class="tl">Hit Dices</span><span class="tval hdtile">2/2&nbsp;d6 · 3/3&nbsp;d8</span></button><div class="tile ac"><div class="tl">AC</div><input class="num" value="13"></div><div class="tile"><div class="tl">Initiative</div><input class="num" value="+2"></div></div></div>
+<div class="bottom"><div class="sv">
+<div class="svhead"><button type="button" class="back" aria-label="Back to sections">‹</button><span class="t">Companions</span></div>
+
+<div class="sechead-row" data-c="vestige"><button type="button" class="sechead" aria-expanded="true"><span class="caret" aria-hidden="true">▾</span><span class="nmtxt">Vestige</span><span class="ccount">9/16</span></button><span class="sec-actions"><button type="button" class="editcat" aria-label="Edit companion Vestige">✎</button></span></div>
+<div class="compbody" data-c="vestige">
+  <div class="tiles" data-c="vestige">
+    <div class="tile hp"><div><div class="tl">Hit Points</div><div class="hpwrap"><span class="stepper"><button type="button" class="step" aria-label="Decrease Vestige hit points">−</button><input class="num" inputmode="numeric" aria-label="Vestige hit points" value="9"><button type="button" class="step" aria-label="Increase Vestige hit points">+</button></span><span class="slash">/</span><input class="num" inputmode="numeric" aria-label="Vestige total hit points" value="16"></div></div><div class="tempbox"><div class="tl">Temp</div><span class="stepper"><button type="button" class="step" disabled>−</button><input class="num" inputmode="numeric" aria-label="Vestige temporary hit points" value="0"><button type="button" class="step">+</button></span></div></div>
+    <button type="button" class="tile btn hdt"><span class="tl">Hit Dices</span><span class="tval hdtile"></span></button><div class="tile hdoff"><div class="tl">Hit Dices</div><span class="tval off">No hit dices</span></div>
+    <div class="tile ac"><div class="tl">AC</div><input class="num" inputmode="numeric" aria-label="Vestige armor class" value="16"></div>
+    <div class="tile init"><div class="tl">Initiative</div><input class="num" inputmode="text" aria-label="Vestige initiative" value="+0"><span class="tval off">Uses yours</span></div>
+  </div>
+  <div class="compsub"><button type="button" class="subtoggle" aria-expanded="true"><span class="caret" aria-hidden="true">▾</span><span class="dlabel">Abilities</span></button></div>
+  <div class="subbody">
+  <div class="abhead nomark" aria-hidden="true"><span>Ability</span><span>Score</span><span>Mod</span><span>Save</span></div>
+  <div class="abrow nomark"><span class="an">STR</span><input class="num" value="1"><input class="num" value="-5"><input class="num" value="-2"></div>
+  <div class="abrow nomark"><span class="an">DEX</span><input class="num" value="14"><input class="num" value="+2"><input class="num" value="+5"></div>
+  <div class="abrow nomark"><span class="an">CON</span><input class="num" value="10"><input class="num" value="+0"><input class="num" value="+3"></div>
+  <div class="abrow nomark"><span class="an">INT</span><input class="num" value="15"><input class="num" value="+2"><input class="num" value="+5"></div>
+  <div class="abrow nomark"><span class="an">WIS</span><input class="num" value="15"><input class="num" value="+2"><input class="num" value="+5"></div>
+  <div class="abrow nomark"><span class="an">CHA</span><input class="num" value="16"><input class="num" value="+3"><input class="num" value="+6"></div>
+  </div>
+  <div class="compsub"><button type="button" class="subtoggle" aria-expanded="true"><span class="caret" aria-hidden="true">▾</span><span class="dlabel">Stat block</span></button></div>
+  <div class="subbody">
+  <textarea id="vestige-stat-block" aria-label="Vestige stat block" class="area" rows="8" placeholder="Freeform notes…">Small Undead, Neutral
+Speed 5 ft., Fly 30 ft. (hover)
+Resistances Necrotic
+Immunities Charmed, Frightened, Prone
+Senses Darkvision 60 ft.; Passive Perception 12
+Languages Speaks the languages you know
+
+Traits
+Pact Bond. Add your Proficiency Bonus to any ability check or saving throw the vestige makes.
+
+Actions
+Vestige's Strike. Melee or Ranged Attack Roll: +6, reach 5 ft. or range 60 ft. Hit: 1d6 + 6 Necrotic damage.
+
+Bonus Actions
+Divine Power (1/Day). Cursed Invocation: a creature within 30 ft. of the vestige is cursed for 1 minute.</textarea>
+  </div>
+  <div class="compsub"><button type="button" class="subtoggle" aria-expanded="true"><span class="caret" aria-hidden="true">▾</span><span class="dlabel">Counters</span></button><button type="button" class="addmini" aria-label="Add counter to Vestige">+</button></div>
+  <div class="subbody">
+  <div class="rec"><button type="button" class="recopen"><span class="nm">Divine Power</span><span class="pv">Bonus action. Cursed Invocation, Healing Light or Rot, by form.</span></button><span class="valcluster"><span class="stepper"><button type="button" class="step" aria-label="Decrease Divine Power remaining">−</button><input class="curinp" inputmode="decimal" autocomplete="off" aria-label="Divine Power remaining" value="1"><button type="button" class="step" aria-label="Increase Divine Power remaining">+</button></span><span class="maxlbl">/ 1</span></span></div>
+  </div>
+</div>
+
+<div class="sechead-row" data-c="owl"><button type="button" class="sechead" aria-expanded="false"><span class="caret" aria-hidden="true">▸</span><span class="nmtxt">Owl</span><span class="ccount">0/1</span></button><span class="sec-actions"><button type="button" class="editcat" aria-label="Edit companion Owl">✎</button></span></div>
+<div class="compbody" data-c="owl" hidden>
+  <div class="tiles" data-c="owl">
+    <div class="tile hp"><div><div class="tl">Hit Points</div><div class="hpwrap"><span class="stepper"><button type="button" class="step" disabled>−</button><input class="num" inputmode="numeric" aria-label="Owl hit points" value="0"><button type="button" class="step">+</button></span><span class="slash">/</span><input class="num" inputmode="numeric" aria-label="Owl total hit points" value="1"></div></div><div class="tempbox"><div class="tl">Temp</div><span class="stepper"><button type="button" class="step" disabled>−</button><input class="num" inputmode="numeric" aria-label="Owl temporary hit points" value="0"><button type="button" class="step">+</button></span></div></div>
+    <button type="button" class="tile btn hdt"><span class="tl">Hit Dices</span><span class="tval hdtile"></span></button><div class="tile hdoff"><div class="tl">Hit Dices</div><span class="tval off">No hit dices</span></div>
+    <div class="tile ac"><div class="tl">AC</div><input class="num" inputmode="numeric" aria-label="Owl armor class" value="11"></div>
+    <div class="tile init"><div class="tl">Initiative</div><input class="num" inputmode="text" aria-label="Owl initiative" value="+1"><span class="tval off">Uses yours</span></div>
+  </div>
+  <div class="compsub"><button type="button" class="subtoggle" aria-expanded="true"><span class="caret" aria-hidden="true">▾</span><span class="dlabel">Abilities</span></button></div>
+  <div class="subbody">
+  <div class="abhead nomark" aria-hidden="true"><span>Ability</span><span>Score</span><span>Mod</span><span>Save</span></div>
+  <div class="abrow nomark"><span class="an">STR</span><input class="num" value="3"><input class="num" value="-4"><input class="num" value="-4"></div>
+  <div class="abrow nomark"><span class="an">DEX</span><input class="num" value="13"><input class="num" value="+1"><input class="num" value="+1"></div>
+  <div class="abrow nomark"><span class="an">CON</span><input class="num" value="8"><input class="num" value="-1"><input class="num" value="-1"></div>
+  <div class="abrow nomark"><span class="an">INT</span><input class="num" value="2"><input class="num" value="-4"><input class="num" value="-4"></div>
+  <div class="abrow nomark"><span class="an">WIS</span><input class="num" value="12"><input class="num" value="+1"><input class="num" value="+1"></div>
+  <div class="abrow nomark"><span class="an">CHA</span><input class="num" value="7"><input class="num" value="-2"><input class="num" value="-2"></div>
+  </div>
+  <div class="compsub"><button type="button" class="subtoggle" aria-expanded="true"><span class="caret" aria-hidden="true">▾</span><span class="dlabel">Stat block</span></button></div>
+  <div class="subbody">
+  <textarea id="owl-stat-block" aria-label="Owl stat block" class="area" rows="8">Tiny Celestial, Neutral
+Speed 5 ft., Fly 60 ft.
+Skills Perception +5, Stealth +5
+Senses Darkvision 120 ft.; Passive Perception 15
+Languages None
+
+Traits
+Flyby. The owl doesn't provoke Opportunity Attacks when it flies out of an enemy's reach.
+
+Actions
+Talons. Melee Attack Roll: +3, reach 5 ft. Hit: 1 Slashing damage.</textarea>
+  </div>
+  <div class="compsub"><button type="button" class="subtoggle" aria-expanded="true"><span class="caret" aria-hidden="true">▾</span><span class="dlabel">Counters</span></button><button type="button" class="addmini" aria-label="Add counter to Owl">+</button></div>
+  <div class="subbody">
+  </div>
+</div>
+
+<button type="button" class="newcat">+ New companion</button>
+</div></div></div></div>
+
+<dialog class="dialog" id="edit" aria-label="Companion"><div class="dhead"><span class="t">Companion</span><button type="button" class="close" aria-label="Close">×</button></div>
+<span class="dlabel">Companion name</span><span class="nameField"><input class="inp" autocomplete="off" aria-label="Companion name" value="Vestige"></span>
+<label class="chkrow"><input class="chkinput" type="checkbox" id="sw-init"><span class="box" aria-hidden="true">✓</span><span class="lab">Rolls initiative</span></label>
+<div class="hint">Leave it off if it uses your initiative.</div>
+<label class="chkrow"><input class="chkinput" type="checkbox" id="sw-hd"><span class="box" aria-hidden="true">✓</span><span class="lab">Hit Dices</span></label>
+<div class="hint">Leave it off if it has none.</div>
+<div class="dact"><button type="button" class="del">Delete companion</button></div></dialog>
+<dialog class="dialog" id="hd" aria-label="Hit Dices"><div class="dhead"><span class="t" id="hd-title">Hit Dices</span><button type="button" class="close" aria-label="Close">×</button></div><div class="hint" style="margin-top: 0px;">Set up each die type with its total and current count.</div><div id="hd-rows"></div><div class="addrow"><input class="inp" id="hd-new" inputmode="numeric" aria-label="New die size" placeholder="8" value=""><button type="button" class="txtbtn" id="hd-add" disabled>+ Add die type</button></div></dialog>
+<dialog class="dialog" id="new" aria-label="New companion"><div class="dhead"><span class="t">New companion</span><button type="button" class="close" aria-label="Close">×</button></div><div class="addrow"><input class="inp" aria-label="Companion name" placeholder="e.g. Owl" value=""><button type="button" class="txtbtn" disabled>+ Create</button></div></dialog>
+
+<script>
+  // Mockup only: ?open=vestige,owl picks the expanded companions, ?dialog=edit|new opens one,
+  // and the headings toggle as the app's do.
+  const params = new URLSearchParams(location.search);
+  const open = params.has('open') ? params.get('open').split(',') : [];
+  const set = (c, on) => {
+    const head = document.querySelector(`.sechead-row[data-c="${c}"] .sechead`);
+    head.setAttribute('aria-expanded', String(on));
+    head.querySelector('.caret').textContent = on ? '▾' : '▸';
+    document.querySelector(`.compbody[data-c="${c}"]`).hidden = !on;
+  };
+  for (const c of ['vestige', 'owl']) set(c, open.includes(c));
+  for (const head of document.querySelectorAll('.sechead-row[data-c] .sechead')) {
+    head.addEventListener('click', () => {
+      const c = head.parentElement.dataset.c;
+      set(c, head.getAttribute('aria-expanded') !== 'true');
+    });
+  }
+  for (const t of document.querySelectorAll('.subtoggle')) {
+    t.addEventListener('click', () => {
+      const on = t.getAttribute('aria-expanded') !== 'true';
+      t.setAttribute('aria-expanded', String(on));
+      t.querySelector('.caret').textContent = on ? '▾' : '▸';
+      t.parentElement.nextElementSibling.hidden = !on;
+    });
+  }
+  const state = {
+    vestige: { init: false, dice: [{ size: 6, cur: 2, tot: 3 }] },
+    owl: { init: true, dice: null },
+  };
+  const show = (el, on) => { el.style.display = on ? '' : 'none'; };
+  let current = null;
+  const draw = (c) => {
+    const st = state[c];
+    const tiles = document.querySelector('.tiles[data-c="' + c + '"]');
+    const init = tiles.querySelector('.init');
+    show(init.querySelector('input'), st.init);
+    show(init.querySelector('.tval'), !st.init);
+    const on = st.dice !== null;
+    show(tiles.querySelector('.hdt'), on);
+    show(tiles.querySelector('.hdoff'), !on);
+    tiles.querySelector('.hdtile').textContent = on && st.dice.length > 0
+      ? st.dice.map((d) => d.cur + '/' + d.tot + '\u00a0d' + d.size).join(' · ')
+      : 'Tap to set up';
+    if (current !== c) return;
+    document.getElementById('sw-init').checked = st.init;
+    document.getElementById('sw-hd').checked = on;
+    document.getElementById('hd-rows').innerHTML = (st.dice || []).map((d, i) =>
+      '<div class="hdrow"><span class="dtype">d' + d.size + '</span><span class="lab">Cur</span><span class="stepper"><button type="button" class="step">−</button><input class="curinp" value="' + d.cur + '"><button type="button" class="step">+</button></span><span class="lab">Total</span><input class="curinp total" value="' + d.tot + '"><button type="button" class="delx" data-i="' + i + '" aria-label="Remove d' + d.size + '">✕</button></div>').join('') ||
+      '<div class="empty">No hit dices yet.</div>';
+  };
+  for (const c of Object.keys(state)) draw(c);
+  for (const b of document.querySelectorAll('.editcat')) {
+    b.addEventListener('click', () => {
+      current = b.closest('.sechead-row').dataset.c;
+      const edit = document.getElementById('edit');
+      edit.querySelector('input').value = b.closest('.sechead-row').querySelector('.nmtxt').textContent;
+      draw(current);
+      edit.showModal();
+    });
+  }
+  document.getElementById('sw-init').addEventListener('change', (e) => {
+    state[current].init = e.target.checked;
+    if (e.target.checked) document.querySelector('.tiles[data-c="' + current + '"] .init input').value = '+0';
+    draw(current);
+  });
+  document.getElementById('sw-hd').addEventListener('change', (e) => {
+    state[current].dice = e.target.checked ? [] : null;
+    draw(current);
+  });
+  for (const t of document.querySelectorAll('.hdt')) {
+    t.addEventListener('click', () => {
+      current = t.closest('.tiles').dataset.c;
+      draw(current);
+      const name = document.querySelector('.sechead-row[data-c="' + current + '"] .nmtxt').textContent;
+      document.getElementById('hd-title').textContent = name + ': Hit Dices';
+      document.getElementById('hd').showModal();
+    });
+  }
+  document.getElementById('hd').addEventListener('close', () => { current = null; });
+  document.getElementById('hd-rows').addEventListener('click', (e) => {
+    const i = e.target.dataset && e.target.dataset.i;
+    if (i === undefined) return;
+    state[current].dice.splice(Number(i), 1);
+    draw(current);
+  });
+  const hdNew = document.getElementById('hd-new');
+  const hdAdd = document.getElementById('hd-add');
+  hdNew.addEventListener('input', () => { hdAdd.disabled = !/^[1-9]\d*$/.test(hdNew.value.trim()); });
+  hdAdd.addEventListener('click', () => {
+    const size = Number(hdNew.value.trim());
+    if (!state[current].dice.some((d) => d.size === size)) state[current].dice.push({ size, cur: 0, tot: 0 });
+    hdNew.value = '';
+    hdAdd.disabled = true;
+    draw(current);
+  });
+  document.getElementById('edit').addEventListener('close', () => { current = null; });
+  document.querySelector('.newcat').addEventListener('click', () => document.getElementById('new').showModal());
+  for (const b of document.querySelectorAll('dialog .close')) b.addEventListener('click', () => b.closest('dialog').close());
+  if (params.get('dialog') === 'edit') document.querySelector('.sechead-row[data-c="' + (params.get('c') || 'vestige') + '"] .editcat').click();
+  else if (params.get('dialog')) document.getElementById(params.get('dialog')).showModal();
+  const svh = document.querySelector('.svhead');
+  document.documentElement.style.setProperty('--svhead-h', svh.getBoundingClientRect().height + 'px');
+  if (params.get('theme')) document.documentElement.dataset.theme = params.get('theme');
+</script>
+</body></html>

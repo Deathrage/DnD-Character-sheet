@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { AbilitiesAndSkills } from './AbilitiesAndSkills.js';
+import { Companions } from './Companions.js';
 import { Counters } from './Counters.js';
 import { Equipment } from './Equipment.js';
 import { FeatsAndTraits } from './FeatsAndTraits.js';
@@ -13,6 +14,8 @@ import type {
   AbilitiesAndSkillsActions,
   AbilitiesAndSkillsView,
   CharacterView,
+  CompanionsActions,
+  CompanionView,
   CountersActions,
   CountersView,
   EquipmentActions,
@@ -30,7 +33,7 @@ import type {
 } from '../types.js';
 
 /**
- * Everything the seven sections render, and everything they call.
+ * Everything the eight sections render, and everything they call.
  *
  * One object per section rather than fourteen props on the hub: the hub does not read any of it,
  * it only picks which section is on screen and hands that section its own pair. When this is
@@ -45,6 +48,7 @@ export interface SheetData {
   spellList: SpellListView;
   counters: CountersView;
   abilitiesAndSkills: AbilitiesAndSkillsView;
+  companions: CompanionView[];
 }
 
 export interface SheetActions {
@@ -56,6 +60,7 @@ export interface SheetActions {
   spellList: SpellListActions;
   counters: CountersActions;
   abilitiesAndSkills: AbilitiesAndSkillsActions;
+  companions: CompanionsActions;
 }
 
 interface Props {
@@ -67,7 +72,7 @@ interface Props {
   onBack(): void;
   onExport(): void;
   onOpenRawJson(): void;
-  /** Which tiles are live. Defaults to all seven; a story stands sections down again. */
+  /** Which tiles are live. Defaults to all eight; a story stands sections down again. */
   wiredSections?: readonly SectionKey[];
   /** Absent hides the button — the stories and any screen without a cloud. */
   onUpload?(): void;
@@ -185,8 +190,18 @@ function Section({
     case 'abilities':
       return (
         <AbilitiesAndSkills
+          characterId={data.character.id}
           data={data.abilitiesAndSkills}
           actions={actions.abilitiesAndSkills}
+          onClose={onClose}
+        />
+      );
+    case 'companions':
+      return (
+        <Companions
+          characterId={data.character.id}
+          data={data.companions}
+          actions={actions.companions}
           onClose={onClose}
         />
       );

@@ -104,3 +104,8 @@ commit or PR that shipped it, rather than deleting it.
   remaining and total may be fractions of up to three places. Design in
   `docs/superpowers/specs/2026-11-01-decimal-counters-design.md`; AGENTS.md's "Schema v7" entry
   has the rest.
+- **Companions.** Shipped on branch `feature/companions` as schema v8: `companions`, each a small
+  copy of the sheet (hit points, switchable hit dices and initiative, armor class, six abilities,
+  a free-text stat block and its own counters), on an eighth hub section. The Abilities & Skills
+  screen's two blocks fold too. Design in `docs/superpowers/specs/2026-11-08-companions-design.md`;
+  AGENTS.md's "Schema v8" entry has the rest.

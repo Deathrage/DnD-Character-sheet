@@ -9,7 +9,7 @@ import { NumberField } from '../components/NumberField.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import { ordinal } from '../reference.js';
 import { CheckRow } from '../components/CheckRow.js';
-import { CategorySelect, locate, type Located } from './categoryPicker.js';
+import { CategorySelect, locate } from './categoryPicker.js';
 import type {
   CategoryView,
   CountersActions,
@@ -109,7 +109,8 @@ export const Counters = memo(function Counters({ characterId, data, actions, onC
       )}
       {editing && (
         <EditCounterDialog
-          located={editing}
+          counter={editing.item}
+          categoryId={editing.categoryId}
           categories={data.categories}
           actions={actions}
           onClose={close}
@@ -119,26 +120,34 @@ export const Counters = memo(function Counters({ characterId, data, actions, onC
   );
 });
 
-/** Memoised: a change elsewhere leaves `counter` the same object (`bind.ts` keeps it). */
-const CounterRow = memo(function CounterRow({
+/**
+ * Memoised: a change elsewhere leaves `counter` the same object (`bind.ts` keeps it).
+ * `labelPrefix` starts both accessible names with a companion's name; without it, the row's
+ * button is named by its visible text, as on this screen.
+ */
+export const CounterRow = memo(function CounterRow({
   counter,
   onOpen,
   onSetCurrent,
+  labelPrefix,
 }: {
   counter: CounterView;
   onOpen(id: string): void;
   onSetCurrent: CountersActions['setCounterCurrent'];
+  labelPrefix?: string;
 }) {
+  const name = labelPrefix === undefined ? counter.name : `${labelPrefix} ${counter.name}`;
   return (
     <ItemRow
       name={counter.name}
       description={counter.description}
       dim={counter.current <= 0}
       onOpen={() => onOpen(counter.id)}
+      {...(labelPrefix === undefined ? {} : { label: name })}
       after={
         <span className="valcluster">
           <NumberField
-            label={`${counter.name} remaining`}
+            label={`${name} remaining`}
             className="curinp"
             value={counter.current}
             onChange={(value) => onSetCurrent(counter.id, value)}
@@ -268,14 +277,18 @@ function SpellSlotsDialog({
   );
 }
 
-function NewCounterDialog({
+/**
+ * Shared with a companion's counters, which have no categories: without `categories` there is
+ * no picker at all, since an empty one would still offer Uncategorized.
+ */
+export function NewCounterDialog({
   categoryId,
   categories,
   onCreate,
   onClose,
 }: {
   categoryId: string | null;
-  categories: CategoryView<CounterView>[];
+  categories?: CategoryView<CounterView>[];
   onCreate: CountersActions['addCounter'];
   onClose(): void;
 }) {
@@ -321,7 +334,9 @@ function NewCounterDialog({
         <StepField value={step} onChange={setStep} />
       </div>
       <StepHint />
-      <CategorySelect value={target} categories={categories} onChange={setTarget} />
+      {categories !== undefined && (
+        <CategorySelect value={target} categories={categories} onChange={setTarget} />
+      )}
       <label className="dlabel mt12" htmlFor="new-counter-description">
         Note
       </label>
@@ -337,19 +352,31 @@ function NewCounterDialog({
   );
 }
 
-function EditCounterDialog({
-  located,
+/** What the edit dialog writes through. Moving is optional: a companion's counter stays put. */
+export type CounterEditActions = Pick<
+  CountersActions,
+  | 'renameCounter'
+  | 'setCounterDescription'
+  | 'setCounterCurrent'
+  | 'setCounterTotal'
+  | 'setCounterStep'
+  | 'removeCounter'
+> & { moveCounter?: CountersActions['moveCounter'] };
+
+/** Like `NewCounterDialog`, it shows the category picker only when it is given categories. */
+export function EditCounterDialog({
+  counter,
+  categoryId = null,
   categories,
   actions,
   onClose,
 }: {
-  located: Located<CounterView>;
-  categories: CategoryView<CounterView>[];
-  actions: CountersActions;
+  counter: CounterView;
+  categoryId?: string | null;
+  categories?: CategoryView<CounterView>[];
+  actions: CounterEditActions;
   onClose(): void;
 }) {
-  const { item: counter, categoryId } = located;
-
   return (
     <ResponsiveDialog
       title="Edit counter"
@@ -400,13 +427,15 @@ function EditCounterDialog({
           value={counter.step}
           onChange={(value) => actions.setCounterStep(counter.id, value)}
         />
-        <div className="col">
-          <CategorySelect
-            value={categoryId}
-            categories={categories}
-            onChange={(id) => actions.moveCounter(counter.id, id)}
-          />
-        </div>
+        {categories !== undefined && (
+          <div className="col">
+            <CategorySelect
+              value={categoryId}
+              categories={categories}
+              onChange={(id) => actions.moveCounter?.(counter.id, id)}
+            />
+          </div>
+        )}
       </div>
       <StepHint />
       <label className="dlabel mt12" htmlFor="counter-description">

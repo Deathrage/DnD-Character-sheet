@@ -52,8 +52,8 @@ export function HubGrid({
               line={enabled ? (summaries?.[section.key] ?? section.subtitle) : 'not built yet'}
               // `aria-disabled` rather than `disabled`: the entry is present and readable — it
               // is the map of what this character sheet holds — it just does not go anywhere
-              // yet. A `disabled` button is skipped by the tab order, which would hide six of
-              // the seven sections from a keyboard or screen reader entirely.
+              // yet. A `disabled` button is skipped by the tab order, which would hide every
+              // unbuilt section from a keyboard or screen reader entirely.
               inert={!enabled}
               onClick={() => {
                 if (enabled) onOpen(section.key);

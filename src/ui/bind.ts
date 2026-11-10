@@ -19,6 +19,7 @@ import {
   type CharacterLibraryBO,
   type CharacterSheetBO,
   type CloudBackup,
+  type CompanionBO,
   type EquipmentItemBO,
   RuleViolation,
   WeaponBO,
@@ -41,6 +42,8 @@ import type {
   CharacterView,
   CloudView,
   CoinKey,
+  CompanionsActions,
+  CompanionView,
   CountersActions,
   CountersView,
   EquipmentActions,
@@ -283,6 +286,47 @@ function countersView(sheet: CharacterSheetBO): CountersView {
   };
 }
 
+function companionView(bo: CompanionBO): CompanionView {
+  return {
+    id: bo.id,
+    name: bo.name,
+    hitPoints: {
+      current: bo.hitPoints.current,
+      total: bo.hitPoints.total,
+      temporary: bo.hitPoints.temporary,
+    },
+    // `null` when switched off, which is not the same as no die: `?.` keeps the two apart.
+    hitDices:
+      bo.hitDices?.items.map((die) => ({
+        size: die.size,
+        current: die.current,
+        total: die.total,
+      })) ?? null,
+    armorClass: bo.armorClass,
+    initiative: bo.initiative,
+    abilities: Object.fromEntries(
+      ABILITIES.map(({ key }) => {
+        const ability = bo.abilities[key];
+        return [
+          key,
+          {
+            score: ability.score,
+            modifier: ability.modifier,
+            savingThrowModifier: ability.savingThrowModifier,
+          },
+        ];
+      }),
+    ) as CompanionView['abilities'],
+    description: bo.description,
+    counters: bo.counters.items.map((counter) => ({
+      ...namedItemView(counter),
+      current: counter.current,
+      total: counter.total,
+      step: counter.step,
+    })),
+  };
+}
+
 function abilitiesView(sheet: CharacterSheetBO): AbilitiesAndSkillsView {
   const bo = sheet.abilitiesAndSkills;
   return {
@@ -370,12 +414,12 @@ class Keep {
 }
 
 /**
- * `toSheetData` as eight MobX computeds, one per section, read together.
+ * `toSheetData` as nine MobX computeds, one per section, read together.
  *
  * `toSheetData` reads the whole tree on every change, and that was the price a keystroke paid
  * for being anywhere on the sheet: the snapshot was rebuilt in full and every component below
  * it re-rendered. A computed per section re-runs only when something it read changed, so a
- * coin typed in Inventory leaves the other seven views the same objects they were, and the
+ * coin typed in Inventory leaves the other eight views the same objects they were, and the
  * memoised components they feed skip their render. Within a changed section, `Keep` does the
  * same for the rows.
  *
@@ -432,6 +476,24 @@ export function createSheetViews(sheet: CharacterSheetBO): () => SheetData {
       ) as Record<SkillKey, SkillView>,
     };
   });
+  const companions = computed((): CompanionView[] => {
+    // The nested parts first, then the list: a companion is kept as a whole only if its parts
+    // were, and each level is keyed by id because two companions may share a name.
+    const views = sheet.companions.items.map((bo) => {
+      const view = companionView(bo);
+      return {
+        ...view,
+        abilities: Object.fromEntries(
+          ABILITIES.map(({ key }) => [
+            key,
+            keep.one(`companion#${view.id}/ability#${key}`, view.abilities[key]),
+          ]),
+        ) as CompanionView['abilities'],
+        counters: keep.list(`companion#${view.id}/counters`, view.counters),
+      };
+    });
+    return keep.list('companions', views);
+  });
   return () => ({
     character: character.get(),
     journalAndNotes: journalAndNotes.get(),
@@ -441,6 +503,7 @@ export function createSheetViews(sheet: CharacterSheetBO): () => SheetData {
     spellList: spellList.get(),
     counters: counters.get(),
     abilitiesAndSkills: abilitiesAndSkills.get(),
+    companions: companions.get(),
   });
 }
 
@@ -677,6 +740,76 @@ function abilitiesActions(sheet: CharacterSheetBO): AbilitiesAndSkillsActions {
   };
 }
 
+function companionsActions(sheet: CharacterSheetBO): CompanionsActions {
+  const companion = (id: string) => byId(sheet.companions.items, id, 'companion');
+  // Like a character's hit die, a companion's is keyed by size. Its dice may also be switched off.
+  const die = (id: string, size: number) => {
+    const owner = companion(id);
+    const found = owner.hitDices?.items.find((entry) => entry.size === size);
+    if (found === undefined) {
+      throw new RuleViolation(
+        'GONE',
+        owner.hitDices === null
+          ? `${owner.name} has no hit dices switched on`
+          : `${owner.name} has no d${size}`,
+      );
+    }
+    return found;
+  };
+  const counter = (id: string, counterId: string) =>
+    byId(companion(id).counters.items, counterId, 'counter');
+  return {
+    addCompanion: (name) => {
+      let id = '';
+      const message = attempt(() => {
+        id = sheet.companions.add(name).id;
+      });
+      return message === null ? { ok: true, id } : { ok: false, message };
+    },
+    renameCompanion: (id, name) => attempt(() => companion(id).setName(name)),
+    removeCompanion: (id) => companion(id).remove(),
+    setCompanionCurrentHitPoints: (id, value) => companion(id).hitPoints.setCurrent(value),
+    setCompanionTotalHitPoints: (id, value) => companion(id).hitPoints.setTotal(value),
+    setCompanionTemporaryHitPoints: (id, value) => companion(id).hitPoints.setTemporary(value),
+    setCompanionArmorClass: (id, value) => companion(id).setArmorClass(value),
+    setCompanionRollsInitiative: (id, on) => companion(id).setRollsInitiative(on),
+    setCompanionInitiative: (id, value) => companion(id).setInitiative(value),
+    setCompanionHasHitDices: (id, on) => companion(id).setHasHitDices(on),
+    addCompanionHitDie: (id, size) =>
+      attempt(() => {
+        const dice = companion(id).hitDices;
+        if (dice === null) {
+          throw new RuleViolation('GONE', `${companion(id).name} has no hit dices switched on`);
+        }
+        dice.add(size);
+      }),
+    setCompanionHitDieCurrent: (id, size, value) => die(id, size).setCurrent(value),
+    setCompanionHitDieTotal: (id, size, value) => die(id, size).setTotal(value),
+    removeCompanionHitDie: (id, size) => die(id, size).remove(),
+    setCompanionAbilityScore: (id, key, value) => companion(id).abilities[key].setScore(value),
+    setCompanionAbilityModifier: (id, key, value) =>
+      companion(id).abilities[key].setModifier(value),
+    setCompanionSavingThrowModifier: (id, key, value) =>
+      companion(id).abilities[key].setSavingThrowModifier(value),
+    setCompanionDescription: (id, text) => companion(id).setDescription(text),
+    addCompanionCounter: (id, init) => {
+      // A new counter starts full, as the character's do.
+      const added = companion(id).counters.add({ name: init.name, description: init.description });
+      added.setStep(init.step);
+      added.setTotal(init.total);
+      added.setCurrent(init.total);
+    },
+    renameCompanionCounter: (id, counterId, name) =>
+      attempt(() => counter(id, counterId).setName(name)),
+    setCompanionCounterDescription: (id, counterId, text) =>
+      counter(id, counterId).setDescription(text),
+    setCompanionCounterCurrent: (id, counterId, value) => counter(id, counterId).setCurrent(value),
+    setCompanionCounterTotal: (id, counterId, value) => counter(id, counterId).setTotal(value),
+    setCompanionCounterStep: (id, counterId, step) => counter(id, counterId).setStep(step),
+    removeCompanionCounter: (id, counterId) => counter(id, counterId).remove(),
+  };
+}
+
 export function toSheetActions(sheet: CharacterSheetBO): SheetActions {
   return {
     vitals: vitalsActions(sheet),
@@ -687,6 +820,7 @@ export function toSheetActions(sheet: CharacterSheetBO): SheetActions {
     spellList: spellListActions(sheet),
     counters: countersActions(sheet),
     abilitiesAndSkills: abilitiesActions(sheet),
+    companions: companionsActions(sheet),
   };
 }
 
@@ -759,7 +893,7 @@ export function toStorageGateView(gate: StorageGate): StorageGateView {
  * data-in/callbacks-out contract — the property that lets a story be a literal. What keeps it
  * cheap is the snapshot's shape, not the reaction: `createSheetViews` builds it from one computed
  * per section, so a change rebuilds one section's view and the memoised components under the
- * other seven see the same objects and skip.
+ * other eight see the same objects and skip.
  *
  * `fireImmediately` costs one extra render on mount and buys the window between the first
  * render's snapshot and the effect subscribing, in which a change would otherwise be missed.

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCharacter } from '../data/schema/index.js';
 import { CharacterSheetBO } from './characterSheet.js';
+import { HitPointsBO } from './hitPoints.js';
 
 const sheetFor = () =>
   new CharacterSheetBO(
@@ -11,7 +12,7 @@ const sheetFor = () =>
     }),
   );
 
-describe('HitPointsBO', () => {
+describe('HitPointsWithDeathSavesBO', () => {
   it('starts at zero across all three fields', () => {
     const { hitPoints } = sheetFor();
     expect([hitPoints.current, hitPoints.total, hitPoints.temporary]).toEqual([0, 0, 0]);
@@ -136,5 +137,24 @@ describe('DeathSavesBO', () => {
       expect(sheet.hitPoints.deathSaves.failures).toBe(3);
       expect(sheet.hitPoints.current).toBe(30);
     });
+  });
+});
+
+describe('HitPointsBO', () => {
+  it('a HitPointsBO has no death saves', () => {
+    expect(new HitPointsBO({ current: 1, total: 2, temporary: 0 })).not.toHaveProperty(
+      'deathSaves',
+    );
+  });
+
+  it('a HitPointsWithDeathSavesBO is a HitPointsBO', () => {
+    expect(sheetFor().hitPoints).toBeInstanceOf(HitPointsBO);
+  });
+
+  it.each(['setCurrent', 'setTotal', 'setTemporary'] as const)('%s guards its value', (setter) => {
+    const hp = new HitPointsBO({ current: 1, total: 2, temporary: 0 });
+    expect(() => hp[setter](-1)).toThrow(expect.objectContaining({ code: 'NEGATIVE' }));
+    expect(() => hp[setter](1.5)).toThrow(expect.objectContaining({ code: 'NOT_AN_INTEGER' }));
+    expect(hp.current).toBe(1);
   });
 });
