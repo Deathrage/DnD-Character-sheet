@@ -1,8 +1,6 @@
-import { observable } from 'mobx';
 import { describe, expect, it } from 'vitest';
 import { createCharacter } from '../data/schema/index.js';
 import { CharacterSheetBO } from './characterSheet.js';
-import { HitDicesBO } from './hitDices.js';
 
 const sheetFor = () =>
   new CharacterSheetBO(
@@ -96,35 +94,5 @@ describe('HitDicesBO', () => {
     die.setTotal(5);
 
     expect(sheet.toDocument().hitDices).toEqual({ '8': { current: 3, total: 5 } });
-  });
-});
-
-describe('HitDicesBO over a switchable record', () => {
-  const setup = () => {
-    const holder = observable({
-      dice: {} as Record<string, { current: number; total: number }> | null,
-    });
-    return { holder, bo: new HitDicesBO(() => holder.dice) };
-  };
-
-  it('writes to the record the resolver returns now', () => {
-    const { holder, bo } = setup();
-    const held = bo;
-    holder.dice = null;
-    holder.dice = {};
-    held.add(6);
-    expect(holder.dice).toEqual({ '6': { current: 0, total: 0 } });
-  });
-
-  it('throws GONE while the resolver returns null', () => {
-    const { holder, bo } = setup();
-    holder.dice = null;
-    expect(() => bo.add(6)).toThrow(expect.objectContaining({ code: 'GONE' }) as Error);
-  });
-
-  it('lists nothing while switched off', () => {
-    const { holder, bo } = setup();
-    holder.dice = null;
-    expect(bo.items).toEqual([]);
   });
 });

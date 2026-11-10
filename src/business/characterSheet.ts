@@ -56,7 +56,7 @@ export class CharacterSheetBO {
     this.#portrait = observable({ value: portrait });
     this.classes = new ClassesBO(this.#doc.classes);
     this.hitPoints = new HitPointsWithDeathSavesBO(this.#doc.hitPoints);
-    this.hitDices = new HitDicesBO(() => this.#doc.hitDices);
+    this.hitDices = new HitDicesBO(this.#doc.hitDices);
     this.journalAndNotes = new JournalAndNotesBO(this.#doc.journalAndNotes);
     this.inventory = new InventoryBO(this.#doc.inventory.coins, this.#doc.inventory.items);
     this.equipment = new EquipmentBO(this.#doc.equipment.weapons, this.#doc.equipment.other);

@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 2847 tests across 103 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 2845 tests across 103 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -319,9 +319,14 @@ back on the next load (criterion 14).
     when turned on (`?? 0`, `?? {}`) and store `null` when turned off, with no confirmation.
     `setInitiative` while off throws `NO_INITIATIVE`, the one new `RuleCode`, not in
     `PRESENTABLE`: the field is hidden while off. Switching the dice off and on replaces the
-    record, and MobX stores a copy, so `HitDicesBO` and `HitDieBO` now resolve their record on
-    every access (`() => doc.hitDices` for the character) and throw `GONE` while it is `null`, except `items`, which returns `[]`.
-    Adding a die or a counter to a removed companion throws `GONE` too.
+    record, and MobX stores a copy, so a companion's dice are `CompanionHitDicesBO` and
+    `CompanionHitDieBO`, in `companions.ts`. They extend `HitDicesBO` and `HitDieBO`, which hold
+    the record as on `main` but read it only through a `protected get dice()` (and make dice
+    through a `protected die(size)`). The subclasses hold the companion and override `dice` to
+    read the record it has now, so every die rule is inherited, and they throw `GONE` while it is
+    `null`, except `items`, which returns `[]`. Adding a die or a counter to a removed companion
+    throws `GONE` too. The character's dice are the bases, unchanged in behaviour: its record is
+    never replaced.
   - **Shared bases.** `HitPointsBO` (`HitPointsWithDeathSavesBO` adds death saves) and
     `AbilityBO` (`AbilityWithSaveProficiencyBO` adds the P). `CompanionCounterBO` repeats `CounterBO`'s three
     guarded setters, because `CounterBO` needs a categorized owner; the blank counter is one
@@ -739,7 +744,7 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
   hitPoints.ts         HitPointsBO (current, total, temporary, shared with companions) /
                        HitPointsWithDeathSavesBO / DeathSavesBO — counts of ticked boxes, never ticked for you
   hitDices.ts          HitDicesBO / HitDieBO, keyed by die size — no id, the size is the identity;
-                       they resolve their record on every access, so a companion's can switch off
+                       the record is read through a protected `dice`, which a companion overrides
   journalAndNotes.ts   JournalAndNotesBO / JournalDayBO — append or delete-the-newest-day only
   inventory.ts         InventoryBO / CoinsBO / InventoryItemBO
   equipment.ts         EquipmentBO / EquipmentItemBO / WeaponBO (the attack roll, ability first;
@@ -754,7 +759,8 @@ src/business/          index.ts is the public face; CharacterSheetBO is the obse
   abilitiesAndSkills.ts AbilityBO (score, modifier, save) / AbilityWithSaveProficiencyBO (adds the P) /
                        SkillBO, fixed key sets built once in the constructor
   companions.ts        CompanionsBO / CompanionBO (the initiative and hit dices switches) /
-                       CompanionCountersBO / CompanionCounterBO, a flat list with no categories
+                       CompanionHitDicesBO / CompanionHitDieBO, over the record the companion has
+                       now / CompanionCountersBO / CompanionCounterBO, a flat list with no categories
   errors.ts            RuleViolation, RuleCode — every rule this layer enforces, plus the
                        re-exports `ui` needs but may not import from `data`: describeLoadError,
                        LoadError, StorageFailure

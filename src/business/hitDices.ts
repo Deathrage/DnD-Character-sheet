@@ -4,25 +4,26 @@ import type { CharacterData, HitDieData } from './types.js';
 
 type HitDices = CharacterData['hitDices'];
 
-/**
- * Re-read on every access, never held: assigning an object to an observable stores a copy, so a
- * record captured before it was switched off and on again would be a detached object.
- */
-type Resolve = () => HitDices | null;
-
-function record(resolve: Resolve): HitDices {
-  const dice = resolve();
-  if (dice === null) {
-    throw new RuleViolation('GONE', 'these hit dice are switched off or no longer in the document');
-  }
-  return dice;
-}
-
 export class HitDicesBO {
-  readonly #resolve: Resolve;
+  readonly #dice: HitDices;
 
-  constructor(resolve: Resolve) {
-    this.#resolve = resolve;
+  constructor(dice: HitDices) {
+    this.#dice = dice;
+  }
+
+  /**
+   * Every read and write goes through this, never through `#dice`: a companion's record is
+   * replaced when its dice switch off and on, so `CompanionHitDicesBO` overrides it to read the
+   * record the companion has now. `protected` for the reason `NodeBO.node` is: a subclass must
+   * reach it, and reaching it from outside takes a deliberate cast.
+   */
+  protected get dice(): HitDices {
+    return this.#dice;
+  }
+
+  /** `CompanionHitDicesBO` overrides it, so `items` and `add` hand out its own die. */
+  protected die(size: number): HitDieBO {
+    return new HitDieBO(this.dice, size);
   }
 
   /**
@@ -30,12 +31,10 @@ export class HitDicesBO {
    * numeric order, but sorting explicitly says so rather than relying on that.
    */
   get items(): HitDieBO[] {
-    const dice = this.#resolve();
-    if (dice === null) return [];
-    return Object.keys(dice)
+    return Object.keys(this.dice)
       .map(Number)
       .sort((a, b) => a - b)
-      .map((size) => new HitDieBO(this.#resolve, size));
+      .map((size) => this.die(size));
   }
 
   /**
@@ -48,7 +47,6 @@ export class HitDicesBO {
    * alongside the `DUPLICATE_DIE` just below it.
    */
   add(size: number): HitDieBO {
-    const dice = record(this.#resolve);
     const key = String(size);
     if (!/^[1-9]\d*$/.test(key)) {
       throw new RuleViolation(
@@ -56,22 +54,27 @@ export class HitDicesBO {
         `a die size must be a whole number of at least 1 that stores as plain digits, got ${key}`,
       );
     }
-    if (key in dice) {
+    if (key in this.dice) {
       throw new RuleViolation('DUPLICATE_DIE', `a d${key} is already present`);
     }
 
-    dice[key] = { current: 0, total: 0 };
-    return new HitDieBO(this.#resolve, size);
+    this.dice[key] = { current: 0, total: 0 };
+    return this.die(size);
   }
 }
 
 export class HitDieBO {
-  readonly #resolve: Resolve;
+  readonly #dice: HitDices;
   readonly #key: string;
 
-  constructor(resolve: Resolve, size: number) {
-    this.#resolve = resolve;
+  constructor(dice: HitDices, size: number) {
+    this.#dice = dice;
     this.#key = String(size);
+  }
+
+  /** As `HitDicesBO.dice`; `CompanionHitDieBO` overrides it. */
+  protected get dice(): HitDices {
+    return this.#dice;
   }
 
   get size(): number {
@@ -96,7 +99,7 @@ export class HitDieBO {
 
   remove(): void {
     this.#require();
-    delete record(this.#resolve)[this.#key];
+    delete this.dice[this.#key];
   }
 
   /**
@@ -108,7 +111,7 @@ export class HitDieBO {
   }
 
   #require(): HitDieData {
-    const node = record(this.#resolve)[this.#key];
+    const node = this.dice[this.#key];
     if (node === undefined) {
       throw new RuleViolation('GONE', `the d${this.#key} is no longer in the document`);
     }

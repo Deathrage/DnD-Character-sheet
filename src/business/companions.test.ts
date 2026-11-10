@@ -135,6 +135,14 @@ describe('CompanionBO hit dice', () => {
     owl.setHasHitDices(false);
     expect(code(() => held?.add(8))).toBe('GONE');
   });
+
+  it('a hit die held while off throws GONE', () => {
+    const owl = sheetFor().companions.add('Owl');
+    owl.setHasHitDices(true);
+    const d8 = owl.hitDices?.add(8);
+    owl.setHasHitDices(false);
+    expect(code(() => d8?.setTotal(3))).toBe('GONE');
+  });
 });
 
 describe('CompanionBO removal and counters', () => {

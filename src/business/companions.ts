@@ -11,7 +11,7 @@ import {
 } from './guards.js';
 import { AbilityBO, type AbilityKey } from './abilitiesAndSkills.js';
 import { newCounter } from './counters.js';
-import { HitDicesBO } from './hitDices.js';
+import { HitDicesBO, HitDieBO } from './hitDices.js';
 import { HitPointsBO } from './hitPoints.js';
 import { NamedItemBO } from './namedItem.js';
 import { pushAndRead } from './observableList.js';
@@ -89,18 +89,77 @@ export class CompanionBO extends NamedItemBO<CompanionData> {
     this.node.initiative = checked;
   }
 
-  /** Built on every read: a record held across off and on would be a detached copy. */
-  get hitDices(): HitDicesBO | null {
+  get hitDices(): CompanionHitDicesBO | null {
     if (this.node.hitDices === null) return null;
-    return new HitDicesBO(() => (this.#live() ? this.node.hitDices : null));
+    return new CompanionHitDicesBO(this.node, this.siblings);
   }
 
   setHasHitDices(on: boolean): void {
     this.node.hitDices = on ? (this.node.hitDices ?? {}) : null;
   }
+}
 
-  #live(): boolean {
-    return this.siblings.includes(this.node);
+type HitDices = NonNullable<CompanionData['hitDices']>;
+
+function hitDicesOf(companion: CompanionData): HitDices {
+  if (companion.hitDices === null) {
+    throw new RuleViolation('GONE', `${companion.name}'s hit dices are switched off`);
+  }
+  return companion.hitDices;
+}
+
+/**
+ * Holds the companion, never its record: assigning `{}` to an observable stores a copy, so after
+ * off and on the companion has a new record, and one held from before would be detached. So
+ * `dice` reads the record the companion has now, and every die rule is `HitDicesBO`'s.
+ *
+ * `super` gets the record the companion has at construction. The base keeps it but reads it only
+ * through `dice`, which this overrides, so it is never read again; it is the one real record to
+ * give, and taking it throws `GONE` while the dice are off.
+ */
+export class CompanionHitDicesBO extends HitDicesBO {
+  readonly #companion: CompanionData;
+  readonly #companions: CompanionData[];
+
+  constructor(companion: CompanionData, companions: CompanionData[]) {
+    super(hitDicesOf(companion));
+    this.#companion = companion;
+    this.#companions = companions;
+  }
+
+  protected override get dice(): HitDices {
+    return hitDicesOf(this.#companion);
+  }
+
+  protected override die(size: number): CompanionHitDieBO {
+    return new CompanionHitDieBO(this.#companion, size);
+  }
+
+  /** Nothing while off, rather than `GONE` out of a render. */
+  override get items(): HitDieBO[] {
+    return this.#companion.hitDices === null ? [] : super.items;
+  }
+
+  /** A setter on a removed companion writes to its detached node, but an add must not. */
+  override add(size: number): HitDieBO {
+    if (!this.#companions.includes(this.#companion)) {
+      throw new RuleViolation('GONE', 'this companion is no longer in the document');
+    }
+    return super.add(size);
+  }
+}
+
+/** As `CompanionHitDicesBO`: holds the companion and reads its record now. */
+export class CompanionHitDieBO extends HitDieBO {
+  readonly #companion: CompanionData;
+
+  constructor(companion: CompanionData, size: number) {
+    super(hitDicesOf(companion), size);
+    this.#companion = companion;
+  }
+
+  protected override get dice(): HitDices {
+    return hitDicesOf(this.#companion);
   }
 }
 

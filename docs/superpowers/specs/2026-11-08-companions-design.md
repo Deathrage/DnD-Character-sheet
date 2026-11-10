@@ -485,9 +485,9 @@ Chromium at 320px, 360px and 412px, light and dark:
 
 ## 10. Deviations
 
-Where the build departed from this design or from the plan, and why. The ninth came from the browser checks, and the tenth from the owner's review of the pull request.
+Where the build departed from this design or from the plan, and why. The ninth came from the browser checks, and the tenth and eleventh from the owner's review of the pull request.
 
-- **`HitDicesBO.items` returns `[]` while the dice are switched off.** §4 says every call throws
+- **`CompanionHitDicesBO.items` returns `[]` while the dice are switched off.** §4 says every call throws
   `GONE` while the record is `null`. Every other call does. `items` is the one exception, made in
   the plan, so a list of nothing reads as nothing rather than throwing out of a render.
 - **The blank counter is one `newCounter` in `counters.ts`,** shared by `CountersBO.add` and
@@ -537,6 +537,18 @@ Where the build departed from this design or from the plan, and why. The ninth c
   qualifier. The bases are `HitPointsBO` / `HitPointsData` and `AbilityBO` / `AbilityData`; the
   character's are `HitPointsWithDeathSavesBO` / `HitPointsWithDeathSavesData` and
   `AbilityWithSaveProficiencyBO` / `AbilityWithSaveProficiencyData`.
+- **A companion's dice are subclasses, not a resolver.** §4 had `HitDicesBO` and `HitDieBO` take
+  `() => record | null`, called on every access, with the character passing `() => doc.hitDices`.
+  In review the owner judged a function called again and again a smell, and the shared base
+  should not widen to a companion's case, the rule the hit points rename follows. The bases hold
+  the record again, as on `main`, but read it only through a `protected get dice()` and make dice
+  through a `protected die(size)`. `CompanionHitDicesBO` and `CompanionHitDieBO`, in
+  `companions.ts`, extend them, hold the companion, and override `dice` to read the record it has
+  now, so every die rule is inherited rather than repeated. `CompanionHitDicesBO` also overrides
+  `items` (`[]` while off) and `add` (`GONE` on a removed companion). Every behaviour §4 and §8
+  list still holds; the resolver's own tests in `hitDices.test.ts` are gone, and a held die while
+  off throwing `GONE` has a test of its own. `protected` is reachable by a deliberate cast, the
+  bar `NodeBO.node` already accepts.
 - **Kept as designed after checking in the browser:**
   - `--svhead-h` stays 50px: `.svhead` measured 50px at 320px, 360px and 412px.
   - The first companion heading sits 22px below the title, which is where every other section's
