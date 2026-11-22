@@ -90,7 +90,9 @@ it, and the lint boundaries are unchanged.
   main bundle (`idb` is there already, for the characters). The observers use `buffered: true`,
   so frames from page load that happened before the import settled are still delivered.
 - **`useDiagnostics()`** returns
-  `{ view: { on, count, since }, refresh(), setOn(on), download(), clear() }`. `count` and
+  `{ view: { on, count, since }, refresh(), setOn(on), logFile(), clear() }`. `logFile()` hands
+  back `{ filename, text }` (or null if the log could not be read), and `App` saves it: the DOM
+  download stays with the other browser affordances in `App`. `count` and
   `since` (the oldest entry's `at`) are read by `refresh()`, which writes the buffer first.
   `App` calls it when the menu opens (its existing `onOpenMenu`), and each action calls it
   after. They are not live: the menu is open for seconds.
@@ -131,7 +133,8 @@ it, and the lint boundaries are unchanged.
     `ConfirmDelete`, what "The diagnostics log"
 - **`CharacterList` stays presentational**: it takes a `DiagnosticsView` and the three callbacks
   as props; `App` supplies them from `useDiagnostics()`. Absent hides the row, as `account` does.
-- **The file** is `dnd-diagnostics-YYYY-MM-DD.json` (local date, like the export filename):
+- **The file** is `dnd-diagnostics-YYYY-MM-DD.json`, dated the way `exportFilename` dates a
+  character (`toISOString().slice(0, 10)`):
 
   ```json
   { "format": 1, "exportedAt": "2026-11-22T18:03:11.402Z", "entries": [ … ] }
@@ -151,8 +154,10 @@ above it requires.
 ## 7. Reading a log
 
 Script positions point into the minified bundle. To map them: check out the commit that was
-deployed, build with source maps (`npx vite build --sourcemap`), confirm the entry script's file
-name equals the log's `session.build`, and look `sourceCharPosition` up in the matching `.map`.
+deployed, build with hidden source maps (`npx vite build --sourcemap hidden --outDir <dir>`:
+hidden adds no `sourceMappingURL` comment, so the JS, and with it the hashed file name, should
+match the deployed build), confirm the entry script's file name equals the log's
+`session.build`, and look `sourceCharPosition` up in the matching `.map`.
 No tooling for this ships; the first log is mapped by hand, and a script is written only if that
 proves tedious.
 
