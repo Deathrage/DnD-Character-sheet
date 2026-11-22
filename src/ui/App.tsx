@@ -16,6 +16,7 @@ import {
   useStorageGate,
   useUploadNotice,
 } from './bind.js';
+import { useDiagnostics } from './diagnostics/index.js';
 import { useInstall } from './install.js';
 import { navigate, useRoute } from './route.js';
 import { CharacterHub } from './screens/CharacterHub.js';
@@ -42,6 +43,7 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
   const gate = useStorageGate(library.storageGate);
   const failure = useStorageFailure(library.storageGate);
   const account = useCloud(cloud);
+  const diagnostics = useDiagnostics();
   // Installing is what moves `persist()` in Chromium and Safari, so it is asked again straight away.
   const install = useInstall(
     useCallback(() => void library.storageGate.requestPersist(), [library]),
@@ -160,8 +162,19 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
             onCreate={createCharacter}
             onImport={() => filePicker.current?.click()}
             account={account}
-            // Loads Firebase the first time — on opening the menu, never at launch.
-            onOpenMenu={() => void cloud.checkSignIn()}
+            onOpenMenu={() => {
+              // Loads Firebase the first time — on opening the menu, never at launch.
+              void cloud.checkSignIn();
+              void diagnostics.refresh();
+            }}
+            diagnostics={diagnostics.view}
+            onSetDiagnostics={(on) => void diagnostics.setOn(on)}
+            onDownloadDiagnostics={() =>
+              void diagnostics.logFile().then((file) => {
+                if (file !== null) download(file);
+              })
+            }
+            onClearDiagnostics={() => void diagnostics.clear()}
             onSignIn={() => cloud.signIn()}
             onSignOut={() => cloud.signOut()}
             onOpenCloud={() => navigate({ name: 'cloud' })}
@@ -490,11 +503,11 @@ function Notice({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Purely a browser affordance: `CharacterFile` knows the name and the text, and only the DOM can
- * put them in the player's downloads. The object URL is revoked immediately — `click()` has
- * already read it synchronously.
+ * Purely a browser affordance: a `CharacterFile` or the diagnostics log knows its name and its
+ * text, and only the DOM can put them in the player's downloads. The object URL is revoked
+ * immediately — `click()` has already read it synchronously.
  */
-function download(file: CharacterFile): void {
+function download(file: { filename: string; text: string }): void {
   const url = URL.createObjectURL(new Blob([file.text], { type: 'application/json' }));
   const link = document.createElement('a');
   link.href = url;

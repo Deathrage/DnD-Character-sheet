@@ -272,4 +272,22 @@ describe('App', () => {
       expect(screen.queryByText('Your characters are not safe here yet')).toBeNull(),
     );
   });
+
+  it('turns diagnostics on and off from the menu, and counts what it recorded', async () => {
+    renderApp();
+    fireEvent.click(await screen.findByRole('button', { name: 'Menu' }));
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Diagnostics',
+        description: 'Record slow moments for the developer.',
+      }),
+    );
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Record slow moments' }));
+    await waitFor(() => expect(localStorage.getItem('diagnostics:on')).toBe('true'));
+    // The session entry the recorder writes when it starts.
+    expect(await screen.findByText(/^1 entry since /)).toBeDefined();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Record slow moments' }));
+    await waitFor(() => expect(localStorage.getItem('diagnostics:on')).toBe('false'));
+  });
 });
