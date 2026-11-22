@@ -189,6 +189,22 @@ describe('Recorder', () => {
     window.dispatchEvent(new HashChangeEvent('hashchange'));
     await vi.advanceTimersByTimeAsync(5000);
     expect(written).toHaveLength(2);
+
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await settle();
+    expect(written).toHaveLength(2);
+  });
+
+  it('records no screen change timed after stop', async () => {
+    const made = recorder();
+    made.start();
+    history.replaceState(null, '', `#/c/${ID}`);
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await made.stop();
+    await vi.advanceTimersByTimeAsync(17);
+    await made.flush();
+    expect(written.filter(isRoute)).toEqual([]);
   });
 
   it('never throws when the store refuses a batch', async () => {

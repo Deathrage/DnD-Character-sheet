@@ -194,6 +194,7 @@ export class Recorder {
     this.#frame(() => {
       const nextFrame = this.#now();
       setTimeout(() => {
+        if (!this.recording) return;
         this.#push({
           kind: 'route',
           ...stamp(start, this.#timeOrigin),
