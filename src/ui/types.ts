@@ -524,3 +524,14 @@ export interface CompanionsActions {
   setCompanionCounterStep(id: string, counterId: string, step: number): void;
   removeCompanionCounter(id: string, counterId: string): void;
 }
+
+/**
+ * The diagnostics log as the list menu shows it (spec 2026-11-22 §5). Not about a character:
+ * the log is the app's, kept by `src/ui/diagnostics/`.
+ */
+export interface DiagnosticsView {
+  on: boolean;
+  count: number;
+  /** The oldest entry's wall-clock time, or null while the log is empty. */
+  since: string | null;
+}

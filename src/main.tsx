@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CharacterLibraryBO, CloudBackup } from './business/index.js';
 import { App } from './ui/App.js';
+import { startIfOn } from './ui/diagnostics/index.js';
 import { applyTheme, storedTheme } from './ui/theme.js';
 import { UpdatePrompt } from './ui/UpdatePrompt.js';
 import './ui/styles.css';
@@ -18,6 +19,8 @@ if (root === null) {
 
 // Before anything renders, so a chosen theme is on the page from the first frame.
 applyTheme(storedTheme());
+// Before anything renders too: with diagnostics on, a launch is recorded from its first frames.
+startIfOn();
 
 const library = new CharacterLibraryBO();
 
