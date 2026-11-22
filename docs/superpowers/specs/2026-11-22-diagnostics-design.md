@@ -3,7 +3,8 @@
 An opt-in log of slow moments, recorded on the player's phone and downloaded as a file, so a lag
 that only happens there can be debugged here.
 
-Status: **designed 2026-11-22**, not built.
+Status: **built 2026-11-22** on branch `ccr-5527685e-89z8fo`, from
+`docs/superpowers/plans/2026-11-22-diagnostics.md`.
 
 ## 0. Why
 

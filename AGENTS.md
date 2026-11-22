@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 2847 tests across 103 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 2893 tests across 107 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -379,6 +379,39 @@ back on the next load (criterion 14).
       reads back as v8 with
       `companions: []` last: the list wrote it back. Its hub says `Nothing yet`
     - Abilities & Skills' two folds survive a reload
+- **A diagnostics log** (2026-11-22). A player saw a few seconds of lag leaving the Spell List
+  on an installed Android copy, sometimes, and headless Chromium at a 6× throttle never
+  reproduced it. So the list menu has a **Diagnostics** switch: while on, `src/ui/diagnostics/`
+  records slow frames (Chrome's Long Animation Frames, with the scripts that ran in them), slow
+  taps (Event Timing), every screen change timed to the frame after it, and lifecycle events.
+  `docs/superpowers/specs/2026-11-22-diagnostics-design.md` is the design.
+  - **Its own database, `dnd-diagnostics`**, never a store in the characters database, whose
+    `DB_VERSION` bump would wait on every tab and lock older builds out. Newest 2,000 entries,
+    written every 2 s and at once when the app is hidden.
+  - **Nothing typed reaches it**: an element is its tag and classes, a route has no id, a
+    script's invoker is cut at `[` (Chrome appends an image's `src`, and a portrait's is the
+    portrait). The privacy page says so.
+  - **Off, it costs nothing**: `recorder.ts` is a dynamic import, loaded only while the switch
+    (`diagnostics:on` in localStorage) is on. `main.tsx` starts it before the first render.
+  - **Reading a log**: `session.build` names the entry bundle. Build that commit with
+    `npx vite build --sourcemap hidden --outDir <dir>`, check the file name matches, and look
+    each `sourceCharPosition` up in the `.map`.
+  - **Verified in Chromium** (production build, 412px, headless 157): switching it on from the
+    menu survives a reload (two `session` entries, both `index-ygWt1OH5.js`, the name in
+    `dist/index.html`). A 300 ms click handler on Spell List's back button gave one `input`, one
+    `frame` of 303.1 ms whose script is `BUTTON.onclick` (300 ms), and the route entry
+    `spells → null` (`toNextFrame` 0, `toFrameDone` 2.5 ms). None of the character's id, name,
+    spell or feat names is in the log. The script must press "Back to sections", because the
+    header has a `.back` button too and comes first in the DOM. No `lifecycle` entry appeared:
+    the `pagehide` at a reload is written during unload and does not land, and bringing a second
+    page to the front in headless Chromium also left none. The `visibilitychange` write is
+    therefore unproven here. Overhead, "hub in DOM" at 6× on the Spell List back press: 116, 95,
+    92 ms off and 113, 109, 101 ms on, so the ranges overlap. A hidden-source-map build of the
+    same commit has the same `assets/index-ygWt1OH5.js` name. With a 317-spell character at 6×
+    and every category open, eight frames were logged, and their positions map to
+    `scheduler.production.js:121` (React's `MessagePort.onmessage`), `src/ui/App.tsx:106` and
+    `idb/build/index.js:34`. The privacy paragraph reads as one paragraph with the new sentence
+    inside "Storage on your device".
 - The storage-layer work the followups doc called the sharpest risk is done: `createIndexedDbRepository`
   takes an injectable `registry` and `openDb`, reports `blocked`, `blocking` and `terminated`
   through an `onFailure` callback, and `list()` awaits `tx.done` so an aborted transaction rejects
@@ -790,6 +823,9 @@ src/ui/                components are presentational: data in, callbacks out, no
                        the one row of ability buttons both attack dialogs share. VitalTiles,
                        HitDiceDialog, AbilityRow and Mark are shared by the character and its
                        companions; screens/Companions.tsx is the eighth section
+  diagnostics/         the opt-in diagnostics log: entries.ts (pure, nothing typed), logStore.ts
+                       (its own IndexedDB database), recorder.ts (observers, buffer; lazy),
+                       index.ts (startIfOn, useDiagnostics — the only way in)
 src/main.tsx           the composition root; the only place the real library is constructed
 index.html             the app document; vite.config.ts builds and tests it
 src/data/schema/       index.ts is the public face; README.md governs versioning
