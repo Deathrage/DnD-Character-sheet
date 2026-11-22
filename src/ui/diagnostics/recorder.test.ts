@@ -1,0 +1,203 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { FrameEntry, LogEntry, RouteEntry } from './entries.js';
+import { Recorder, type ObserverConstructor, type RecorderOptions } from './recorder.js';
+
+const ORIGIN = Date.UTC(2026, 10, 22, 17, 0, 0);
+const ID = 'e4c315d2-310f-454b-82c5-ad649abaa300';
+
+/** jsdom has a `PerformanceObserver`, but neither entry type, so the test drives its own. */
+class FakeObserver {
+  static supportedEntryTypes: readonly string[] = ['long-animation-frame', 'event'];
+  static all: FakeObserver[] = [];
+  options: Record<string, unknown> | null = null;
+  disconnected = false;
+
+  constructor(readonly callback: (list: { getEntries(): PerformanceEntry[] }) => void) {
+    FakeObserver.all.push(this);
+  }
+  observe(options: Record<string, unknown>): void {
+    this.options = options;
+  }
+  disconnect(): void {
+    this.disconnected = true;
+  }
+  emit(entries: object[]): void {
+    this.callback({ getEntries: () => entries as PerformanceEntry[] });
+  }
+  static of(type: string): FakeObserver {
+    const found = FakeObserver.all.find((observer) => observer.options?.type === type);
+    if (found === undefined) throw new Error(`nothing observes ${type}`);
+    return found;
+  }
+}
+
+const loaf = (startTime = 100) => ({
+  startTime,
+  duration: 120,
+  renderStart: startTime + 100,
+  styleAndLayoutStart: startTime + 105,
+  blockingDuration: 70,
+  scripts: [],
+});
+
+/** Enough turns of the microtask queue for a flush to reach the store. */
+const settle = async () => {
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+};
+
+const isFrame = (entry: LogEntry): entry is FrameEntry => entry.kind === 'frame';
+const isRoute = (entry: LogEntry): entry is RouteEntry => entry.kind === 'route';
+
+let written: LogEntry[];
+let append: ReturnType<typeof vi.fn<(entries: readonly LogEntry[]) => Promise<void>>>;
+let created: Recorder[];
+
+function recorder(overrides: Partial<RecorderOptions> = {}): Recorder {
+  const made = new Recorder({
+    store: { append },
+    Observer: FakeObserver as unknown as ObserverConstructor,
+    now: () => Date.now(),
+    timeOrigin: ORIGIN,
+    frame: (callback) => void setTimeout(callback, 16),
+    heap: () => 1_000_000,
+    ...overrides,
+  });
+  created.push(made);
+  return made;
+}
+
+beforeEach(() => {
+  vi.useFakeTimers({
+    now: 0,
+    toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
+  });
+  history.replaceState(null, '', `#/c/${ID}/spells`);
+  FakeObserver.all = [];
+  written = [];
+  append = vi.fn((entries: readonly LogEntry[]) => {
+    written.push(...entries);
+    return Promise.resolve();
+  });
+  created = [];
+});
+
+afterEach(async () => {
+  for (const made of created) await made.stop();
+  Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true });
+  vi.useRealTimers();
+});
+
+describe('Recorder', () => {
+  it('writes a session entry, then a batch every 2 s', async () => {
+    recorder().start();
+    expect(append).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(written.map((entry) => entry.kind)).toEqual(['session']);
+
+    FakeObserver.of('long-animation-frame').emit([loaf()]);
+    await vi.advanceTimersByTimeAsync(1999);
+    expect(append).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(written.map((entry) => entry.kind)).toEqual(['session', 'frame']);
+  });
+
+  it('observes both entry types buffered, and taps from 100 ms', () => {
+    recorder().start();
+    expect(FakeObserver.of('long-animation-frame').options).toEqual({
+      type: 'long-animation-frame',
+      buffered: true,
+    });
+    expect(FakeObserver.of('event').options).toEqual({
+      type: 'event',
+      buffered: true,
+      durationThreshold: 100,
+    });
+  });
+
+  it('observes nothing the browser does not support, and says so', async () => {
+    class Unsupported extends FakeObserver {
+      static override supportedEntryTypes: readonly string[] = [];
+    }
+    const made = recorder({ Observer: Unsupported as unknown as ObserverConstructor });
+    made.start();
+    await made.flush();
+    expect(FakeObserver.all).toEqual([]);
+    expect(written[0]).toMatchObject({
+      kind: 'session',
+      supports: { frames: false, inputs: false },
+    });
+  });
+
+  it('labels a frame with the screen it started on', async () => {
+    const made = recorder();
+    made.start();
+    await vi.advanceTimersByTimeAsync(500);
+    history.replaceState(null, '', `#/c/${ID}`);
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    FakeObserver.of('long-animation-frame').emit([loaf(100), loaf(600)]);
+    await made.flush();
+    expect(written.filter(isFrame).map((entry) => entry.route)).toEqual([
+      { name: 'character', section: 'spells' },
+      { name: 'character', section: null },
+    ]);
+  });
+
+  it('times a screen change to the frame after it, and records no id', async () => {
+    const made = recorder();
+    made.start();
+    await vi.advanceTimersByTimeAsync(1000);
+    history.replaceState(null, '', `#/c/${ID}`);
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    // The fake clock runs a 0 ms timer 1 ms on, so the frame at 16 is done at 17.
+    await vi.advanceTimersByTimeAsync(17);
+    await made.flush();
+    expect(written.find(isRoute)).toEqual({
+      kind: 'route',
+      at: new Date(ORIGIN + 1000).toISOString(),
+      t: 1000,
+      from: { name: 'character', section: 'spells' },
+      to: { name: 'character', section: null },
+      toNextFrame: 16,
+      toFrameDone: 17,
+    });
+    expect(JSON.stringify(written)).not.toContain(ID);
+  });
+
+  it('writes at once when the app is hidden, and on pagehide', async () => {
+    recorder().start();
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    await settle();
+    expect(written.map((entry) => entry.kind)).toEqual(['session', 'lifecycle']);
+    expect(written[1]).toMatchObject({ event: 'visibilitychange', state: 'hidden' });
+
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+    await settle();
+    expect(written.at(-1)).toMatchObject({ kind: 'lifecycle', event: 'pagehide', persisted: true });
+  });
+
+  it('stop disconnects, stops listening, and writes what is left', async () => {
+    const made = recorder();
+    made.start();
+    FakeObserver.of('long-animation-frame').emit([loaf()]);
+    await made.stop();
+    expect(made.recording).toBe(false);
+    expect(FakeObserver.all.every((observer) => observer.disconnected)).toBe(true);
+    expect(written.map((entry) => entry.kind)).toEqual(['session', 'frame']);
+
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(written).toHaveLength(2);
+  });
+
+  it('never throws when the store refuses a batch', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    append.mockImplementation(() => Promise.reject(new Error('QuotaExceededError')));
+    const made = recorder();
+    made.start();
+    await expect(made.flush()).resolves.toBeUndefined();
+    expect(warn).toHaveBeenCalledOnce();
+    warn.mockRestore();
+  });
+});
