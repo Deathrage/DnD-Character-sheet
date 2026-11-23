@@ -5,6 +5,7 @@ import {
   routeAt,
   routeOfHash,
   stamp,
+  type Clock,
   type EventTiming,
   type LifecycleEntry,
   type LogEntry,
@@ -37,8 +38,8 @@ export interface RecorderOptions {
   Observer?: ObserverConstructor | undefined;
   /** Defaults to `performance.now`. */
   now?: () => number;
-  /** Defaults to `performance.timeOrigin`. */
-  timeOrigin?: number;
+  /** Defaults to `Date.now`: the wall clock, which keeps running while a device sleeps. */
+  wallNow?: () => number;
   /** Runs a callback at the next frame. Defaults to `requestAnimationFrame`. */
   frame?: (callback: () => void) => void;
   /** Defaults to Chrome's `performance.memory.usedJSHeapSize`, null elsewhere. */
@@ -56,7 +57,7 @@ export class Recorder {
   readonly #store: Pick<LogStore, 'append'>;
   readonly #Observer: ObserverConstructor | undefined;
   readonly #now: () => number;
-  readonly #timeOrigin: number;
+  readonly #wallNow: () => number;
   readonly #frame: (callback: () => void) => void;
   readonly #heap: () => number | null;
   readonly #flushMs: number;
@@ -75,7 +76,7 @@ export class Recorder {
         ? options.Observer
         : (globalThis.PerformanceObserver as unknown as ObserverConstructor | undefined);
     this.#now = options.now ?? (() => performance.now());
-    this.#timeOrigin = options.timeOrigin ?? performance.timeOrigin;
+    this.#wallNow = options.wallNow ?? (() => Date.now());
     this.#frame = options.frame ?? ((callback) => void requestAnimationFrame(() => callback()));
     this.#heap = options.heap ?? readHeap;
     this.#flushMs = options.flushMs ?? FLUSH_MS;
@@ -94,7 +95,7 @@ export class Recorder {
       for (const entry of entries as unknown as LongAnimationFrameTiming[]) {
         this.#push(
           frameEntry(entry, {
-            timeOrigin: this.#timeOrigin,
+            clock: this.#clock(),
             route: routeAt(this.#routes, entry.startTime),
             heap: this.#heap(),
           }),
@@ -105,7 +106,7 @@ export class Recorder {
       if (this.#seen.size > MAX_SEEN) this.#seen.clear();
       this.#push(
         ...inputEntries(entries as unknown as EventTiming[], {
-          timeOrigin: this.#timeOrigin,
+          clock: this.#clock(),
           routeAt: (t) => routeAt(this.#routes, t),
           seen: this.#seen,
         }),
@@ -156,12 +157,16 @@ export class Recorder {
     return this.#writing;
   }
 
+  #clock(): Clock {
+    return { perfNow: this.#now(), wallNow: this.#wallNow() };
+  }
+
   #push(...entries: LogEntry[]): void {
     this.#buffer.push(...entries);
   }
 
   #lifecycle(fields: Pick<LifecycleEntry, 'event' | 'persisted' | 'state'>): void {
-    this.#push({ kind: 'lifecycle', ...stamp(this.#now(), this.#timeOrigin), ...fields });
+    this.#push({ kind: 'lifecycle', ...stamp(this.#now(), this.#clock()), ...fields });
   }
 
   #listen(target: EventTarget, type: string, handler: (event: Event) => void): void {
@@ -197,7 +202,7 @@ export class Recorder {
         if (!this.recording) return;
         this.#push({
           kind: 'route',
-          ...stamp(start, this.#timeOrigin),
+          ...stamp(start, this.#clock()),
           from,
           to,
           toNextFrame: round(nextFrame - start),
@@ -213,7 +218,7 @@ export class Recorder {
       PerformanceNavigationTiming | undefined;
     return {
       kind: 'session',
-      ...stamp(this.#now(), this.#timeOrigin),
+      ...stamp(this.#now(), this.#clock()),
       build: buildName(),
       userAgent: navigator.userAgent,
       deviceMemory: (navigator as unknown as { deviceMemory?: number }).deviceMemory ?? null,

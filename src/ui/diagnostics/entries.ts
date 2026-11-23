@@ -137,8 +137,18 @@ export function round(ms: number): number {
   return Math.round(ms * 10) / 10;
 }
 
-export function stamp(t: number, timeOrigin: number): Stamp {
-  return { at: new Date(timeOrigin + t).toISOString(), t: round(t) };
+/**
+ * Both clocks read at the same moment. `at` is the wall clock then, less how long ago `t` was on
+ * the performance clock: `performance.now()` stops while an Android device sleeps, so
+ * `timeOrigin + t` would be hours early after the app has been in the background.
+ */
+export interface Clock {
+  perfNow: number;
+  wallNow: number;
+}
+
+export function stamp(t: number, clock: Clock): Stamp {
+  return { at: new Date(clock.wallNow - (clock.perfNow - t)).toISOString(), t: round(t) };
 }
 
 function routeLabel(route: Route): RouteLabel {
@@ -212,11 +222,11 @@ const sinceStart = (mark: number, start: number): number | null =>
 
 export function frameEntry(
   entry: LongAnimationFrameTiming,
-  context: { timeOrigin: number; route: RouteLabel | null; heap: number | null },
+  context: { clock: Clock; route: RouteLabel | null; heap: number | null },
 ): FrameEntry {
   return {
     kind: 'frame',
-    ...stamp(entry.startTime, context.timeOrigin),
+    ...stamp(entry.startTime, context.clock),
     duration: round(entry.duration),
     blockingDuration: round(entry.blockingDuration),
     renderStart: sinceStart(entry.renderStart, entry.startTime),
@@ -239,7 +249,7 @@ export function frameEntry(
 export function inputEntries(
   entries: readonly EventTiming[],
   context: {
-    timeOrigin: number;
+    clock: Clock;
     routeAt: (t: number) => RouteLabel | null;
     seen: Set<number>;
   },
@@ -258,7 +268,7 @@ export function inputEntries(
     const processing = round(entry.processingEnd - entry.processingStart);
     return {
       kind: 'input',
-      ...stamp(entry.startTime, context.timeOrigin),
+      ...stamp(entry.startTime, context.clock),
       name: entry.name,
       duration: round(entry.duration),
       inputDelay,

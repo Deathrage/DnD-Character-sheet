@@ -58,7 +58,7 @@ function recorder(overrides: Partial<RecorderOptions> = {}): Recorder {
     store: { append },
     Observer: FakeObserver as unknown as ObserverConstructor,
     now: () => Date.now(),
-    timeOrigin: ORIGIN,
+    wallNow: () => ORIGIN + Date.now(),
     frame: (callback) => void setTimeout(callback, 16),
     heap: () => 1_000_000,
     ...overrides,
@@ -162,6 +162,18 @@ describe('Recorder', () => {
       toFrameDone: 17,
     });
     expect(JSON.stringify(written)).not.toContain(ID);
+  });
+
+  it('dates an entry from the wall clock when the performance clock has fallen behind', async () => {
+    const SLEPT = 8 * 3_600_000;
+    const made = recorder({ now: () => 1000, wallNow: () => ORIGIN + SLEPT + 1000 });
+    made.start();
+    FakeObserver.of('long-animation-frame').emit([loaf(1000)]);
+    await made.flush();
+    expect(written.find(isFrame)).toMatchObject({
+      t: 1000,
+      at: new Date(ORIGIN + SLEPT + 1000).toISOString(),
+    });
   });
 
   it('writes at once when the app is hidden, and on pagehide', async () => {

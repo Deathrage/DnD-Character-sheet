@@ -15,6 +15,8 @@ import {
 } from './entries.js';
 
 const ORIGIN = Date.UTC(2026, 10, 22, 17, 0, 0);
+/** Both clocks read together: the performance clock started at ORIGIN, with no sleep. */
+const CLOCK = { perfNow: 5000, wallNow: ORIGIN + 5000 };
 const ID = 'e4c315d2-310f-454b-82c5-ad649abaa300';
 
 const script = (overrides: Partial<ScriptTiming> = {}): ScriptTiming => ({
@@ -50,16 +52,16 @@ const event = (overrides: Partial<EventTiming> = {}): EventTiming => ({
   ...overrides,
 });
 
-const frameContext = { timeOrigin: ORIGIN, route: null, heap: null };
+const frameContext = { clock: CLOCK, route: null, heap: null };
 const inputContext = () => ({
-  timeOrigin: ORIGIN,
+  clock: CLOCK,
   routeAt: () => ({ name: 'list' }) as const,
   seen: new Set<number>(),
 });
 
 describe('frameEntry', () => {
   it('stamps the frame and times its phases from its start', () => {
-    const entry = frameEntry(frame(), { timeOrigin: ORIGIN, route: { name: 'list' }, heap: 2048 });
+    const entry = frameEntry(frame(), { clock: CLOCK, route: { name: 'list' }, heap: 2048 });
     expect(entry).toMatchObject({
       kind: 'frame',
       at: '2026-11-22T17:00:01.000Z',
