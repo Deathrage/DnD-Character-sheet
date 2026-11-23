@@ -182,6 +182,20 @@ describe('Recorder', () => {
     ]);
   });
 
+  it('labels a frame with the screen the page opened on, when the player navigated before the recorder started', async () => {
+    await vi.advanceTimersByTimeAsync(500);
+    const initialHash = location.hash; // spells, as the page opened
+    history.replaceState(null, '', `#/c/${ID}`); // moved on while the chunk loaded
+    const made = recorder();
+    made.start({ launch: true, initialHash });
+    FakeObserver.of('long-animation-frame').emit([loaf(100), loaf(600)]);
+    await made.flush();
+    expect(written.filter(isFrame).map((entry) => entry.route)).toEqual([
+      { name: 'character', section: 'spells' },
+      { name: 'character', section: null },
+    ]);
+  });
+
   it('skips a frame from before the last stop, keeps one from while off with no route, and labels one after the restart', async () => {
     const made = recorder();
     made.start({ launch: true });
@@ -318,7 +332,8 @@ describe('Recorder', () => {
       const made = recorder();
       made.start({ launch: true });
       worker.dispatchEvent(new Event('controllerchange'));
-      await made.flush();
+      // Written at once, with no flush asked for: an update reload follows.
+      await settle();
       expect(written.at(-1)).toMatchObject({ kind: 'lifecycle', event: 'controllerchange' });
     } finally {
       delete (navigator as unknown as Record<string, unknown>).serviceWorker;

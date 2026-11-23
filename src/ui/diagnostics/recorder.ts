@@ -60,6 +60,12 @@ export interface StartOptions {
    * the buffered entries from before are then from a screen not known, and say `route: null`.
    */
   launch: boolean;
+  /**
+   * With `launch`: `location.hash` as the page opened, read before the recorder's chunk loaded.
+   * The player may have navigated since, so the route at t = 0 is this one, and a different
+   * current hash is marked at the moment the recorder starts.
+   */
+  initialHash?: string;
 }
 
 export class Recorder {
@@ -102,9 +108,14 @@ export class Recorder {
     return this.#stops.length > 0;
   }
 
-  start({ launch }: StartOptions): void {
+  start({ launch, initialHash }: StartOptions): void {
     if (this.recording) return;
-    this.#routes = [{ t: launch ? 0 : this.#now(), route: routeOfHash(location.hash) }];
+    const first = launch && initialHash !== undefined ? initialHash : location.hash;
+    this.#routes = [{ t: launch ? 0 : this.#now(), route: routeOfHash(first) }];
+    // The screen changed before the recorder was up: its first moment on the new one is now.
+    if (first !== location.hash) {
+      this.#routes.push({ t: this.#now(), route: routeOfHash(location.hash) });
+    }
     this.#push(this.#session());
 
     this.#observe('long-animation-frame', {}, (entries) => {
@@ -143,9 +154,11 @@ export class Recorder {
     this.#listen(document, 'freeze', () => this.#lifecycle({ event: 'freeze' }));
     this.#listen(document, 'resume', () => this.#lifecycle({ event: 'resume' }));
     if ('serviceWorker' in navigator) {
-      this.#listen(navigator.serviceWorker, 'controllerchange', () =>
-        this.#lifecycle({ event: 'controllerchange' }),
-      );
+      // Flushed at once: an update that takes control is followed by a reload.
+      this.#listen(navigator.serviceWorker, 'controllerchange', () => {
+        this.#lifecycle({ event: 'controllerchange' });
+        void this.flush();
+      });
     }
   }
 

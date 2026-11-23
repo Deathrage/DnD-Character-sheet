@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CharacterLibraryBO,
   CloudBackup,
@@ -11,6 +11,7 @@ import { ID_A, docFor, putRaw, wipe } from '../test/fixtures.js';
 import { stubDialogElement } from '../test/stubDialog.js';
 import { App } from './App.js';
 import { Diagnostics } from './diagnostics/index.js';
+import type { LogStore } from './diagnostics/logStore.js';
 import { navigate } from './route.js';
 
 /**
@@ -43,12 +44,14 @@ const cloudWith =
     } as unknown as Awaited<ReturnType<CloudLoad>>);
 
 let diagnosticsDatabases = 0;
+const builtDiagnostics: Diagnostics[] = [];
 const databaseExists = async (name: string) =>
   (await indexedDB.databases()).some((info) => info.name === name);
 
 function renderApp(
   gatePort: PersistencePort = port(),
   load: CloudLoad = () => Promise.reject(new Error('no cloud in the shell tests')),
+  store?: LogStore,
 ) {
   const library = new CharacterLibraryBO({
     storageGate: new StorageGate({ port: gatePort }),
@@ -57,10 +60,12 @@ function renderApp(
   const cloud = new CloudBackup(library, { load });
   // Its own database per test, so no test sees what another recorded.
   const dbName = `diagnostics-app-test-${++diagnosticsDatabases}`;
-  const diagnostics = new Diagnostics({ dbName });
+  const diagnostics = new Diagnostics(store === undefined ? { dbName } : { dbName, store });
+  builtDiagnostics.push(diagnostics);
   return {
     library,
     dbName,
+    diagnostics,
     ...render(<App library={library} cloud={cloud} diagnostics={diagnostics} />),
   };
 }
@@ -75,7 +80,10 @@ describe('App', () => {
     localStorage.clear();
     await wipe();
   });
-  afterEach(wipe);
+  afterEach(async () => {
+    for (const diagnostics of builtDiagnostics.splice(0)) diagnostics.dispose();
+    await wipe();
+  });
 
   it('lists nothing on a first run', async () => {
     renderApp();
@@ -305,9 +313,13 @@ describe('App', () => {
   });
 
   it('creates no diagnostics database until recording is switched on', async () => {
-    const { dbName } = renderApp();
+    const { dbName, diagnostics } = renderApp();
+    const summary = vi.spyOn(diagnostics, 'summary');
     fireEvent.click(await screen.findByRole('button', { name: 'Menu' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Diagnostics' }));
+    // The menu's refresh has read the log, which is what could have created the database.
+    await waitFor(() => expect(summary).toHaveBeenCalled());
+    await summary.mock.results[0]?.value;
     await screen.findByText('Nothing recorded yet.');
     expect(await databaseExists(dbName)).toBe(false);
 
@@ -317,5 +329,31 @@ describe('App', () => {
     // Left off, so the recorder does not keep observing into the next test.
     fireEvent.click(screen.getByRole('checkbox', { name: 'Record slow moments' }));
     await waitFor(() => expect(localStorage.getItem('diagnostics:on')).toBe('false'));
+  });
+
+  it('says so when the diagnostics log cannot be read or cleared', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const broken = () => Promise.reject(new Error('InvalidStateError'));
+    const store: LogStore = {
+      append: broken,
+      readAll: broken,
+      count: () => Promise.resolve(1),
+      oldest: () => Promise.resolve(null),
+      clear: broken,
+    };
+    try {
+      renderApp(port(), undefined, store);
+      fireEvent.click(await screen.findByRole('button', { name: 'Menu' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Diagnostics' }));
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Download log' }));
+      expect(await screen.findByText('The diagnostics log could not be read.')).toBeDefined();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Clear log' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+      expect(await screen.findByText('The diagnostics log could not be cleared.')).toBeDefined();
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

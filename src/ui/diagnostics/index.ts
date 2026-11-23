@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { readPersisted, writePersisted } from '../persistedState.js';
 import type { DiagnosticsView } from '../types.js';
 import { createLogStore, type LogStore } from './logStore.js';
@@ -16,7 +16,7 @@ const KEY = 'diagnostics:on';
 
 /** The slice of `Recorder` used here. */
 interface RecorderLike {
-  start(options: { launch: boolean }): void;
+  start(options: { launch: boolean; initialHash?: string }): void;
   flush(): Promise<void>;
   stop(): Promise<void>;
 }
@@ -29,6 +29,8 @@ export interface RecorderModule {
 export interface DiagnosticsOptions {
   /** The log's database. Defaults to the app's; tests give each case its own. */
   dbName?: string;
+  /** The log's store, instead of one opened on `dbName`. For tests of a store that fails. */
+  store?: LogStore;
   load?: () => Promise<RecorderModule>;
 }
 
@@ -39,23 +41,58 @@ export class Diagnostics {
   #recorder: Promise<RecorderLike> | null = null;
   /** Whether the player wants recording now: a recorder whose load finishes late checks it. */
   #wanted = false;
+  /**
+   * This tab's switch, in memory. Seeded from the persisted one and then kept here, so a write
+   * that throws, or a recorder that failed to load, cannot leave the menu saying what is not so.
+   */
+  #on: boolean;
+  readonly #listeners = new Set<() => void>();
+  readonly #onStorage = (event: StorageEvent): void => {
+    if (event.key !== KEY) return;
+    const on = event.newValue === 'true';
+    if (on === this.#on) return;
+    this.#on = on;
+    if (on) this.#start(false);
+    else void this.#stop().catch(() => {});
+    this.#notify();
+  };
 
-  constructor({ dbName, load = () => import('./recorder.js') }: DiagnosticsOptions = {}) {
-    this.#store = createLogStore(dbName === undefined ? {} : { name: dbName });
+  constructor({ dbName, store, load = () => import('./recorder.js') }: DiagnosticsOptions = {}) {
+    this.#store = store ?? createLogStore(dbName === undefined ? {} : { name: dbName });
     this.#load = load;
+    this.#on = readPersisted(KEY, false);
+    // Another window of the app (the installed one and a browser tab) shares the switch and the log.
+    globalThis.addEventListener?.('storage', this.#onStorage);
   }
 
-  /** The persisted switch. */
+  /** Whether this tab is recording, or about to. */
   get on(): boolean {
-    return readPersisted(KEY, false);
+    return this.#on;
+  }
+
+  /** Removes the `storage` listener. `main.tsx`'s instance lives as long as the page. */
+  dispose(): void {
+    globalThis.removeEventListener?.('storage', this.#onStorage);
+  }
+
+  /** Tells `listener` when the switch changed without the player pressing it here. */
+  subscribe(listener: () => void): () => void {
+    this.#listeners.add(listener);
+    return () => void this.#listeners.delete(listener);
+  }
+
+  #notify(): void {
+    for (const listener of [...this.#listeners]) listener();
   }
 
   /** Called once by `main.tsx`, before the first render, so a launch is recorded from its start. */
   startIfOn(): void {
-    if (this.on) this.#start(true);
+    // Read now: the recorder starts when its chunk has loaded, and the player may have moved on.
+    if (this.#on) this.#start(true, location.hash);
   }
 
   async setOn(on: boolean): Promise<void> {
+    this.#on = on;
     writePersisted(KEY, on);
     if (on) this.#start(false);
     else await this.#stop();
@@ -63,7 +100,7 @@ export class Diagnostics {
 
   /** The count and the oldest entry's time, after writing what the recorder holds. */
   async summary(): Promise<{ count: number; since: string | null }> {
-    await this.#flush();
+    await this.flush();
     const [count, oldest] = await Promise.all([this.#store.count(), this.#store.oldest()]);
     return { count, since: oldest?.at ?? null };
   }
@@ -71,7 +108,7 @@ export class Diagnostics {
   /** The log as a file, or null when it could not be read. */
   async logFile(now: Date = new Date()): Promise<{ filename: string; text: string } | null> {
     try {
-      await this.#flush();
+      await this.flush();
       const entries = await this.#store.readAll();
       return {
         filename: `dnd-diagnostics-${now.toISOString().slice(0, 10)}.json`,
@@ -83,12 +120,15 @@ export class Diagnostics {
     }
   }
 
-  async clear(): Promise<void> {
+  /** Whether the log was cleared. */
+  async clear(): Promise<boolean> {
     try {
-      await this.#flush();
+      await this.flush();
       await this.#store.clear();
+      return true;
     } catch (error) {
       console.warn('Diagnostics: the log could not be cleared.', error);
+      return false;
     }
   }
 
@@ -105,16 +145,28 @@ export class Diagnostics {
     return this.#recorder;
   }
 
-  /** `launch` is whether recording starts with the page, rather than from the menu mid-launch. */
-  #start(launch: boolean): void {
+  /**
+   * `launch` is whether recording starts with the page, rather than from the menu mid-launch;
+   * `initialHash` is the page's hash at that launch.
+   */
+  #start(launch: boolean, initialHash?: string): void {
     this.#wanted = true;
     this.#loadRecorder().then(
       (recorder) => {
         // Switched off while the chunk was loading: a recorder started now would record after
         // the player said off. `start` is idempotent, so a quick off → on starts it once.
-        if (this.#wanted) recorder.start({ launch });
+        if (this.#wanted) {
+          recorder.start(initialHash === undefined ? { launch } : { launch, initialHash });
+        }
       },
-      () => {}, // Already reported by `#loadRecorder`.
+      () => {
+        // Already reported by `#loadRecorder`. Nothing records, so the switch says so.
+        if (this.#wanted) {
+          this.#wanted = false;
+          this.#on = false;
+          this.#notify();
+        }
+      },
     );
   }
 
@@ -123,7 +175,8 @@ export class Diagnostics {
     if (this.#recorder !== null) await (await this.#recorder).stop();
   }
 
-  async #flush(): Promise<void> {
+  /** Writes what the recorder holds. Never rejects. */
+  async flush(): Promise<void> {
     const recorder = this.#recorder;
     if (recorder === null) return;
     let loaded: RecorderLike;
@@ -143,7 +196,8 @@ export interface DiagnosticsHook {
   setOn(on: boolean): Promise<void>;
   /** The log as a file, or null when it could not be read. */
   logFile(now?: Date): Promise<{ filename: string; text: string } | null>;
-  clear(): Promise<void>;
+  /** Whether the log was cleared. */
+  clear(): Promise<boolean>;
 }
 
 export function useDiagnostics(diagnostics: Diagnostics): DiagnosticsHook {
@@ -186,9 +240,13 @@ export function useDiagnostics(diagnostics: Diagnostics): DiagnosticsHook {
   const logFile = useCallback((now?: Date) => diagnostics.logFile(now), [diagnostics]);
 
   const clear = useCallback(async () => {
-    await diagnostics.clear();
+    const cleared = await diagnostics.clear();
     await refresh();
+    return cleared;
   }, [diagnostics, refresh]);
+
+  // The switch changed in another window, or the recorder failed to load: show it.
+  useEffect(() => diagnostics.subscribe(() => void refresh()), [diagnostics, refresh]);
 
   return { view, refresh, setOn, logFile, clear };
 }

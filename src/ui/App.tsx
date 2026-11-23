@@ -179,10 +179,15 @@ export function App({
             onSetDiagnostics={(on) => void diagnostics.setOn(on)}
             onDownloadDiagnostics={() =>
               void diagnostics.logFile().then((file) => {
-                if (file !== null) download(file);
+                if (file === null) setProblem('The diagnostics log could not be read.');
+                else download(file);
               })
             }
-            onClearDiagnostics={() => void diagnostics.clear()}
+            onClearDiagnostics={() =>
+              void diagnostics.clear().then((cleared) => {
+                if (!cleared) setProblem('The diagnostics log could not be cleared.');
+              })
+            }
             onSignIn={() => cloud.signIn()}
             onSignOut={() => cloud.signOut()}
             onOpenCloud={() => navigate({ name: 'cloud' })}

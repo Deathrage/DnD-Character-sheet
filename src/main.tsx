@@ -43,7 +43,11 @@ if (import.meta.env.DEV) {
 createRoot(root).render(
   <StrictMode>
     {/* First, so the strip sits above the app and pushes it down (see `#root` in styles.css). */}
-    <UpdatePrompt beforeReload={() => library.flush()} />
+    <UpdatePrompt
+      beforeReload={async () => {
+        await Promise.all([library.flush(), diagnostics.flush()]);
+      }}
+    />
     <App library={library} cloud={cloud} diagnostics={diagnostics} />
   </StrictMode>,
 );
