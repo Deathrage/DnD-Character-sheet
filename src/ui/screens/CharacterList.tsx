@@ -2,11 +2,12 @@ import { useId, useState, type ReactNode } from 'react';
 import { Portrait } from '../components/Portrait.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import { Avatar } from '../components/Avatar.js';
+import { DiagnosticsDialog } from '../components/DiagnosticsDialog.js';
 import { ICONS } from '../components/icons.js';
-import { formatWhen } from '../format.js';
+import { formatWhen, plural } from '../format.js';
 import type { LegalPage } from '../route.js';
 import { chooseTheme, storedTheme, THEMES } from '../theme.js';
-import type { CharacterRow, CloudView, InstallView } from '../types.js';
+import type { CharacterRow, CloudView, DiagnosticsView, InstallView } from '../types.js';
 import { CloudTerms } from './Legal.js';
 
 interface Props {
@@ -32,6 +33,11 @@ interface Props {
   onSignOut?(): Promise<string | null>;
   onOpenCloud?(): void;
   onOpenLegal?(page: LegalPage): void;
+  /** Absent hides the menu's Diagnostics row: the stories, and any screen without the log. */
+  diagnostics?: DiagnosticsView;
+  onSetDiagnostics?(on: boolean): void;
+  onDownloadDiagnostics?(): void;
+  onClearDiagnostics?(): void;
 }
 
 export function CharacterList({
@@ -50,12 +56,17 @@ export function CharacterList({
   onSignOut,
   onOpenCloud,
   onOpenLegal,
+  diagnostics,
+  onSetDiagnostics,
+  onDownloadDiagnostics,
+  onClearDiagnostics,
 }: Props) {
   const [confirming, setConfirming] = useState<{
     action: 'clone' | 'delete';
     row: CharacterRow;
   } | null>(null);
   const [showingSteps, setShowingSteps] = useState(false);
+  const [showingDiagnostics, setShowingDiagnostics] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuMessage, setMenuMessage] = useState<string | null>(null);
   const signedIn = account?.status === 'signedIn';
@@ -230,6 +241,20 @@ export function CharacterList({
               />
             </ul>
           )}
+          {diagnostics !== undefined && (
+            <ul className="mgroup">
+              <MenuItem
+                icon={ICONS.pulse}
+                label="Diagnostics"
+                description={
+                  diagnostics.on
+                    ? `Recording · ${plural(diagnostics.count, 'entry', 'entries')}`
+                    : 'Record slow moments for the developer.'
+                }
+                onClick={fromMenu(() => setShowingDiagnostics(true))}
+              />
+            </ul>
+          )}
           <ul className="mgroup">
             <MenuItem
               icon={ICONS.privacy}
@@ -265,6 +290,16 @@ export function CharacterList({
             An installed app starts offline and is the one this browser trusts to keep its storage.
           </p>
         </ResponsiveDialog>
+      )}
+
+      {showingDiagnostics && diagnostics !== undefined && (
+        <DiagnosticsDialog
+          view={diagnostics}
+          onSetOn={(on) => onSetDiagnostics?.(on)}
+          onDownload={() => onDownloadDiagnostics?.()}
+          onClear={() => onClearDiagnostics?.()}
+          onClose={() => setShowingDiagnostics(false)}
+        />
       )}
 
       {confirming !== null && (

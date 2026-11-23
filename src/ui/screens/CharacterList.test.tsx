@@ -2,7 +2,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 import { stubDialogElement } from '../../test/stubDialog.js';
-import type { InstallView } from '../types.js';
+import type { DiagnosticsView, InstallView } from '../types.js';
 import { CharacterList } from './CharacterList.js';
 
 beforeAll(stubDialogElement);
@@ -173,5 +173,70 @@ describe('CharacterList menu: appearance', () => {
     localStorage.setItem('ui:theme', '"light"');
     list();
     expect((choice('Light') as HTMLInputElement).checked).toBe(true);
+  });
+});
+
+describe('CharacterList menu: diagnostics', () => {
+  const log = (extra: Partial<DiagnosticsView> = {}): DiagnosticsView => ({
+    on: false,
+    count: 0,
+    since: null,
+    ...extra,
+  });
+
+  it('is absent without a log', () => {
+    list();
+    expect(screen.queryByRole('button', { name: 'Diagnostics' })).toBeNull();
+  });
+
+  it('says what it does while off', () => {
+    list({ diagnostics: log() });
+    expect(
+      screen.getByRole('button', {
+        name: 'Diagnostics',
+        description: 'Record slow moments for the developer.',
+      }),
+    ).toBeTruthy();
+  });
+
+  it('says how much it holds while on', () => {
+    list({ diagnostics: log({ on: true, count: 134 }) });
+    expect(
+      screen.getByRole('button', { name: 'Diagnostics', description: 'Recording · 134 entries' }),
+    ).toBeTruthy();
+  });
+
+  it('opens a dialog whose switch, download and clear reach the callbacks', () => {
+    const onSetDiagnostics = vi.fn();
+    const onDownloadDiagnostics = vi.fn();
+    const onClearDiagnostics = vi.fn();
+    list({
+      diagnostics: log({ count: 3, since: '2026-11-22T17:03:00.000Z' }),
+      onSetDiagnostics,
+      onDownloadDiagnostics,
+      onClearDiagnostics,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Diagnostics' }));
+    const dialog = screen.getByRole('dialog', { name: 'Diagnostics' });
+    expect(within(dialog).getByText(/^3 entries since /)).toBeTruthy();
+
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Record slow moments' }));
+    expect(onSetDiagnostics).toHaveBeenCalledWith(true);
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Download log' }));
+    expect(onDownloadDiagnostics).toHaveBeenCalledOnce();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Clear log' }));
+    expect(onClearDiagnostics).not.toHaveBeenCalled();
+    const confirm = screen.getByRole('dialog', { name: 'Delete?' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
+    expect(onClearDiagnostics).toHaveBeenCalledOnce();
+  });
+
+  it('cannot download an empty log, and says it is empty', () => {
+    list({ diagnostics: log() });
+    fireEvent.click(screen.getByRole('button', { name: 'Diagnostics' }));
+    expect(screen.getByRole('button', { name: 'Download log' })).toHaveProperty('disabled', true);
+    expect(screen.getByText('Nothing recorded yet.')).toBeTruthy();
   });
 });

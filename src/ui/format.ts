@@ -22,3 +22,8 @@ export function formatSigned(value: number): string {
 export function formatHitPoints(hp: { current: number; total: number; temporary: number }): string {
   return `${hp.current}/${hp.total}${hp.temporary > 0 ? ` +${hp.temporary}` : ''}`;
 }
+
+/** `1 item`, `3 items`, `1 entry`, `2 entries`: a count with its noun, as the player reads it. */
+export function plural(n: number, one: string, many = `${one}s`): string {
+  return `${n} ${n === 1 ? one : many}`;
+}

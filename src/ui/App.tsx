@@ -16,6 +16,7 @@ import {
   useStorageGate,
   useUploadNotice,
 } from './bind.js';
+import { useDiagnostics, type Diagnostics } from './diagnostics/index.js';
 import { useInstall } from './install.js';
 import { navigate, useRoute } from './route.js';
 import { CharacterHub } from './screens/CharacterHub.js';
@@ -33,15 +34,24 @@ import type { ConflictView, SectionKey } from './types.js';
  * and does the three things no business object can, because they are browser affordances rather
  * than rules — downloading a file, reading a picked one, and owning the open sheet's lifetime.
  *
- * The library is a prop, not a module singleton, so a test builds its own and nothing leaks
- * between them.
+ * The library, the cloud and the diagnostics log are props, not module singletons, so a test
+ * builds its own and nothing leaks between them.
  */
-export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: CloudBackup }) {
+export function App({
+  library,
+  cloud,
+  diagnostics: log,
+}: {
+  library: CharacterLibraryBO;
+  cloud: CloudBackup;
+  diagnostics: Diagnostics;
+}) {
   const route = useRoute();
   const rows = useCharacterRows(library);
   const gate = useStorageGate(library.storageGate);
   const failure = useStorageFailure(library.storageGate);
   const account = useCloud(cloud);
+  const diagnostics = useDiagnostics(log);
   // Installing is what moves `persist()` in Chromium and Safari, so it is asked again straight away.
   const install = useInstall(
     useCallback(() => void library.storageGate.requestPersist(), [library]),
@@ -160,8 +170,24 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
             onCreate={createCharacter}
             onImport={() => filePicker.current?.click()}
             account={account}
-            // Loads Firebase the first time — on opening the menu, never at launch.
-            onOpenMenu={() => void cloud.checkSignIn()}
+            onOpenMenu={() => {
+              // Loads Firebase the first time — on opening the menu, never at launch.
+              void cloud.checkSignIn();
+              void diagnostics.refresh();
+            }}
+            diagnostics={diagnostics.view}
+            onSetDiagnostics={(on) => void diagnostics.setOn(on)}
+            onDownloadDiagnostics={() =>
+              void diagnostics.logFile().then((file) => {
+                if (file === null) setProblem('The diagnostics log could not be read.');
+                else download(file);
+              })
+            }
+            onClearDiagnostics={() =>
+              void diagnostics.clear().then((cleared) => {
+                if (!cleared) setProblem('The diagnostics log could not be cleared.');
+              })
+            }
             onSignIn={() => cloud.signIn()}
             onSignOut={() => cloud.signOut()}
             onOpenCloud={() => navigate({ name: 'cloud' })}
@@ -490,11 +516,11 @@ function Notice({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Purely a browser affordance: `CharacterFile` knows the name and the text, and only the DOM can
- * put them in the player's downloads. The object URL is revoked immediately — `click()` has
- * already read it synchronously.
+ * Purely a browser affordance: a `CharacterFile` or the diagnostics log knows its name and its
+ * text, and only the DOM can put them in the player's downloads. The object URL is revoked
+ * immediately — `click()` has already read it synchronously.
  */
-function download(file: CharacterFile): void {
+function download(file: { filename: string; text: string }): void {
   const url = URL.createObjectURL(new Blob([file.text], { type: 'application/json' }));
   const link = document.createElement('a');
   link.href = url;

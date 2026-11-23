@@ -15,7 +15,7 @@ import { routeHash, type LegalPage } from '../route.js';
  * store of personal data, a new processor, analytics, or anything written to the device beyond
  * what "Storage on your device" lists, all need a line here and a new `UPDATED`.
  */
-const UPDATED = '25 September 2026';
+const UPDATED = '23 November 2026';
 const CONTACT = 'hi@lukasprochazka.net';
 const APP_ORIGIN = 'dnd-character-sheet-64a24.web.app';
 
@@ -156,9 +156,13 @@ const PAGES: Record<LegalPage, { title: string; body: ReactNode }> = {
           The app stores your characters and portraits in your browser&rsquo;s IndexedDB, keeps a
           few settings in its local and session storage, and caches itself so it works offline. When
           you are signed in, Firebase keeps your sign-in session in browser storage, and your
-          browser may keep your Google profile picture in its ordinary cache. All of this is
-          strictly necessary for the app you are using, so it needs no consent. The app uses no
-          cookies or trackers for analytics or advertising.
+          browser may keep your Google profile picture in its ordinary cache. If you turn on
+          Diagnostics in the menu, the app also keeps a log in IndexedDB of when and how long
+          screens and taps take, which part of the app was busy, and basic details of your browser
+          and device, never what you typed. The log stays until you clear it, even after you turn
+          Diagnostics off, and leaves your device only if you download it. All of this is strictly
+          necessary for the app you are using, so it needs no consent. The app uses no cookies or
+          trackers for analytics or advertising.
         </p>
 
         <h2>Your rights</h2>
