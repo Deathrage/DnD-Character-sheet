@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 2913 tests across 107 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 2924 tests across 107 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -390,14 +390,20 @@ back on the next load (criterion 14).
     written every 2 s and at once when the app is hidden.
   - **Nothing typed reaches it**: an element is its tag and classes, a route has no id, a
     script's invoker is cut at `[` (Chrome appends an image's `src`, and a portrait's is the
-    portrait). The privacy page says so.
+    portrait), and a URL invoker (an inline script's can be the document's own, whose hash holds
+    the character id) is reduced to its path with no `#` or `?`. The privacy page says so.
   - **Off, it costs nothing**: `recorder.ts` is a dynamic import, loaded only while the switch
     (`diagnostics:on` in localStorage) is on, and the `dnd-diagnostics` database is created by
     the first write only, so a player who never turns Diagnostics on never gets it. The store
     decides, not the menu: `readAll`, `count`, `oldest` and `clear` ask `indexedDB.databases()`
-    first and answer empty without opening it. One `Diagnostics` object is built in `main.tsx`
+    first and answer empty without opening it. That holds where `indexedDB.databases()` exists
+    (Chromium, Safari 14+, Firefox 126+); elsewhere a read opens the database, empty. One `Diagnostics` object is built in `main.tsx`
     and passed to `App`, like `library` and `cloud`; `main.tsx` calls its `startIfOn()` before the
     first render, which starts the recorder once its chunk has loaded.
+  - **The switch is this tab's in-memory state**, seeded from `diagnostics:on`, so a refused
+    `localStorage` write or a recorder that failed to load cannot leave the menu wrong. It is
+    followed across tabs: the installed app and a browser tab share the switch and the log, so
+    a `storage` event on the key starts or stops this tab's recorder.
   - **`at` is the wall clock at processing**, less how long ago the event was on the performance
     clock, because `performance.now()` stops while an Android device sleeps and `timeOrigin + t`
     would be hours early. **Buffered entries**: Chrome hands a new observer the page's earlier

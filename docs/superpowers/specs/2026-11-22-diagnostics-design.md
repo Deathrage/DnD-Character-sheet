@@ -45,13 +45,14 @@ is processed, less how long ago it was on the performance clock) and `t`
 |---|---|---|
 | `session` | once when recording starts: at launch while on, or when switched on | `build` (the entry script's file name, e.g. `index-B3x9.js`), `userAgent`, `deviceMemory`, `hardwareConcurrency`, `viewport` (`{ width, height, dpr }`), `standalone` (`display-mode: standalone` matches), `navigation` (`navigate`, `reload` or `back_forward`), `controlled` (a service worker controls the page), `supports` (`{ frames, inputs }`: whether the two entry types exist) |
 | `frame` | every `long-animation-frame` entry Chrome reports (all are over 50 ms) | `duration`, `blockingDuration`, `renderStart` and `styleAndLayoutStart` (relative to the frame's start), `route` (§2.1), `heap` (`performance.memory.usedJSHeapSize`, absent where it does not exist), `scripts`: up to 10, longest first, each `invokerType`, `invoker` (§2.2), `sourceURL` (path only, no origin), `sourceFunctionName`, `sourceCharPosition`, `duration`, `forcedStyleAndLayoutDuration`, `pauseDuration` |
-| `input` | one per interaction whose longest `event` entry is at least 100 ms (`durationThreshold: 100`) | `name` (`pointerdown`, `click`, `keydown`…, from the longest entry of the interaction), `duration`, `inputDelay` (`processingStart − startTime`), `processing` (`processingEnd − processingStart`), `presentationDelay` (the rest), `target` (§2.2), `route` |
+| `input` | one per interaction whose longest `event` entry, in the observer callback that first reports it, is at least 100 ms (`durationThreshold: 100`) | `name` (`pointerdown`, `click`, `keydown`…, from the longest entry of the interaction in that callback), `duration`, `inputDelay` (`processingStart − startTime`), `processing` (`processingEnd − processingStart`), `presentationDelay` (the rest), `target` (§2.2), `route` |
 | `route` | every `hashchange` | `from` (the route the recorder last saw, read from `location.hash` when it started) and `to` (§2.1), `toNextFrame` (`hashchange` to the next `requestAnimationFrame` callback), `toFrameDone` (to a task queued from that callback, i.e. after the frame) |
 | `lifecycle` | `visibilitychange`, `pagehide`, `pageshow`, `freeze`, `resume`, and `controllerchange` on the service worker container | `event`, plus `persisted` for `pagehide` and `pageshow` and `state` for `visibilitychange` |
 
 Event entries with `interactionId` 0 (hover, pointer enter and leave) are not interactions and are
 ignored. The several entries of one interaction (`pointerdown`, `pointerup`, `click`) share an
-`interactionId` and become one `input` entry.
+`interactionId` and become one `input` entry. One split across two observer callbacks is
+recorded from the events of the first, so its entry is its longest there, not necessarily overall.
 
 ### 2.1 Routes
 
@@ -68,7 +69,9 @@ Nothing from a sheet reaches the log: no names, descriptions, numbers or ids.
   (`Fire Bolt prepared`).
 - A frame script's `invoker` comes from Chrome as tag, id and event (`BUTTON#b.onclick`). It is
   cut at the first `[`, because Chrome may append `[src=…]` for an image and a portrait's `src`
-  is the portrait, and then to 100 characters. The ids in this app are fixed strings
+  is the portrait. A script's invoker is a URL, and an inline script's can be the document's own
+  (`https://…/#/c/<id>/spells`): one containing `://` is reduced to its path and cut at the first
+  `#` or `?`. An element invoker's `#` is an id and is kept. Then it is cut to 100 characters. The ids in this app are fixed strings
   (`new-spell-name`) or React's `useId`, never content.
 
 ## 3. Architecture
@@ -237,3 +240,13 @@ AGENTS.md gets a short entry under "Current state".
 - **The recorder idles.** The 2 s interval is a timeout armed by the first entry into an empty
   buffer, the `flushMs` option is gone, the stop mark is applied once in `#observe`, a batch of
   frames reads the clock and heap once, and `session.standalone` is `runningInstalled()`.
+
+## 13. Changes after /code-review
+
+1. **A URL invoker keeps only its path.** `sanitiseInvoker` reduces an invoker containing `://` to `sourcePath` and cuts at `#` or `?`; element invokers are untouched (§2.2).
+2. **A missing `interactionId` is no interaction.** `!entry.interactionId`, so an engine without it no longer keys every event `undefined`; the doc and §2 say a split interaction is recorded from the first callback's events.
+3. **The switch is this tab's real state.** `Diagnostics` keeps `on` in memory, seeded from `diagnostics:on`; `setOn` sets it before the best-effort write, and a failed recorder load sets it back to false.
+4. **The switch is followed across tabs.** A `storage` event on `diagnostics:on` starts or stops this tab's recorder; `subscribe()` lets `useDiagnostics` refresh, and `dispose()` removes the listener.
+5. **The launch route is the hash the page opened on.** `startIfOn()` reads `location.hash` at once and passes `initialHash`; a different hash when the recorder starts is marked at that moment.
+6. **Nothing buffered is lost to an update reload.** `Diagnostics.flush()` is public and awaited beside `library.flush()` in `main.tsx`; `controllerchange` flushes at once.
+7. **A failed Download log or Clear log says so.** `clear()` resolves to whether it worked, and `App` reports both failures through `setProblem`; `Diagnostics` takes an optional `store` for tests.
