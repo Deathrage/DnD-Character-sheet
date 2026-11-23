@@ -2,23 +2,10 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LogEntry } from './entries.js';
+import { Diagnostics, useDiagnostics, type RecorderModule } from './index.js';
+import { createLogStore } from './logStore.js';
 
-/** The recorder is the one part loaded lazily: these tests count how often it is built. */
-const { built, made } = vi.hoisted(() => ({
-  built: vi.fn(),
-  made: [] as { start: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn> }[],
-}));
-vi.mock('./recorder.js', () => ({
-  Recorder: class {
-    start = vi.fn();
-    flush = vi.fn(() => Promise.resolve());
-    stop = vi.fn(() => Promise.resolve());
-    constructor(options: unknown) {
-      built(options);
-      made.push(this);
-    }
-  },
-}));
+type FakeRecorder = { start: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn> };
 
 const entry = (t: number): LogEntry => ({
   kind: 'lifecycle',
@@ -27,39 +14,58 @@ const entry = (t: number): LogEntry => ({
   t,
 });
 
-/** A fresh copy of the module each test, so its record of a running recorder starts empty. */
-const load = () => import('./index.js');
-const store = async () => (await import('./logStore.js')).createLogStore();
+/**
+ * A `Diagnostics` on its own database, with a recorder that does nothing but count: the real
+ * one is the lazily loaded part, and these tests are about when it is built, started and stopped.
+ */
+let databases = 0;
+function setup() {
+  const dbName = `diagnostics-index-test-${++databases}`;
+  const made: FakeRecorder[] = [];
+  const load = vi.fn((): Promise<RecorderModule> =>
+    Promise.resolve({
+      Recorder: class {
+        start = vi.fn();
+        flush = vi.fn(() => Promise.resolve());
+        stop = vi.fn(() => Promise.resolve());
+        constructor() {
+          made.push(this);
+        }
+      },
+    }),
+  );
+  const diagnostics = new Diagnostics({ dbName, load });
+  return { diagnostics, load, made, store: createLogStore({ name: dbName }) };
+}
 
-beforeEach(async () => {
+beforeEach(() => {
   localStorage.clear();
-  built.mockClear();
-  made.length = 0;
-  vi.resetModules();
-  await (await store()).clear();
 });
 
 describe('startIfOn', () => {
   it('loads no recorder while the switch is off', async () => {
-    (await load()).startIfOn();
+    const { diagnostics, load } = setup();
+    diagnostics.startIfOn();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(built).not.toHaveBeenCalled();
+    expect(load).not.toHaveBeenCalled();
   });
 
   it('starts the recorder at launch while the switch is on', async () => {
     localStorage.setItem('diagnostics:on', 'true');
-    (await load()).startIfOn();
-    await vi.waitFor(() => expect(built).toHaveBeenCalledOnce());
+    const { diagnostics, made } = setup();
+    diagnostics.startIfOn();
+    await vi.waitFor(() => expect(made).toHaveLength(1));
+    expect(made[0]?.start).toHaveBeenCalledWith({ launch: true });
   });
 });
 
 describe('useDiagnostics', () => {
   it('switching on stores the switch and starts the recorder; off stores it', async () => {
-    const { useDiagnostics } = await load();
-    const { result } = renderHook(() => useDiagnostics());
+    const { diagnostics, load, made } = setup();
+    const { result } = renderHook(() => useDiagnostics(diagnostics));
     await act(() => result.current.setOn(true));
     expect(localStorage.getItem('diagnostics:on')).toBe('true');
-    expect(built).toHaveBeenCalledOnce();
+    expect(load).toHaveBeenCalledOnce();
     expect(result.current.view.on).toBe(true);
 
     await act(() => result.current.setOn(false));
@@ -68,22 +74,27 @@ describe('useDiagnostics', () => {
     expect(made[0]?.stop).toHaveBeenCalledOnce();
   });
 
-  it('starts from the menu as a switch-on, and at launch as a launch', async () => {
-    const { useDiagnostics } = await load();
-    const { result } = renderHook(() => useDiagnostics());
+  it('starts from the menu as a switch-on', async () => {
+    const { diagnostics, made } = setup();
+    const { result } = renderHook(() => useDiagnostics(diagnostics));
     await act(() => result.current.setOn(true));
     expect(made[0]?.start).toHaveBeenCalledWith({ launch: false });
+  });
 
-    vi.resetModules();
-    localStorage.setItem('diagnostics:on', 'true');
-    (await load()).startIfOn();
-    await vi.waitFor(() => expect(made).toHaveLength(2));
-    expect(made[1]?.start).toHaveBeenCalledWith({ launch: true });
+  it('reuses the one recorder across off and on again', async () => {
+    const { diagnostics, load, made } = setup();
+    const { result } = renderHook(() => useDiagnostics(diagnostics));
+    await act(() => result.current.setOn(true));
+    await act(() => result.current.setOn(false));
+    await act(() => result.current.setOn(true));
+    await vi.waitFor(() => expect(made[0]?.start).toHaveBeenCalledTimes(2));
+    expect(load).toHaveBeenCalledOnce();
+    expect(made).toHaveLength(1);
   });
 
   it('does not start a recorder the player switched off while its chunk was loading', async () => {
-    const { useDiagnostics } = await load();
-    const { result } = renderHook(() => useDiagnostics());
+    const { diagnostics, made } = setup();
+    const { result } = renderHook(() => useDiagnostics(diagnostics));
     await act(async () => {
       const on = result.current.setOn(true);
       await result.current.setOn(false);
@@ -94,10 +105,26 @@ describe('useDiagnostics', () => {
     expect(made.every((recorder) => recorder.start.mock.calls.length === 0)).toBe(true);
   });
 
+  it('tries the load again after one failed', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const { diagnostics, load, made } = setup();
+      load.mockRejectedValueOnce(new Error('offline'));
+      const { result } = renderHook(() => useDiagnostics(diagnostics));
+      await act(() => result.current.setOn(true));
+      await act(() => result.current.setOn(false));
+      await act(() => result.current.setOn(true));
+      await vi.waitFor(() => expect(made[0]?.start).toHaveBeenCalledOnce());
+      expect(load).toHaveBeenCalledTimes(2);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it('refresh counts the log and dates it from its oldest entry', async () => {
-    await (await store()).append([entry(1000), entry(2000)]);
-    const { useDiagnostics } = await load();
-    const { result } = renderHook(() => useDiagnostics());
+    const { diagnostics, store } = setup();
+    await store.append([entry(1000), entry(2000)]);
+    const { result } = renderHook(() => useDiagnostics(diagnostics));
     await act(() => result.current.refresh());
     expect(result.current.view).toEqual({
       on: false,
@@ -106,10 +133,20 @@ describe('useDiagnostics', () => {
     });
   });
 
+  it('keeps the same view object when a refresh finds nothing new', async () => {
+    const { diagnostics, store } = setup();
+    await store.append([entry(1000)]);
+    const { result } = renderHook(() => useDiagnostics(diagnostics));
+    await act(() => result.current.refresh());
+    const before = result.current.view;
+    await act(() => result.current.refresh());
+    expect(result.current.view).toBe(before);
+  });
+
   it('exports the log as a dated file, oldest first', async () => {
-    await (await store()).append([entry(1000), entry(2000)]);
-    const { useDiagnostics } = await load();
-    const { result } = renderHook(() => useDiagnostics());
+    const { diagnostics, store } = setup();
+    await store.append([entry(1000), entry(2000)]);
+    const { result } = renderHook(() => useDiagnostics(diagnostics));
     const file = await result.current.logFile(new Date('2026-11-22T18:03:11.402Z'));
     expect(file?.filename).toBe('dnd-diagnostics-2026-11-22.json');
     expect(JSON.parse(file?.text ?? 'null')).toEqual({
@@ -120,11 +157,11 @@ describe('useDiagnostics', () => {
   });
 
   it('clear empties the log', async () => {
-    await (await store()).append([entry(1000)]);
-    const { useDiagnostics } = await load();
-    const { result } = renderHook(() => useDiagnostics());
+    const { diagnostics, store } = setup();
+    await store.append([entry(1000)]);
+    const { result } = renderHook(() => useDiagnostics(diagnostics));
     await act(() => result.current.clear());
     expect(result.current.view.count).toBe(0);
-    expect(await (await store()).count()).toBe(0);
+    expect(await store.count()).toBe(0);
   });
 });

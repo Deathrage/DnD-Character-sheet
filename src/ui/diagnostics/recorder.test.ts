@@ -1,12 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FrameEntry, LogEntry, RouteEntry } from './entries.js';
-import {
-  forgetStops,
-  Recorder,
-  type ObserverConstructor,
-  type RecorderOptions,
-} from './recorder.js';
+import { Recorder, type ObserverConstructor, type RecorderOptions } from './recorder.js';
 
 const ORIGIN = Date.UTC(2026, 10, 22, 17, 0, 0);
 const ID = 'e4c315d2-310f-454b-82c5-ad649abaa300';
@@ -85,7 +80,6 @@ beforeEach(() => {
     return Promise.resolve();
   });
   created = [];
-  forgetStops();
 });
 
 afterEach(async () => {
@@ -172,16 +166,15 @@ describe('Recorder', () => {
   });
 
   it('skips a frame from before the last stop, keeps one from while off with no route, and labels one after the restart', async () => {
-    const first = recorder();
-    first.start({ launch: true });
+    const made = recorder();
+    made.start({ launch: true });
     await vi.advanceTimersByTimeAsync(1000);
-    await first.stop();
+    await made.stop();
     written.length = 0;
     FakeObserver.all = [];
 
     await vi.advanceTimersByTimeAsync(1000);
-    const second = recorder();
-    second.start({ launch: false });
+    made.start({ launch: false });
     const tap = (startTime: number, interactionId: number) => ({
       name: 'click',
       startTime,
@@ -193,7 +186,7 @@ describe('Recorder', () => {
     });
     FakeObserver.of('long-animation-frame').emit([loaf(900), loaf(1500), loaf(2500)]);
     FakeObserver.of('event').emit([tap(900, 1), tap(1500, 2), tap(2500, 3)]);
-    await second.flush();
+    await made.flush();
     const frames = written.filter(isFrame);
     expect(frames.map((entry) => entry.t)).toEqual([1500, 2500]);
     expect(frames.map((entry) => entry.route)).toEqual([

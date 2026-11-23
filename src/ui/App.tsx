@@ -16,7 +16,7 @@ import {
   useStorageGate,
   useUploadNotice,
 } from './bind.js';
-import { useDiagnostics } from './diagnostics/index.js';
+import { useDiagnostics, type Diagnostics } from './diagnostics/index.js';
 import { useInstall } from './install.js';
 import { navigate, useRoute } from './route.js';
 import { CharacterHub } from './screens/CharacterHub.js';
@@ -34,16 +34,24 @@ import type { ConflictView, SectionKey } from './types.js';
  * and does the three things no business object can, because they are browser affordances rather
  * than rules — downloading a file, reading a picked one, and owning the open sheet's lifetime.
  *
- * The library is a prop, not a module singleton, so a test builds its own and nothing leaks
- * between them.
+ * The library, the cloud and the diagnostics log are props, not module singletons, so a test
+ * builds its own and nothing leaks between them.
  */
-export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: CloudBackup }) {
+export function App({
+  library,
+  cloud,
+  diagnostics: log,
+}: {
+  library: CharacterLibraryBO;
+  cloud: CloudBackup;
+  diagnostics: Diagnostics;
+}) {
   const route = useRoute();
   const rows = useCharacterRows(library);
   const gate = useStorageGate(library.storageGate);
   const failure = useStorageFailure(library.storageGate);
   const account = useCloud(cloud);
-  const diagnostics = useDiagnostics();
+  const diagnostics = useDiagnostics(log);
   // Installing is what moves `persist()` in Chromium and Safari, so it is asked again straight away.
   const install = useInstall(
     useCallback(() => void library.storageGate.requestPersist(), [library]),

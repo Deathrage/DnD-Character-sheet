@@ -53,20 +53,6 @@ const INPUT_THRESHOLD_MS = 100;
 const MAX_SEEN = 200;
 const MAX_ROUTES = 50;
 
-/**
- * The time, on the performance clock, of the last `stop()` in this page. Chrome hands every new
- * `buffered` observer the page's earlier entries, so a recorder started after an off → on would
- * record again what the last one had. Entries from while it was off are kept, with `route: null`,
- * like those from before a first switch-on. Module level because the module stays loaded once
- * imported. Never goes back: a page's clock does not.
- */
-let notBefore = 0;
-
-/** For tests only: the high-water mark outlives a recorder, which is its whole point. */
-export function forgetStops(): void {
-  notBefore = 0;
-}
-
 export interface StartOptions {
   /**
    * True when recording starts with the page, so the route showing at the first
@@ -89,6 +75,13 @@ export class Recorder {
   #routes: RouteMark[] = [];
   readonly #seen = new Set<number>();
   #stops: (() => void)[] = [];
+  /**
+   * The time, on the performance clock, of this recorder's last `stop()`. Chrome hands every new
+   * `buffered` observer the page's earlier entries, so a restart after an off → on would record
+   * again what the last run had. Entries from while it was off are kept, with `route: null`, like
+   * those from before a first switch-on. Never goes back: a page's clock does not.
+   */
+  #notBefore = 0;
   /** Chained, so batches land in order and a flush during a write waits for it. */
   #writing: Promise<void> = Promise.resolve();
 
@@ -116,7 +109,7 @@ export class Recorder {
 
     this.#observe('long-animation-frame', {}, (entries) => {
       for (const entry of entries as unknown as LongAnimationFrameTiming[]) {
-        if (entry.startTime < notBefore) continue;
+        if (entry.startTime < this.#notBefore) continue;
         this.#push(
           frameEntry(entry, {
             clock: this.#clock(),
@@ -130,7 +123,7 @@ export class Recorder {
       if (this.#seen.size > MAX_SEEN) this.#seen.clear();
       this.#push(
         ...inputEntries(
-          (entries as unknown as EventTiming[]).filter((e) => e.startTime >= notBefore),
+          (entries as unknown as EventTiming[]).filter((e) => e.startTime >= this.#notBefore),
           {
             clock: this.#clock(),
             routeAt: (t) => routeAt(this.#routes, t),
@@ -166,7 +159,7 @@ export class Recorder {
 
   /** Disconnects everything, then writes what the buffer still holds. The log is kept. */
   async stop(): Promise<void> {
-    if (this.recording) notBefore = Math.max(notBefore, this.#now());
+    if (this.recording) this.#notBefore = Math.max(this.#notBefore, this.#now());
     for (const stop of this.#stops.splice(0)) stop();
     await this.flush();
   }
