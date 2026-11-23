@@ -2,9 +2,9 @@ import { useId, useState, type ReactNode } from 'react';
 import { Portrait } from '../components/Portrait.js';
 import { ResponsiveDialog } from '../components/ResponsiveDialog.js';
 import { Avatar } from '../components/Avatar.js';
-import { countEntries, DiagnosticsDialog } from '../components/DiagnosticsDialog.js';
+import { DiagnosticsDialog } from '../components/DiagnosticsDialog.js';
 import { ICONS } from '../components/icons.js';
-import { formatWhen } from '../format.js';
+import { formatWhen, plural } from '../format.js';
 import type { LegalPage } from '../route.js';
 import { chooseTheme, storedTheme, THEMES } from '../theme.js';
 import type { CharacterRow, CloudView, DiagnosticsView, InstallView } from '../types.js';
@@ -251,7 +251,7 @@ export function CharacterList({
                 label="Diagnostics"
                 description={
                   diagnostics.on
-                    ? `Recording · ${countEntries(diagnostics.count)}`
+                    ? `Recording · ${plural(diagnostics.count, 'entry', 'entries')}`
                     : 'Record slow moments for the developer.'
                 }
                 onClick={fromMenu(() => {

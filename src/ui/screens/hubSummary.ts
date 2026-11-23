@@ -1,4 +1,4 @@
-import { formatHitPoints, formatSigned } from '../format.js';
+import { formatHitPoints, formatSigned, plural } from '../format.js';
 import { COINS, ordinal } from '../reference.js';
 import type { CategorizedView, SectionKey } from '../types.js';
 import type { SheetData } from './CharacterHub.js';
@@ -69,8 +69,4 @@ function all<T>({ categories, uncategorized }: CategorizedView<T>): T[] {
 function line(parts: (string | false)[]): string {
   const present = parts.filter((part): part is string => part !== false);
   return present.length > 0 ? present.join(' · ') : EMPTY;
-}
-
-function plural(n: number, one: string, many = `${one}s`): string {
-  return `${n} ${n === 1 ? one : many}`;
 }

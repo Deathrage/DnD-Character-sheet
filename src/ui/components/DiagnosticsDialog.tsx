@@ -1,4 +1,4 @@
-import { formatWhen } from '../format.js';
+import { formatWhen, plural } from '../format.js';
 import type { DiagnosticsView } from '../types.js';
 import { CheckRow } from './CheckRow.js';
 import { ConfirmDelete } from './ConfirmDelete.js';
@@ -10,11 +10,6 @@ interface Props {
   onDownload(): void;
   onClear(): void;
   onClose(): void;
-}
-
-/** "1 entry", "134 entries": shared with the menu row's line. */
-export function countEntries(count: number): string {
-  return count === 1 ? '1 entry' : `${count} entries`;
 }
 
 /**
@@ -52,8 +47,8 @@ export function DiagnosticsDialog({ view, onSetOn, onDownload, onClear, onClose 
         {view.count === 0
           ? 'Nothing recorded yet.'
           : view.since === null
-            ? countEntries(view.count)
-            : `${countEntries(view.count)} since ${formatWhen(view.since)}`}
+            ? plural(view.count, 'entry', 'entries')
+            : `${plural(view.count, 'entry', 'entries')} since ${formatWhen(view.since)}`}
       </p>
     </ResponsiveDialog>
   );
