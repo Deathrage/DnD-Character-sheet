@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FrameEntry, LogEntry, RouteEntry } from './entries.js';
-import { Recorder, type ObserverConstructor, type RecorderOptions } from './recorder.js';
+import {
+  forgetStops,
+  Recorder,
+  type ObserverConstructor,
+  type RecorderOptions,
+} from './recorder.js';
 
 const ORIGIN = Date.UTC(2026, 10, 22, 17, 0, 0);
 const ID = 'e4c315d2-310f-454b-82c5-ad649abaa300';
@@ -80,6 +85,7 @@ beforeEach(() => {
     return Promise.resolve();
   });
   created = [];
+  forgetStops();
 });
 
 afterEach(async () => {
@@ -140,6 +146,57 @@ describe('Recorder', () => {
     expect(written.filter(isFrame).map((entry) => entry.route)).toEqual([
       { name: 'character', section: 'spells' },
       { name: 'character', section: null },
+    ]);
+  });
+
+  it("labels a frame from before a switch-on start with no screen, and a launch start with the page's", async () => {
+    await vi.advanceTimersByTimeAsync(500);
+    const switched = recorder();
+    switched.start({ launch: false });
+    FakeObserver.of('long-animation-frame').emit([loaf(100), loaf(600)]);
+    await switched.flush();
+    expect(written.filter(isFrame).map((entry) => entry.route)).toEqual([
+      null,
+      { name: 'character', section: 'spells' },
+    ]);
+
+    written.length = 0;
+    FakeObserver.all = [];
+    const launched = recorder();
+    launched.start({ launch: true });
+    FakeObserver.of('long-animation-frame').emit([loaf(100)]);
+    await launched.flush();
+    expect(written.filter(isFrame).map((entry) => entry.route)).toEqual([
+      { name: 'character', section: 'spells' },
+    ]);
+  });
+
+  it('records no frame or tap from before the last stop, and one after the new start', async () => {
+    const first = recorder();
+    first.start();
+    await vi.advanceTimersByTimeAsync(1000);
+    await first.stop();
+    written.length = 0;
+    FakeObserver.all = [];
+
+    await vi.advanceTimersByTimeAsync(1000);
+    const second = recorder();
+    second.start({ launch: false });
+    const tap = (startTime: number, interactionId: number) => ({
+      name: 'click',
+      startTime,
+      duration: 200,
+      processingStart: startTime + 10,
+      processingEnd: startTime + 60,
+      interactionId,
+      target: null,
+    });
+    FakeObserver.of('long-animation-frame').emit([loaf(900), loaf(1500)]);
+    FakeObserver.of('event').emit([tap(900, 1), tap(1500, 2)]);
+    await second.flush();
+    expect(written.filter(isFrame).map((entry) => entry.t)).toEqual([1500]);
+    expect(written.filter((entry) => entry.kind === 'input').map((entry) => entry.t)).toEqual([
+      1500,
     ]);
   });
 

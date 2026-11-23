@@ -26,14 +26,15 @@ export function isRecording(): boolean {
 
 /** Called once by `main.tsx`, before the first render, so a launch is recorded from its start. */
 export function startIfOn(): void {
-  if (isRecording()) start();
+  if (isRecording()) start(true);
 }
 
-function start(): void {
+/** `launch` is whether recording starts with the page, rather than from the menu mid-launch. */
+function start(launch: boolean): void {
   if (running !== null) return;
   const loading = import('./recorder.js').then(({ Recorder }) => {
     const recorder = new Recorder({ store });
-    recorder.start();
+    recorder.start({ launch });
     return recorder;
   });
   running = loading;
@@ -85,7 +86,7 @@ export function useDiagnostics(): {
       writePersisted(KEY, on);
       setView((previous) => ({ ...previous, on }));
       try {
-        if (on) start();
+        if (on) start(false);
         else await stop();
       } catch (error) {
         console.warn('Diagnostics: the recorder could not be stopped cleanly.', error);
