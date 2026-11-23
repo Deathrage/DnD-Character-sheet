@@ -107,8 +107,25 @@ describe('sanitiseInvoker', () => {
     expect(sanitiseInvoker('x'.repeat(150))).toHaveLength(100);
   });
 
-  it('leaves an ordinary invoker alone', () => {
+  it('leaves an ordinary invoker alone, its # being an element id and no URL fragment', () => {
     expect(sanitiseInvoker('BUTTON#b.onclick')).toBe('BUTTON#b.onclick');
+  });
+
+  it("keeps neither the origin nor the character id of an inline script's document URL", () => {
+    const id = 'e4c315d2-310f-454b-82c5-ad649abaa300';
+    const invoker = sanitiseInvoker(`https://app.example.web.app/#/c/${id}/spells`);
+    expect(invoker).not.toContain(id);
+    expect(invoker).not.toContain('app.example');
+    expect(invoker).not.toContain('#');
+  });
+
+  it('keeps no query of a script URL', () => {
+    const invoker = sanitiseInvoker('https://app.example.web.app/assets/index.js?name=Sable&x=1');
+    expect(invoker).toBe('/assets/index.js');
+  });
+
+  it('cuts a URL that cannot be parsed at its # and ?', () => {
+    expect(sanitiseInvoker('://broken#/c/secret?q=1')).toBe('://broken');
   });
 });
 
@@ -183,6 +200,13 @@ describe('inputEntries', () => {
 
   it('ignores events that are not an interaction', () => {
     expect(inputEntries([event({ interactionId: 0 })], inputContext())).toEqual([]);
+  });
+
+  it('ignores an event with no interactionId at all, and does not hide later taps', () => {
+    const context = inputContext();
+    const none = event({ interactionId: undefined as unknown as number });
+    expect(inputEntries([none, none], context)).toEqual([]);
+    expect(inputEntries([event({ interactionId: 9 })], context)).toHaveLength(1);
   });
 
   it('records an interaction once across batches', () => {

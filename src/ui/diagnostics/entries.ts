@@ -190,10 +190,21 @@ export function describeElement(node: Node | null): string | null {
   return element.tagName.toLowerCase() + [...element.classList].map((name) => `.${name}`).join('');
 }
 
-/** Chrome may append `[src=…]` for an image, and a portrait's `src` is the portrait. */
+/**
+ * Chrome may append `[src=…]` for an image, and a portrait's `src` is the portrait. For a script
+ * the invoker is a URL, and an inline script's can be the document's own, whose hash holds the
+ * character's id: a URL is cut to its path, and to its first `#` or `?`. An element invoker such
+ * as `BUTTON#b.onclick` is no URL, and its `#` is an element id, so it is kept.
+ */
 export function sanitiseInvoker(invoker: string): string {
   const bracket = invoker.indexOf('[');
-  return (bracket === -1 ? invoker : invoker.slice(0, bracket)).slice(0, MAX_INVOKER);
+  let clean = bracket === -1 ? invoker : invoker.slice(0, bracket);
+  if (clean.includes('://')) {
+    clean = sourcePath(clean);
+    const cut = clean.search(/[#?]/);
+    if (cut !== -1) clean = clean.slice(0, cut);
+  }
+  return clean.slice(0, MAX_INVOKER);
 }
 
 /** The path of a script's URL: which bundle file, not which origin. */
@@ -244,9 +255,12 @@ export function frameEntry(
 
 /**
  * One entry per interaction. Chrome reports a tap as several events (`pointerdown`,
- * `pointerup`, `click`) sharing an `interactionId`; the longest stands for them all. Events with
- * `interactionId` 0 (hover, pointer enter and leave) are not interactions. `seen` carries the
- * ids already recorded from one batch to the next, and is added to.
+ * `pointerup`, `click`) sharing an `interactionId`; the longest in the batch stands for them all.
+ * An interaction split across two observer callbacks is recorded from the events of the first,
+ * so its entry is its longest there, not necessarily overall. Events with `interactionId` 0
+ * (hover, pointer enter and leave), or none at all on an engine without it, are not
+ * interactions. `seen` carries the ids already recorded from one batch to the next, and is
+ * added to.
  */
 export function inputEntries(
   entries: readonly EventTiming[],
@@ -258,7 +272,7 @@ export function inputEntries(
 ): InputEntry[] {
   const longest = new Map<number, EventTiming>();
   for (const entry of entries) {
-    if (entry.interactionId === 0 || context.seen.has(entry.interactionId)) continue;
+    if (!entry.interactionId || context.seen.has(entry.interactionId)) continue;
     const kept = longest.get(entry.interactionId);
     if (kept === undefined || entry.duration > kept.duration) {
       longest.set(entry.interactionId, entry);
