@@ -34,7 +34,9 @@ function start(launch: boolean): void {
   if (running !== null) return;
   const loading = import('./recorder.js').then(({ Recorder }) => {
     const recorder = new Recorder({ store });
-    recorder.start({ launch });
+    // Switched off while the chunk was loading: `stop()` has already forgotten this load, and
+    // a recorder started now would record after the player said off.
+    if (running === loading) recorder.start({ launch });
     return recorder;
   });
   running = loading;

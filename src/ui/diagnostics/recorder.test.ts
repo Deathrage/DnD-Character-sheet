@@ -252,6 +252,8 @@ describe('Recorder', () => {
     FakeObserver.of('long-animation-frame').emit([loaf()]);
     await made.stop();
     expect(made.recording).toBe(false);
+    // The 2 s interval is cleared, not only ignored.
+    expect(vi.getTimerCount()).toBe(0);
     expect(FakeObserver.all.every((observer) => observer.disconnected)).toBe(true);
     expect(written.map((entry) => entry.kind)).toEqual(['session', 'frame']);
 
@@ -263,6 +265,36 @@ describe('Recorder', () => {
     document.dispatchEvent(new Event('visibilitychange'));
     await settle();
     expect(written).toHaveLength(2);
+  });
+
+  it.each([
+    ['pageshow', window, () => new PageTransitionEvent('pageshow', { persisted: true }), true],
+    ['freeze', document, () => new Event('freeze'), undefined],
+    ['resume', document, () => new Event('resume'), undefined],
+  ] as const)('writes a lifecycle entry for %s', async (event, target, make, persisted) => {
+    const made = recorder();
+    made.start();
+    target.dispatchEvent(make());
+    await made.flush();
+    const entry = written.find((e) => e.kind === 'lifecycle');
+    expect(entry).toMatchObject({ kind: 'lifecycle', event });
+    expect(entry !== undefined && 'persisted' in entry ? entry.persisted : undefined).toBe(
+      persisted,
+    );
+  });
+
+  it('writes a lifecycle entry when the service worker controller changes', async () => {
+    const worker = new EventTarget();
+    Object.defineProperty(navigator, 'serviceWorker', { value: worker, configurable: true });
+    try {
+      const made = recorder();
+      made.start();
+      worker.dispatchEvent(new Event('controllerchange'));
+      await made.flush();
+      expect(written.at(-1)).toMatchObject({ kind: 'lifecycle', event: 'controllerchange' });
+    } finally {
+      delete (navigator as unknown as Record<string, unknown>).serviceWorker;
+    }
   });
 
   it('records no screen change timed after stop', async () => {

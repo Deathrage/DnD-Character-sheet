@@ -81,6 +81,18 @@ describe('useDiagnostics', () => {
     expect(made[1]?.start).toHaveBeenCalledWith({ launch: true });
   });
 
+  it('does not start a recorder the player switched off while its chunk was loading', async () => {
+    const { useDiagnostics } = await load();
+    const { result } = renderHook(() => useDiagnostics());
+    await act(async () => {
+      const on = result.current.setOn(true);
+      await result.current.setOn(false);
+      await on;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(made.every((recorder) => recorder.start.mock.calls.length === 0)).toBe(true);
+  });
+
   it('refresh counts the log and dates it from its oldest entry', async () => {
     await (await store()).append([entry(1000), entry(2000)]);
     const { useDiagnostics } = await load();
