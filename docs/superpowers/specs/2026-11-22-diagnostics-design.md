@@ -37,7 +37,8 @@ What is left happens only on the phone, and only sometimes. This log records it 
 
 ## 2. What is recorded
 
-Every entry has `kind`, `at` (wall-clock ISO time, so the player can say "around 20:15") and `t`
+Every entry has `kind`, `at` (wall-clock ISO time, so the player can say "around 20:15": the wall clock when the entry
+is processed, less how long ago it was on the performance clock) and `t`
 (milliseconds since this launch's time origin, `performance.now()`'s clock).
 
 | Kind | When | Fields |
@@ -127,8 +128,7 @@ it, and the lint boundaries are unchanged.
 - **The dialog**, `ResponsiveDialog` titled **Diagnostics**:
   - a `CheckRow` **Record slow moments**
   - a hint: "Records how long screens and taps take, and which part of the app was busy.
-    Nothing you type into a sheet is recorded. The log stays on this device until you download
-    it."
+    Nothing you type into a sheet is recorded. It leaves this device only if you download it."
   - a status line: "134 entries since 22 Nov, 18:03" (`formatWhen`), or "Nothing recorded yet."
   - footer: **Download log**, primary, disabled while the log is empty; **Clear log** through
     `ConfirmDelete`, what "The diagnostics log"
@@ -202,3 +202,21 @@ AGENTS.md gets a short entry under "Current state".
 - The JS Self-Profiling API: in reserve, if a log shows long frames whose scripts do not explain
   them and more detail is needed.
 - A source-map lookup script (§7).
+
+## 11. Changes after the final review
+
+- **`at` follows the wall clock.** `performance.now()` stops while an Android device sleeps, so
+  `timeOrigin + t` was hours early after a stay in the background. `at` is now the wall clock at
+  processing, less the age of `t`; `t` is unchanged.
+- **Earlier frames.** Chrome hands a new `buffered` observer the page's earlier entries. A
+  switch-on from the menu now marks its first route at the start time, so those frames say
+  `route: null` rather than the list screen. A module-level mark set by `stop()` makes a later
+  recorder skip entries from before it, so off → on neither repeats frames nor records the time
+  the player had it off.
+- **No database before Diagnostics is opened (the user's decision).** The menu used to read the
+  log on every open, which created the database for every player. It now reads only while
+  recording, and when the Diagnostics row is pressed.
+- **Copy.** The privacy page says the log holds when and how long screens and taps take, which
+  part of the app was busy and basic browser and device details, stays until cleared even with
+  Diagnostics off, and leaves the device only if downloaded. The dialog hint ends "It leaves this
+  device only if you download it."

@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 2893 tests across 107 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 2904 tests across 107 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -392,7 +392,15 @@ back on the next load (criterion 14).
     script's invoker is cut at `[` (Chrome appends an image's `src`, and a portrait's is the
     portrait). The privacy page says so.
   - **Off, it costs nothing**: `recorder.ts` is a dynamic import, loaded only while the switch
-    (`diagnostics:on` in localStorage) is on. `main.tsx` starts it before the first render.
+    (`diagnostics:on` in localStorage) is on, and the `dnd-diagnostics` database is not created
+    until the player opens Diagnostics (the menu reads the log only while recording, or when that
+    row is pressed). `main.tsx` calls `startIfOn()` before the first render, which starts the
+    recorder once its chunk has loaded.
+  - **`at` is the wall clock at processing**, less how long ago the event was on the performance
+    clock, because `performance.now()` stops while an Android device sleeps and `timeOrigin + t`
+    would be hours early. **Buffered entries**: Chrome hands a new observer the page's earlier
+    frames and taps, so a switch-on start (`start({ launch: false })`) labels them `route: null`,
+    and a module-level mark set by `stop()` makes an off → on skip entries from before the stop.
   - **Reading a log**: `session.build` names the entry bundle. Build that commit with
     `npx vite build --sourcemap hidden --outDir <dir>`, check the file name matches, and look
     each `sourceCharPosition` up in the `.map`.
@@ -408,7 +416,7 @@ back on the next load (criterion 14).
     therefore unproven here. Overhead, "hub in DOM" at 6× on the Spell List back press: 116, 95,
     92 ms off and 113, 109, 101 ms on, so the ranges overlap. A hidden-source-map build of the
     same commit has the same `assets/index-ygWt1OH5.js` name. With a 317-spell character at 6×
-    and every category open, eight frames were logged, and their positions map to
+    and every category open, eight frames were logged, and three of their script positions map to
     `scheduler.production.js:121` (React's `MessagePort.onmessage`), `src/ui/App.tsx:106` and
     `idb/build/index.js:34`. The privacy paragraph reads as one paragraph with the new sentence
     inside "Storage on your device".
