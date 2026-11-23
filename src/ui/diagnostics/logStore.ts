@@ -32,7 +32,7 @@ export function createLogStore({
 }: { name?: string; cap?: number } = {}): LogStore {
   let opening: Promise<IDBPDatabase<DiagnosticsDb>> | null = null;
 
-  /** Opened on first use, so a player who never turns diagnostics on never creates it. */
+  /** Opened on first use, so a player who never opens Diagnostics never creates it. */
   const db = (): Promise<IDBPDatabase<DiagnosticsDb>> =>
     (opening ??= openDB<DiagnosticsDb>(name, 1, {
       upgrade(database) {

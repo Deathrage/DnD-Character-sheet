@@ -189,6 +189,15 @@ describe('CharacterList menu: diagnostics', () => {
     expect(screen.queryByRole('button', { name: 'Diagnostics' })).toBeNull();
   });
 
+  it('tells the shell when the Diagnostics row is pressed', () => {
+    const onOpenDiagnostics = vi.fn();
+    list({ diagnostics: log(), onOpenDiagnostics });
+    expect(onOpenDiagnostics).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Diagnostics' }));
+    expect(onOpenDiagnostics).toHaveBeenCalledOnce();
+    expect(screen.getByRole('dialog', { name: 'Diagnostics' })).toBeTruthy();
+  });
+
   it('says what it does while off', () => {
     list({ diagnostics: log() });
     expect(

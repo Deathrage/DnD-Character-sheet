@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CharacterLibraryBO,
   CloudBackup,
@@ -271,6 +271,26 @@ describe('App', () => {
     await waitFor(() =>
       expect(screen.queryByText('Your characters are not safe here yet')).toBeNull(),
     );
+  });
+
+  // Before the test below, which opens the log: the log's store keeps its connection for the
+  // life of the module, so once it is open no later `indexedDB.open` would show.
+  it('opens the diagnostics database only when Diagnostics is opened, with the switch off', async () => {
+    localStorage.clear();
+    const open = vi.spyOn(indexedDB, 'open');
+    const opened = () => open.mock.calls.filter(([name]) => name === 'dnd-diagnostics').length;
+    try {
+      renderApp();
+      fireEvent.click(await screen.findByRole('button', { name: 'Menu' }));
+      await screen.findByRole('button', { name: 'Diagnostics' });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(opened()).toBe(0);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Diagnostics' }));
+      await waitFor(() => expect(opened()).toBe(1));
+    } finally {
+      open.mockRestore();
+    }
   });
 
   it('turns diagnostics on and off from the menu, and counts what it recorded', async () => {

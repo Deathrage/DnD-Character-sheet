@@ -165,9 +165,12 @@ export function App({ library, cloud }: { library: CharacterLibraryBO; cloud: Cl
             onOpenMenu={() => {
               // Loads Firebase the first time — on opening the menu, never at launch.
               void cloud.checkSignIn();
-              void diagnostics.refresh();
+              // Only while recording: reading the log opens its database, and a player who never
+              // opens Diagnostics should never get one.
+              if (diagnostics.view.on) void diagnostics.refresh();
             }}
             diagnostics={diagnostics.view}
+            onOpenDiagnostics={() => void diagnostics.refresh()}
             onSetDiagnostics={(on) => void diagnostics.setOn(on)}
             onDownloadDiagnostics={() =>
               void diagnostics.logFile().then((file) => {
