@@ -4,7 +4,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LogEntry } from './entries.js';
 
 /** The recorder is the one part loaded lazily: these tests count how often it is built. */
-const { built } = vi.hoisted(() => ({ built: vi.fn() }));
+const { built, made } = vi.hoisted(() => ({
+  built: vi.fn(),
+  made: [] as { start: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn> }[],
+}));
 vi.mock('./recorder.js', () => ({
   Recorder: class {
     start = vi.fn();
@@ -12,6 +15,7 @@ vi.mock('./recorder.js', () => ({
     stop = vi.fn(() => Promise.resolve());
     constructor(options: unknown) {
       built(options);
+      made.push(this);
     }
   },
 }));
@@ -30,6 +34,7 @@ const store = async () => (await import('./logStore.js')).createLogStore();
 beforeEach(async () => {
   localStorage.clear();
   built.mockClear();
+  made.length = 0;
   vi.resetModules();
   await (await store()).clear();
 });
@@ -60,6 +65,20 @@ describe('useDiagnostics', () => {
     await act(() => result.current.setOn(false));
     expect(localStorage.getItem('diagnostics:on')).toBe('false');
     expect(result.current.view.on).toBe(false);
+    expect(made[0]?.stop).toHaveBeenCalledOnce();
+  });
+
+  it('starts from the menu as a switch-on, and at launch as a launch', async () => {
+    const { useDiagnostics } = await load();
+    const { result } = renderHook(() => useDiagnostics());
+    await act(() => result.current.setOn(true));
+    expect(made[0]?.start).toHaveBeenCalledWith({ launch: false });
+
+    vi.resetModules();
+    localStorage.setItem('diagnostics:on', 'true');
+    (await load()).startIfOn();
+    await vi.waitFor(() => expect(made).toHaveLength(2));
+    expect(made[1]?.start).toHaveBeenCalledWith({ launch: true });
   });
 
   it('refresh counts the log and dates it from its oldest entry', async () => {
