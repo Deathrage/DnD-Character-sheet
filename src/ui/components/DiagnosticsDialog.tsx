@@ -46,7 +46,7 @@ export function DiagnosticsDialog({ view, onSetOn, onDownload, onClear, onClose 
       <CheckRow label="Record slow moments" checked={view.on} onChange={onSetOn} />
       <p className="hint">
         Records how long screens and taps take, and which part of the app was busy. Nothing you type
-        into a sheet is recorded. The log stays on this device until you download it.
+        into a sheet is recorded. It leaves this device only if you download it.
       </p>
       <p className="hint">
         {view.count === 0
