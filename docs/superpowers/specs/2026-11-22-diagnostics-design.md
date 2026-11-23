@@ -96,8 +96,8 @@ it, and the lint boundaries are unchanged.
   back `{ filename, text }` (or null if the log could not be read), and `App` saves it: the DOM
   download stays with the other browser affordances in `App`. `count` and
   `since` (the oldest entry's `at`) are read by `refresh()`, which writes the buffer first.
-  `App` calls it when the menu opens (its existing `onOpenMenu`), and each action calls it
-  after. They are not live: the menu is open for seconds.
+  `App` calls it when the menu opens while recording is on, and when the Diagnostics dialog
+  opens, and each action calls it after. They are not live: the menu is open for seconds.
 
 ## 4. Storage
 
@@ -211,8 +211,8 @@ AGENTS.md gets a short entry under "Current state".
 - **Earlier frames.** Chrome hands a new `buffered` observer the page's earlier entries. A
   switch-on from the menu now marks its first route at the start time, so those frames say
   `route: null` rather than the list screen. A module-level mark set by `stop()` makes a later
-  recorder skip entries from before it, so off → on neither repeats frames nor records the time
-  the player had it off.
+  recorder skip entries from before it, so off → on does not repeat frames. Frames from while it was off
+  are kept with `route: null`, like those from before a first switch-on.
 - **No database before Diagnostics is opened (the user's decision).** The menu used to read the
   log on every open, which created the database for every player. It now reads only while
   recording, and when the Diagnostics row is pressed.

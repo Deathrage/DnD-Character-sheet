@@ -90,6 +90,7 @@ describe('useDiagnostics', () => {
       await on;
     });
     await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(made).toHaveLength(1);
     expect(made.every((recorder) => recorder.start.mock.calls.length === 0)).toBe(true);
   });
 

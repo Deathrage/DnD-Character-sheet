@@ -96,7 +96,7 @@ afterEach(async () => {
 
 describe('Recorder', () => {
   it('writes a session entry, then a batch every 2 s', async () => {
-    recorder().start();
+    recorder().start({ launch: true });
     expect(append).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(2000);
     expect(written.map((entry) => entry.kind)).toEqual(['session']);
@@ -109,7 +109,7 @@ describe('Recorder', () => {
   });
 
   it('observes both entry types buffered, and taps from 100 ms', () => {
-    recorder().start();
+    recorder().start({ launch: true });
     expect(FakeObserver.of('long-animation-frame').options).toEqual({
       type: 'long-animation-frame',
       buffered: true,
@@ -126,7 +126,7 @@ describe('Recorder', () => {
       static override supportedEntryTypes: readonly string[] = [];
     }
     const made = recorder({ Observer: Unsupported as unknown as ObserverConstructor });
-    made.start();
+    made.start({ launch: true });
     await made.flush();
     expect(FakeObserver.all).toEqual([]);
     expect(written[0]).toMatchObject({
@@ -137,7 +137,7 @@ describe('Recorder', () => {
 
   it('labels a frame with the screen it started on', async () => {
     const made = recorder();
-    made.start();
+    made.start({ launch: true });
     await vi.advanceTimersByTimeAsync(500);
     history.replaceState(null, '', `#/c/${ID}`);
     window.dispatchEvent(new HashChangeEvent('hashchange'));
@@ -171,9 +171,9 @@ describe('Recorder', () => {
     ]);
   });
 
-  it('records no frame or tap from before the last stop, and one after the new start', async () => {
+  it('skips a frame from before the last stop, keeps one from while off with no route, and labels one after the restart', async () => {
     const first = recorder();
-    first.start();
+    first.start({ launch: true });
     await vi.advanceTimersByTimeAsync(1000);
     await first.stop();
     written.length = 0;
@@ -191,18 +191,23 @@ describe('Recorder', () => {
       interactionId,
       target: null,
     });
-    FakeObserver.of('long-animation-frame').emit([loaf(900), loaf(1500)]);
-    FakeObserver.of('event').emit([tap(900, 1), tap(1500, 2)]);
+    FakeObserver.of('long-animation-frame').emit([loaf(900), loaf(1500), loaf(2500)]);
+    FakeObserver.of('event').emit([tap(900, 1), tap(1500, 2), tap(2500, 3)]);
     await second.flush();
-    expect(written.filter(isFrame).map((entry) => entry.t)).toEqual([1500]);
+    const frames = written.filter(isFrame);
+    expect(frames.map((entry) => entry.t)).toEqual([1500, 2500]);
+    expect(frames.map((entry) => entry.route)).toEqual([
+      null,
+      { name: 'character', section: 'spells' },
+    ]);
     expect(written.filter((entry) => entry.kind === 'input').map((entry) => entry.t)).toEqual([
-      1500,
+      1500, 2500,
     ]);
   });
 
   it('times a screen change to the frame after it, and records no id', async () => {
     const made = recorder();
-    made.start();
+    made.start({ launch: true });
     await vi.advanceTimersByTimeAsync(1000);
     history.replaceState(null, '', `#/c/${ID}`);
     window.dispatchEvent(new HashChangeEvent('hashchange'));
@@ -224,7 +229,7 @@ describe('Recorder', () => {
   it('dates an entry from the wall clock when the performance clock has fallen behind', async () => {
     const SLEPT = 8 * 3_600_000;
     const made = recorder({ now: () => 1000, wallNow: () => ORIGIN + SLEPT + 1000 });
-    made.start();
+    made.start({ launch: true });
     FakeObserver.of('long-animation-frame').emit([loaf(1000)]);
     await made.flush();
     expect(written.find(isFrame)).toMatchObject({
@@ -233,8 +238,21 @@ describe('Recorder', () => {
     });
   });
 
+  it('stamps a screen change when it happens, not when its frame comes', async () => {
+    let wall = ORIGIN;
+    const made = recorder({ wallNow: () => wall + Date.now() });
+    made.start({ launch: true });
+    await vi.advanceTimersByTimeAsync(1000);
+    history.replaceState(null, '', `#/c/${ID}`);
+    window.dispatchEvent(new HashChangeEvent('hashchange'));
+    wall += 8 * 3_600_000; // the device sleeps before the frame
+    await vi.advanceTimersByTimeAsync(17);
+    await made.flush();
+    expect(written.find(isRoute)?.at).toBe(new Date(ORIGIN + 1000).toISOString());
+  });
+
   it('writes at once when the app is hidden, and on pagehide', async () => {
-    recorder().start();
+    recorder().start({ launch: true });
     Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
     document.dispatchEvent(new Event('visibilitychange'));
     await settle();
@@ -248,7 +266,7 @@ describe('Recorder', () => {
 
   it('stop disconnects, stops listening, and writes what is left', async () => {
     const made = recorder();
-    made.start();
+    made.start({ launch: true });
     FakeObserver.of('long-animation-frame').emit([loaf()]);
     await made.stop();
     expect(made.recording).toBe(false);
@@ -273,7 +291,7 @@ describe('Recorder', () => {
     ['resume', document, () => new Event('resume'), undefined],
   ] as const)('writes a lifecycle entry for %s', async (event, target, make, persisted) => {
     const made = recorder();
-    made.start();
+    made.start({ launch: true });
     target.dispatchEvent(make());
     await made.flush();
     const entry = written.find((e) => e.kind === 'lifecycle');
@@ -288,7 +306,7 @@ describe('Recorder', () => {
     Object.defineProperty(navigator, 'serviceWorker', { value: worker, configurable: true });
     try {
       const made = recorder();
-      made.start();
+      made.start({ launch: true });
       worker.dispatchEvent(new Event('controllerchange'));
       await made.flush();
       expect(written.at(-1)).toMatchObject({ kind: 'lifecycle', event: 'controllerchange' });
@@ -299,7 +317,7 @@ describe('Recorder', () => {
 
   it('records no screen change timed after stop', async () => {
     const made = recorder();
-    made.start();
+    made.start({ launch: true });
     history.replaceState(null, '', `#/c/${ID}`);
     window.dispatchEvent(new HashChangeEvent('hashchange'));
     await made.stop();
@@ -312,7 +330,7 @@ describe('Recorder', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     append.mockImplementation(() => Promise.reject(new Error('QuotaExceededError')));
     const made = recorder();
-    made.start();
+    made.start({ launch: true });
     await expect(made.flush()).resolves.toBeUndefined();
     expect(warn).toHaveBeenCalledOnce();
     warn.mockRestore();

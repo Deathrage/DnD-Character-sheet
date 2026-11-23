@@ -140,7 +140,9 @@ export function round(ms: number): number {
 /**
  * Both clocks read at the same moment. `at` is the wall clock then, less how long ago `t` was on
  * the performance clock: `performance.now()` stops while an Android device sleeps, so
- * `timeOrigin + t` would be hours early after the app has been in the background.
+ * `timeOrigin + t` would be hours early after the app has been in the background. An entry handed
+ * over late (the buffered ones at a switch-on) can be dated late by any sleep in between, because
+ * the clock is read when it is processed.
  */
 export interface Clock {
   perfNow: number;

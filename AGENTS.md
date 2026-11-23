@@ -400,7 +400,8 @@ back on the next load (criterion 14).
     clock, because `performance.now()` stops while an Android device sleeps and `timeOrigin + t`
     would be hours early. **Buffered entries**: Chrome hands a new observer the page's earlier
     frames and taps, so a switch-on start (`start({ launch: false })`) labels them `route: null`,
-    and a module-level mark set by `stop()` makes an off → on skip entries from before the stop.
+    and a module-level mark set by `stop()` makes an off → on skip entries from before the stop (it does not repeat frames; those from while
+    it was off are kept, `route: null`).
   - **Reading a log**: `session.build` names the entry bundle. Build that commit with
     `npx vite build --sourcemap hidden --outDir <dir>`, check the file name matches, and look
     each `sourceCharPosition` up in the `.map`.

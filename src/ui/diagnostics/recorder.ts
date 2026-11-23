@@ -56,8 +56,9 @@ const MAX_ROUTES = 50;
 /**
  * The time, on the performance clock, of the last `stop()` in this page. Chrome hands every new
  * `buffered` observer the page's earlier entries, so a recorder started after an off → on would
- * record again what the last one had, and what happened while the player had it off. Module
- * level because the module stays loaded once imported. Never goes back: a page's clock does not.
+ * record again what the last one had. Entries from while it was off are kept, with `route: null`,
+ * like those from before a first switch-on. Module level because the module stays loaded once
+ * imported. Never goes back: a page's clock does not.
  */
 let notBefore = 0;
 
@@ -68,11 +69,11 @@ export function forgetStops(): void {
 
 export interface StartOptions {
   /**
-   * True (the default) when recording starts with the page, so the route showing at the first
+   * True when recording starts with the page, so the route showing at the first
    * entry is the one the page opened on. False when the player switched it on from the menu:
    * the buffered entries from before are then from a screen not known, and say `route: null`.
    */
-  launch?: boolean;
+  launch: boolean;
 }
 
 export class Recorder {
@@ -108,7 +109,7 @@ export class Recorder {
     return this.#stops.length > 0;
   }
 
-  start({ launch = true }: StartOptions = {}): void {
+  start({ launch }: StartOptions): void {
     if (this.recording) return;
     this.#routes = [{ t: launch ? 0 : this.#now(), route: routeOfHash(location.hash) }];
     this.#push(this.#session());
@@ -218,7 +219,9 @@ export class Recorder {
    * first be painted. React renders it in between, so a slow render shows here.
    */
   readonly #onHashChange = (): void => {
-    const start = this.#now();
+    // Read once, here: the stamp must not wait for the frame, which a sleep can delay.
+    const clock = this.#clock();
+    const start = clock.perfNow;
     const from = this.#routes.at(-1)?.route ?? null;
     const to = routeOfHash(location.hash);
     this.#routes.push({ t: start, route: to });
@@ -229,7 +232,7 @@ export class Recorder {
         if (!this.recording) return;
         this.#push({
           kind: 'route',
-          ...stamp(start, this.#clock()),
+          ...stamp(start, clock),
           from,
           to,
           toNextFrame: round(nextFrame - start),
