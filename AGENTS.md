@@ -29,7 +29,7 @@ The persistence gate behaves as designed too: headless Chrome refuses `persist()
 to its `refused` phase with the install/export advice, and the session-only dismissal brings it
 back on the next load (criterion 14).
 
-- 2905 tests across 107 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
+- 2913 tests across 107 files, `eslint .` and `tsc --noEmit` clean, `vite build` clean. `npm run test:rules` adds 12 more, against the Firestore emulator and the real `firestore.rules`.
 - `npm run dev` seeds three sample characters **when the store is empty**, via `src/devSeed.ts`.
   It is reached behind `import.meta.env.DEV`, which Vite replaces with a literal `false` in a
   production build, so the module is dead code and never ships — verified by grepping `dist/`.
@@ -392,16 +392,19 @@ back on the next load (criterion 14).
     script's invoker is cut at `[` (Chrome appends an image's `src`, and a portrait's is the
     portrait). The privacy page says so.
   - **Off, it costs nothing**: `recorder.ts` is a dynamic import, loaded only while the switch
-    (`diagnostics:on` in localStorage) is on, and the `dnd-diagnostics` database is not created
-    until the player opens Diagnostics (the menu reads the log only while recording, or when that
-    row is pressed). `main.tsx` calls `startIfOn()` before the first render, which starts the
-    recorder once its chunk has loaded.
+    (`diagnostics:on` in localStorage) is on, and the `dnd-diagnostics` database is created by
+    the first write only, so a player who never turns Diagnostics on never gets it. The store
+    decides, not the menu: `readAll`, `count`, `oldest` and `clear` ask `indexedDB.databases()`
+    first and answer empty without opening it. One `Diagnostics` object is built in `main.tsx`
+    and passed to `App`, like `library` and `cloud`; `main.tsx` calls its `startIfOn()` before the
+    first render, which starts the recorder once its chunk has loaded.
   - **`at` is the wall clock at processing**, less how long ago the event was on the performance
     clock, because `performance.now()` stops while an Android device sleeps and `timeOrigin + t`
     would be hours early. **Buffered entries**: Chrome hands a new observer the page's earlier
     frames and taps, so a switch-on start (`start({ launch: false })`) labels them `route: null`,
-    and a module-level mark set by `stop()` makes an off → on skip entries from before the stop (it does not repeat frames; those from while
-    it was off are kept, `route: null`).
+    and a mark set by `stop()` makes an off → on skip entries from before the stop (it does not
+    repeat frames; those from while it was off are kept, `route: null`). The mark is per
+    `Recorder` instance, and `Diagnostics` reuses one recorder across off → on, so it holds.
   - **Reading a log**: `session.build` names the entry bundle. Build that commit with
     `npx vite build --sourcemap hidden --outDir <dir>`, check the file name matches, and look
     each `sourceCharPosition` up in the `.map`.
@@ -834,7 +837,7 @@ src/ui/                components are presentational: data in, callbacks out, no
                        companions; screens/Companions.tsx is the eighth section
   diagnostics/         the opt-in diagnostics log: entries.ts (pure, nothing typed), logStore.ts
                        (its own IndexedDB database), recorder.ts (observers, buffer; lazy),
-                       index.ts (startIfOn, useDiagnostics — the only way in)
+                       index.ts (Diagnostics, useDiagnostics — the only way in)
 src/main.tsx           the composition root; the only place the real library is constructed
 index.html             the app document; vite.config.ts builds and tests it
 src/data/schema/       index.ts is the public face; README.md governs versioning

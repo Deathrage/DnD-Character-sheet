@@ -82,22 +82,22 @@ it, and the lint boundaries are unchanged.
 | `entries.ts` | Pure functions from browser entries to §2's log entries: script selection and order, invoker and target sanitising, route without id, the input split. Testable with plain objects |
 | `logStore.ts` | The IndexedDB database (§4): `append(entries)`, `readAll()`, `count()`, `clear()`, and the cap |
 | `recorder.ts` | `start()` and `stop()`: the two `PerformanceObserver`s, the listeners, the in-memory buffer and its writes (§4). Its globals (`PerformanceObserver`, `requestAnimationFrame`, the event target, the store, the clock) are injectable for tests |
-| `index.ts` | The only way in: `startIfOn()` and `useDiagnostics()` |
+| `index.ts` | The only way in: the `Diagnostics` class (the switch, the recorder's lifetime, the log's summary, file and clear) and `useDiagnostics(diagnostics)` |
 
 - **The switch** is one localStorage key, `diagnostics:on`, through `readPersisted` and
   `writePersisted` (`src/ui/persistedState.ts`).
-- **`main.tsx` calls `startIfOn()`** before the first render. When the switch is on it loads
+- **`main.tsx` builds one `Diagnostics` and calls its `startIfOn()`** before the first render. When the switch is on it loads
   `recorder.ts` with a dynamic `import()` and starts it, so with recording off the observers and
   the buffer are never loaded; `index.ts`, `logStore.ts` and the dialog are small and stay in the
   main bundle (`idb` is there already, for the characters). The observers use `buffered: true`,
   so frames from page load that happened before the import settled are still delivered.
-- **`useDiagnostics()`** returns
+- **`useDiagnostics(diagnostics)`**, over the `Diagnostics` that `main.tsx` passes to `App`, returns
   `{ view: { on, count, since }, refresh(), setOn(on), logFile(), clear() }`. `logFile()` hands
   back `{ filename, text }` (or null if the log could not be read), and `App` saves it: the DOM
   download stays with the other browser affordances in `App`. `count` and
   `since` (the oldest entry's `at`) are read by `refresh()`, which writes the buffer first.
-  `App` calls it when the menu opens while recording is on, and when the Diagnostics dialog
-  opens, and each action calls it after. They are not live: the menu is open for seconds.
+  `App` calls it whenever the menu opens (the store answers empty without creating the database,
+  §12), and each action calls it after. It keeps the previous `view` object when nothing changed. They are not live: the menu is open for seconds.
 
 ## 4. Storage
 
@@ -220,3 +220,20 @@ AGENTS.md gets a short entry under "Current state".
   part of the app was busy and basic browser and device details, stays until cleared even with
   Diagnostics off, and leaves the device only if downloaded. The dialog hint ends "It leaves this
   device only if you download it."
+
+## 12. Changes after /simplify
+
+- **One `plural()`.** `format.ts` owns `plural(n, one, many)`; the hub summary, the menu row and
+  the dialog use it, and `countEntries` is gone.
+- **The store keeps the "no database" rule.** `readAll`, `count`, `oldest` and `clear` check
+  whether the database exists (this store's open connection, else `indexedDB.databases()`, else
+  open as before where that is missing) and answer empty without creating it; only `append`
+  does. The menu and the dialog read freely, so the guard in `App` and `onOpenDiagnostics` on
+  `CharacterList` are removed.
+- **One owner for the lifetime.** `Diagnostics` replaces the module-level store, the `running`
+  promise and the test-only `forgetStops()`. It loads the recorder once and reuses it across
+  off → on, so the stop mark is a per-recorder field. Tests inject `dbName` and `load` instead of
+  mocking the module.
+- **The recorder idles.** The 2 s interval is a timeout armed by the first entry into an empty
+  buffer, the `flushMs` option is gone, the stop mark is applied once in `#observe`, a batch of
+  frames reads the clock and heap once, and `session.standalone` is `runningInstalled()`.
