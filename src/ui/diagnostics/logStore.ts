@@ -8,6 +8,9 @@ import type { LogEntry } from './entries.js';
  * which waits on every other open tab and locks older builds out, and a debugging tool must
  * never risk that. Keys are generated (`autoIncrement`, no `keyPath`), so a key is never read
  * from a stored value, for the same reason the characters store never does.
+ *
+ * Only a write creates it: every read and `clear` first asks whether it exists, and answers
+ * empty if not, so a player who never turns Diagnostics on never gets the database.
  */
 export const DB_NAME = 'dnd-diagnostics';
 export const MAX_ENTRIES = 2000;
@@ -32,7 +35,7 @@ export function createLogStore({
 }: { name?: string; cap?: number } = {}): LogStore {
   let opening: Promise<IDBPDatabase<DiagnosticsDb>> | null = null;
 
-  /** Opened on first use, so a player who never opens Diagnostics never creates it. */
+  /** Opened on first write; a read of a database that does not exist never gets here. */
   const db = (): Promise<IDBPDatabase<DiagnosticsDb>> =>
     (opening ??= openDB<DiagnosticsDb>(name, 1, {
       upgrade(database) {
@@ -46,6 +49,16 @@ export function createLogStore({
       opening = null;
       throw error;
     }));
+
+  /**
+   * Whether the database exists, without creating it. Where `indexedDB.databases` is missing
+   * (old Firefox) this says yes, and the read opens it as it always did.
+   */
+  const exists = async (): Promise<boolean> => {
+    if (opening !== null) return true;
+    if (typeof indexedDB.databases !== 'function') return true;
+    return (await indexedDB.databases()).some((info) => info.name === name);
+  };
 
   return {
     async append(entries) {
@@ -66,16 +79,18 @@ export function createLogStore({
       await done;
     },
     async readAll() {
-      return (await db()).getAll('entries');
+      return (await exists()) ? (await db()).getAll('entries') : [];
     },
     async count() {
-      return (await db()).count('entries');
+      return (await exists()) ? (await db()).count('entries') : 0;
     },
     async oldest() {
+      if (!(await exists())) return null;
       const cursor = await (await db()).transaction('entries').store.openCursor();
       return cursor?.value ?? null;
     },
     async clear() {
+      if (!(await exists())) return;
       await (await db()).clear('entries');
     },
   };

@@ -35,8 +35,6 @@ interface Props {
   onOpenLegal?(page: LegalPage): void;
   /** Absent hides the menu's Diagnostics row: the stories, and any screen without the log. */
   diagnostics?: DiagnosticsView;
-  /** The Diagnostics row was pressed: the moment to read the log, not before. */
-  onOpenDiagnostics?(): void;
   onSetDiagnostics?(on: boolean): void;
   onDownloadDiagnostics?(): void;
   onClearDiagnostics?(): void;
@@ -59,7 +57,6 @@ export function CharacterList({
   onOpenCloud,
   onOpenLegal,
   diagnostics,
-  onOpenDiagnostics,
   onSetDiagnostics,
   onDownloadDiagnostics,
   onClearDiagnostics,
@@ -254,10 +251,7 @@ export function CharacterList({
                     ? `Recording · ${plural(diagnostics.count, 'entry', 'entries')}`
                     : 'Record slow moments for the developer.'
                 }
-                onClick={fromMenu(() => {
-                  setShowingDiagnostics(true);
-                  onOpenDiagnostics?.();
-                })}
+                onClick={fromMenu(() => setShowingDiagnostics(true))}
               />
             </ul>
           )}

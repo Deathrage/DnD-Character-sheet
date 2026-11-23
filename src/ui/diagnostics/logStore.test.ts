@@ -4,11 +4,11 @@ import { createLogStore, MAX_ENTRIES } from './logStore.js';
 
 /** A database per test: fake-indexeddb keeps them for the whole file. */
 let databases = 0;
-const fresh = (cap?: number) =>
-  createLogStore({
-    name: `diagnostics-test-${++databases}`,
-    ...(cap === undefined ? {} : { cap }),
-  });
+const fresh = (cap?: number) => freshNamed(`diagnostics-test-${++databases}`, cap);
+const freshNamed = (name: string, cap?: number) =>
+  createLogStore({ name, ...(cap === undefined ? {} : { cap }) });
+const exists = async (name: string) =>
+  (await indexedDB.databases()).some((info) => info.name === name);
 
 const entry = (t: number): LogEntry => ({
   kind: 'lifecycle',
@@ -50,5 +50,25 @@ describe('createLogStore', () => {
     await store.clear();
     expect(await store.count()).toBe(0);
     expect(await store.readAll()).toEqual([]);
+  });
+
+  it('never creates its database on a read or a clear; only a write does', async () => {
+    const name = `diagnostics-test-${++databases}`;
+    const store = freshNamed(name);
+    expect(await store.count()).toBe(0);
+    expect(await store.oldest()).toBeNull();
+    expect(await store.readAll()).toEqual([]);
+    await store.clear();
+    expect(await exists(name)).toBe(false);
+
+    await store.append([entry(1)]);
+    expect(await exists(name)).toBe(true);
+    expect(await store.count()).toBe(1);
+  });
+
+  it('reads a database another store instance created', async () => {
+    const name = `diagnostics-test-${++databases}`;
+    await freshNamed(name).append([entry(7)]);
+    expect((await freshNamed(name).readAll()).map((kept) => kept.t)).toEqual([7]);
   });
 });
