@@ -13,6 +13,7 @@ import {
   type RouteMark,
   type SessionEntry,
 } from './entries.js';
+import { runningInstalled } from '../install.js';
 import type { LogStore } from './logStore.js';
 
 /**
@@ -44,7 +45,6 @@ export interface RecorderOptions {
   frame?: (callback: () => void) => void;
   /** Defaults to Chrome's `performance.memory.usedJSHeapSize`, null elsewhere. */
   heap?: () => number | null;
-  flushMs?: number;
 }
 
 const FLUSH_MS = 2000;
@@ -69,7 +69,6 @@ export class Recorder {
   readonly #wallNow: () => number;
   readonly #frame: (callback: () => void) => void;
   readonly #heap: () => number | null;
-  readonly #flushMs: number;
 
   #buffer: LogEntry[] = [];
   #routes: RouteMark[] = [];
@@ -82,6 +81,8 @@ export class Recorder {
    * those from before a first switch-on. Never goes back: a page's clock does not.
    */
   #notBefore = 0;
+  /** The pending write, armed by the first entry into an empty buffer; none while idle. */
+  #timer: ReturnType<typeof setTimeout> | null = null;
   /** Chained, so batches land in order and a flush during a write waits for it. */
   #writing: Promise<void> = Promise.resolve();
 
@@ -95,7 +96,6 @@ export class Recorder {
     this.#wallNow = options.wallNow ?? (() => Date.now());
     this.#frame = options.frame ?? ((callback) => void requestAnimationFrame(() => callback()));
     this.#heap = options.heap ?? readHeap;
-    this.#flushMs = options.flushMs ?? FLUSH_MS;
   }
 
   get recording(): boolean {
@@ -108,28 +108,23 @@ export class Recorder {
     this.#push(this.#session());
 
     this.#observe('long-animation-frame', {}, (entries) => {
+      // Once per batch, not per entry: a batch is processed at one moment.
+      const clock = this.#clock();
+      const heap = this.#heap();
       for (const entry of entries as unknown as LongAnimationFrameTiming[]) {
-        if (entry.startTime < this.#notBefore) continue;
         this.#push(
-          frameEntry(entry, {
-            clock: this.#clock(),
-            route: routeAt(this.#routes, entry.startTime),
-            heap: this.#heap(),
-          }),
+          frameEntry(entry, { clock, route: routeAt(this.#routes, entry.startTime), heap }),
         );
       }
     });
     this.#observe('event', { durationThreshold: INPUT_THRESHOLD_MS }, (entries) => {
       if (this.#seen.size > MAX_SEEN) this.#seen.clear();
       this.#push(
-        ...inputEntries(
-          (entries as unknown as EventTiming[]).filter((e) => e.startTime >= this.#notBefore),
-          {
-            clock: this.#clock(),
-            routeAt: (t) => routeAt(this.#routes, t),
-            seen: this.#seen,
-          },
-        ),
+        ...inputEntries(entries as unknown as EventTiming[], {
+          clock: this.#clock(),
+          routeAt: (t) => routeAt(this.#routes, t),
+          seen: this.#seen,
+        }),
       );
     });
 
@@ -152,15 +147,14 @@ export class Recorder {
         this.#lifecycle({ event: 'controllerchange' }),
       );
     }
-
-    const timer = setInterval(() => void this.flush(), this.#flushMs);
-    this.#stops.push(() => clearInterval(timer));
   }
 
   /** Disconnects everything, then writes what the buffer still holds. The log is kept. */
   async stop(): Promise<void> {
     if (this.recording) this.#notBefore = Math.max(this.#notBefore, this.#now());
     for (const stop of this.#stops.splice(0)) stop();
+    if (this.#timer !== null) clearTimeout(this.#timer);
+    this.#timer = null;
     await this.flush();
   }
 
@@ -184,6 +178,13 @@ export class Recorder {
 
   #push(...entries: LogEntry[]): void {
     this.#buffer.push(...entries);
+    // Armed by an entry, not ticking while idle: a recorder with nothing to write wakes nothing.
+    if (this.#timer === null && this.#buffer.length > 0) {
+      this.#timer = setTimeout(() => {
+        this.#timer = null;
+        void this.flush();
+      }, FLUSH_MS);
+    }
   }
 
   #lifecycle(fields: Pick<LifecycleEntry, 'event' | 'persisted' | 'state'>): void {
@@ -202,7 +203,11 @@ export class Recorder {
   ): void {
     const Observer = this.#Observer;
     if (Observer?.supportedEntryTypes?.includes(type) !== true) return;
-    const observer = new Observer((list) => handle(list.getEntries()));
+    // The stop mark is applied here, once, for every entry type.
+    const observer = new Observer((list) => {
+      const fresh = list.getEntries().filter((entry) => entry.startTime >= this.#notBefore);
+      if (fresh.length > 0) handle(fresh);
+    });
     observer.observe({ type, buffered: true, ...options });
     this.#stops.push(() => observer.disconnect());
   }
@@ -247,8 +252,7 @@ export class Recorder {
       deviceMemory: (navigator as unknown as { deviceMemory?: number }).deviceMemory ?? null,
       hardwareConcurrency: navigator.hardwareConcurrency,
       viewport: { width: innerWidth, height: innerHeight, dpr: devicePixelRatio },
-      standalone:
-        typeof matchMedia === 'function' && matchMedia('(display-mode: standalone)').matches,
+      standalone: runningInstalled(),
       navigation: navigation?.type ?? null,
       controlled: 'serviceWorker' in navigator && navigator.serviceWorker.controller !== null,
       supports: {

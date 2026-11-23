@@ -102,6 +102,23 @@ describe('Recorder', () => {
     expect(written.map((entry) => entry.kind)).toEqual(['session', 'frame']);
   });
 
+  it('reads the heap once for a batch of frames', () => {
+    const heap = vi.fn(() => 1_000_000);
+    recorder({ heap }).start({ launch: true });
+    FakeObserver.of('long-animation-frame').emit([loaf(100), loaf(200), loaf(300)]);
+    expect(heap).toHaveBeenCalledOnce();
+  });
+
+  it('keeps no timer pending once the buffer is written and nothing new arrives', async () => {
+    recorder().start({ launch: true });
+    expect(vi.getTimerCount()).toBe(1);
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(written).toHaveLength(1);
+    expect(vi.getTimerCount()).toBe(0);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(append).toHaveBeenCalledTimes(1);
+  });
+
   it('observes both entry types buffered, and taps from 100 ms', () => {
     recorder().start({ launch: true });
     expect(FakeObserver.of('long-animation-frame').options).toEqual({

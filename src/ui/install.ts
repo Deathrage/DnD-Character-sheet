@@ -46,7 +46,8 @@ interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-function runningInstalled(): boolean {
+/** Whether the page runs as an installed app: `display-mode` on Chromium, `navigator.standalone` on iOS. */
+export function runningInstalled(): boolean {
   return (
     globalThis.matchMedia?.('(display-mode: standalone)').matches === true ||
     (globalThis.navigator as { standalone?: boolean } | undefined)?.standalone === true
